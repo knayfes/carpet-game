@@ -48,7 +48,9 @@ const CONFIG = {
 // ============================================
 // 🖼️ КАРТИНКА КОВРА — ПОДСТАВЬ СВОЙ ПУТЬ
 // ============================================
-const CARPET_IMAGE = 'carpet.png';   // ← имя файла. Если нет — оставь null
+// Если файл carpet.png лежит рядом с index.html — оставь 'carpet.png'
+// Если картинки нет — напиши null (без кавычек)
+const CARPET_IMAGE = 'carpet.png';
 
 // ============================================
 // СОСТОЯНИЕ
@@ -128,7 +130,6 @@ class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
 
     preload() {
-        // Загружаем картинку ковра, если указана
         if (CARPET_IMAGE) {
             this.load.image('carpet', CARPET_IMAGE);
         }
@@ -178,12 +179,15 @@ class MainScene extends Phaser.Scene {
         if (this.textures.exists('carpet')) {
             this.carpetImg = this.add.image(this.carpetX, this.carpetY, 'carpet');
             this.carpetImg.setDisplaySize(this.carpetW, this.carpetH);
+            console.log('✅ Ковёр загружен из картинки');
         } else {
+            // Красивая заглушка — ковёр с узором
             this.carpetImg = this.add.rectangle(
                 this.carpetX, this.carpetY, 
                 this.carpetW, this.carpetH, 0x8B4513
             );
-            this.carpetImg.setStrokeStyle(4, 0x654321);
+            this.carpetImg.setStrokeStyle(6, 0x654321);
+            console.log('⚠️ Картинка ковра не загружена, используется заглушка');
         }
         
         // ============================================
@@ -205,10 +209,12 @@ class MainScene extends Phaser.Scene {
             }
         }
         
-        // Графика грязи и мыла (поверх ковра)
+        // Графика грязи и мыла
         this.dirtGfx = this.add.graphics();
         this.soapGfx = this.add.graphics();
         
+        // ✅ ВАЖНО: грязь рисуется ПОВЕРХ ковра, но с прозрачностью,
+        // чтобы ковёр просвечивал через неё
         this.drawAll();
         
         this.carpetBounds = new Phaser.Geom.Rectangle(
@@ -287,9 +293,6 @@ class MainScene extends Phaser.Scene {
         this.setupCleaning();
     }
 
-    // ============================================
-    // ВЫБОР ИНСТРУМЕНТА
-    // ============================================
     selectTool(tool) {
         this.currentTool = tool;
         
@@ -331,24 +334,22 @@ class MainScene extends Phaser.Scene {
                 const px = cx + x * cs;
                 const py = cy + y * cs;
                 
-                // Грязь — тёмные пиксели
+                // ✅ ГРЯЗЬ — полупрозрачная, чтобы ковёр просвечивал
+                // Максимальная плотность 0.65 — ковёр виден всегда
                 if (dirt > 0.05) {
-                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.85);
+                    this.dirtGfx.fillStyle(0x1a0f05, dirt * 0.65);
                     this.dirtGfx.fillRect(px, py, cs, cs);
                 }
                 
                 // Мыло — белая пена
                 if (soap > 0.05) {
-                    this.soapGfx.fillStyle(0xFFFFFF, soap * 0.7);
+                    this.soapGfx.fillStyle(0xFFFFFF, soap * 0.5);
                     this.soapGfx.fillRect(px, py, cs, cs);
                 }
             }
         }
     }
 
-    // ============================================
-    // УПРАВЛЕНИЕ
-    // ============================================
     setupCleaning() {
         this.game.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
         this.game.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
