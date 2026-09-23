@@ -38,9 +38,6 @@ const CONFIG = {
     
     progressThreshold: 1.0,
     
-    finishButtonThreshold: 0.99,
-    finishButtonDuration: 1000,
-    
     newCarpetRadiusRequired: 70,
     newCarpetRadiusIncrease: 10,
     
@@ -287,10 +284,6 @@ class MainScene extends Phaser.Scene {
         this.celebrationShown = false;
         
         this.inputLocked = false;
-        this.finishButtonActive = false;
-        this.finishAnimating = false;
-        
-        // ✅ Магазин открыт — блокирует ввод по ковру
         this.shopOpen = false;
         
         this.noFoodText = null;
@@ -351,21 +344,10 @@ class MainScene extends Phaser.Scene {
             this.swatterBtnText.setVisible(false);
         }
         
-        this.finishBtnBg = this.add.rectangle(W/2, 1000, 340, 75, 0xFFD700).setDepth(15);
-        this.finishBtnBg.setStrokeStyle(6, 0xFFFFFF);
-        this.finishBtnText = this.add.text(W/2, 1000, '🧹 ДОБИТЬ', {
-            ...TEXT_STYLES.button('#000000', 30)
-        }).setOrigin(0.5).setDepth(16);
-        
-        this.finishBtnBg.setVisible(false);
-        this.finishBtnText.setVisible(false);
-        
-        this.finishBtnBg.setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.finishCarpetFast());
-        
-        this.add.text(W/2, 1080, 'ПОЛУЧИТЬ ДЕНЬГИ', {
-            ...TEXT_STYLES.button('#00FF00', 26),
-            backgroundColor: '#000000', padding: { x: 25, y: 12 }
+        // ✅ Кнопка "ПОЛУЧИТЬ ДЕНЬГИ" — выше, так как кнопки "ДОБИТЬ" больше нет
+        this.add.text(W/2, 1050, 'ПОЛУЧИТЬ ДЕНЬГИ', {
+            ...TEXT_STYLES.button('#00FF00', 30),
+            backgroundColor: '#000000', padding: { x: 30, y: 15 }
         }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => this.finishCarpet());
         
@@ -373,107 +355,6 @@ class MainScene extends Phaser.Scene {
         this.setupCleaning();
         
         this.spawnBugsIfNeeded();
-    }
-
-    showFinishButton() {
-        if (this.finishButtonActive) return;
-        this.finishButtonActive = true;
-        
-        this.finishBtnBg.setVisible(true);
-        this.finishBtnText.setVisible(true);
-        
-        this.tweens.add({
-            targets: [this.finishBtnBg, this.finishBtnText],
-            scaleX: 1.08,
-            scaleY: 1.08,
-            duration: 500,
-            yoyo: true,
-            repeat: -1,
-            ease: 'Sine.easeInOut'
-        });
-    }
-    
-    hideFinishButton() {
-        if (!this.finishButtonActive) return;
-        this.finishButtonActive = false;
-        
-        this.tweens.killTweensOf([this.finishBtnBg, this.finishBtnText]);
-        this.finishBtnBg.setScale(1);
-        this.finishBtnText.setScale(1);
-        
-        this.finishBtnBg.setVisible(false);
-        this.finishBtnText.setVisible(false);
-    }
-    
-    finishCarpetFast() {
-        if (this.finishAnimating) return;
-        if (this.cleanProgress < CONFIG.finishButtonThreshold) return;
-        if (this.shopOpen) return;
-        
-        this.finishAnimating = true;
-        this.hideFinishButton();
-        this.unlockInput();
-        
-        const dirtyCells = [];
-        const cols = this.gridCols;
-        for (let row = 0; row < this.gridRows; row++) {
-            for (let col = 0; col < cols; col++) {
-                if (this.dirtGrid[row * cols + col] > 0.05) {
-                    dirtyCells.push({ row, col });
-                }
-            }
-        }
-        
-        if (dirtyCells.length === 0) {
-            this.finishAnimating = false;
-            this.finishAutoCleanEffect();
-            return;
-        }
-        
-        const tickDelay = 50;
-        const totalTicks = CONFIG.finishButtonDuration / tickDelay;
-        const cellsPerTick = Math.max(1, Math.ceil(dirtyCells.length / totalTicks));
-        
-        let index = 0;
-        
-        this.time.addEvent({
-            delay: tickDelay,
-            repeat: totalTicks,
-            callback: () => {
-                for (let i = 0; i < cellsPerTick && index < dirtyCells.length; i++) {
-                    const cell = dirtyCells[index];
-                    
-                    const px = this.carpetX - this.carpetW/2 + cell.col * this.gridCellSize + this.gridCellSize/2;
-                    const py = this.carpetY - this.carpetH/2 + cell.row * this.gridCellSize + this.gridCellSize/2;
-                    
-                    if (Math.random() < 0.3) {
-                        this.spawnStarsAt(px, py);
-                    }
-                    
-                    this.dirtGrid[cell.row * cols + cell.col] = 0;
-                    index++;
-                }
-                
-                this.needRedrawDirt = true;
-                this.recalcProgressSilent();
-                
-                if (index >= dirtyCells.length) {
-                    this.finishAnimating = false;
-                    this.finishAutoCleanEffect();
-                }
-            }
-        });
-    }
-    
-    finishAutoCleanEffect() {
-        this.cleanProgress = 1.0;
-        this.updateProgressBar();
-        
-        if (!this.celebrationShown) {
-            this.celebrationShown = true;
-            this.spawnCelebration();
-            this.showMessage('Ковёр чистый! ✨');
-        }
     }
 
     spawnBugsIfNeeded() {
@@ -995,17 +876,13 @@ class MainScene extends Phaser.Scene {
         
         const handlePointer = (pointer) => {
             if (this.inputLocked) return;
-            if (this.finishAnimating) return;
-            if (this.shopOpen) return;   // ✅ Магазин открыт — не обрабатываем
+            if (this.shopOpen) return;
             
+            // ✅ Мухобойка — только визуальный прицел, без удара
             if (this.currentTool === 'swatter') {
                 this.drawSwatter(pointer.x, pointer.y);
                 this.swatterGfx.setVisible(true);
                 this.brush.setVisible(false);
-                
-                if (pointer.isDown) {
-                    this.swatAt(pointer.x, pointer.y);
-                }
                 return;
             }
             
@@ -1028,20 +905,39 @@ class MainScene extends Phaser.Scene {
             this.applyTool(localX, localY);
         };
         
+        // ✅ pointerdown — тап. Для мухобойки — удар
         this.input.on('pointerdown', (pointer) => {
             if (this.inputLocked) return;
+            if (this.shopOpen) return;
+            
+            if (this.currentTool === 'swatter') {
+                this.drawSwatter(pointer.x, pointer.y);
+                this.swatterGfx.setVisible(true);
+                this.swatAt(pointer.x, pointer.y);
+                this.isPointerDown = false;
+                return;
+            }
+            
             this.isPointerDown = true;
             this.lastLocalX = -9999;
             this.lastLocalY = -9999;
             handlePointer(pointer);
         });
         
+        // ✅ pointermove — для мухобойки только двигаем прицел, без удара
         this.input.on('pointermove', (pointer) => {
             if (this.inputLocked) return;
             if (!pointer.isDown) {
                 this.isPointerDown = false;
                 return;
             }
+            
+            if (this.currentTool === 'swatter') {
+                this.drawSwatter(pointer.x, pointer.y);
+                this.swatterGfx.setVisible(true);
+                return;
+            }
+            
             handlePointer(pointer);
         });
         
@@ -1089,7 +985,6 @@ class MainScene extends Phaser.Scene {
     }
 
     applyTool(localX, localY) {
-        // ✅ Если магазин открыт — не чистим
         if (this.shopOpen) return;
         
         if (GameState.food <= 0) {
@@ -1173,7 +1068,6 @@ class MainScene extends Phaser.Scene {
             }
             if (allClean) {
                 this.cleanProgress = 1.0;
-                this.hideFinishButton();
                 if (!this.celebrationShown) {
                     this.celebrationShown = true;
                     this.spawnCelebration();
@@ -1181,20 +1075,9 @@ class MainScene extends Phaser.Scene {
                 }
             } else {
                 this.cleanProgress = 0.99;
-                this.showFinishButton();
             }
-        } else {
-            this.hideFinishButton();
         }
         
-        this.updateProgressBar();
-    }
-
-    recalcProgressSilent() {
-        let total = 0;
-        const cells = this.dirtGrid.length;
-        for (let i = 0; i < cells; i++) total += (1 - this.dirtGrid[i]);
-        this.cleanProgress = total / cells;
         this.updateProgressBar();
     }
 
@@ -1219,7 +1102,6 @@ class MainScene extends Phaser.Scene {
         }
         
         this.unlockInput();
-        this.hideFinishButton();
         
         const baseReward = Math.floor(
             CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)
@@ -1265,7 +1147,6 @@ class MainScene extends Phaser.Scene {
     }
 
     openShop() {
-        // ✅ Блокируем ввод по ковру
         this.shopOpen = true;
         
         const W = 720, H = 1280;
@@ -1385,7 +1266,7 @@ class MainScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => { 
               els.forEach(el => el.destroy()); 
-              this.shopOpen = false;   // ✅ Снимаем блокировку
+              this.shopOpen = false;
           });
         els.push(cb);
     }
@@ -1393,9 +1274,8 @@ class MainScene extends Phaser.Scene {
     async buyNewCarpet() {
         if (!canBuyNewCarpet()) return;
         
-        this.shopOpen = false;   // ✅ Магазин закрыт после покупки
+        this.shopOpen = false;
         this.unlockInput();
-        this.hideFinishButton();
         
         GameState.money = 0;
         GameState.toolLevel = CONFIG.startToolLevel;
