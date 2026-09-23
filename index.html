@@ -21,9 +21,6 @@
 <body>
 
 <script>
-// ============================================
-// ⚙️ НАСТРОЙКИ
-// ============================================
 const CONFIG = {
     startMoney: 0, startFood: 3, startToolLevel: 1,
     foodPrice: 10, toolBasePrice: 50,
@@ -38,18 +35,12 @@ const CONFIG = {
 
 const CARPET_IMAGE = 'carpet.png';
 
-// ============================================
-// СОСТОЯНИЕ
-// ============================================
 const GameState = {
     money: CONFIG.startMoney, food: CONFIG.startFood,
     toolLevel: CONFIG.startToolLevel
 };
 let ysdk = null;
 
-// ============================================
-// YANDEX SDK
-// ============================================
 async function initYandexSDK() {
     try {
         if (typeof YaGames === 'undefined') throw new Error('no SDK');
@@ -94,9 +85,6 @@ async function saveGame() {
     } catch (e) {}
 }
 
-// ============================================
-// СЦЕНА ЗАГРУЗКИ
-// ============================================
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
@@ -115,9 +103,6 @@ class PreloadScene extends Phaser.Scene {
     }
 }
 
-// ============================================
-// ОСНОВНАЯ СЦЕНА
-// ============================================
 class MainScene extends Phaser.Scene {
     constructor() { super('MainScene'); }
 
@@ -147,59 +132,23 @@ class MainScene extends Phaser.Scene {
         }
         
         // ============================================
-        // СЕТКА (крупнее = быстрее)
+        // СЕТКА
         // ============================================
-        this.gridCellSize = 25;
+        this.gridCellSize = 20;
         this.gridCols = Math.ceil(this.carpetW / this.gridCellSize);
         this.gridRows = Math.ceil(this.carpetH / this.gridCellSize);
         
-        // ============================================
-        // CANVAS-ТЕКСТУРА для грязи (вместо graphics)
-        // ============================================
-        this.dirtCanvas = document.createElement('canvas');
-        this.dirtCanvas.width = this.gridCols;
-        this.dirtCanvas.height = this.gridRows;
-        this.dirtCtx = this.dirtCanvas.getContext('2d');
-        this.dirtImageData = this.dirtCtx.createImageData(this.gridCols, this.gridRows);
-        
-        this.soapCanvas = document.createElement('canvas');
-        this.soapCanvas.width = this.gridCols;
-        this.soapCanvas.height = this.gridRows;
-        this.soapCtx = this.soapCanvas.getContext('2d');
-        this.soapImageData = this.soapCtx.createImageData(this.gridCols, this.gridRows);
-        
-        // Заполняем грязь (тёмный цвет, alpha 140)
-        const d = this.dirtImageData.data;
-        for (let i = 0; i < d.length; i += 4) {
-            d[i] = 42; d[i+1] = 26; d[i+2] = 10; d[i+3] = 140;
-        }
-        this.dirtCtx.putImageData(this.dirtImageData, 0, 0);
-        
-        // Мыло — прозрачное
-        this.soapCtx.putImageData(this.soapImageData, 0, 0);
-        
-        // Массивы значений
         this.dirtGrid = new Float32Array(this.gridCols * this.gridRows);
         this.soapGrid = new Float32Array(this.gridCols * this.gridRows);
         this.dirtGrid.fill(1.0);
         
-        // ============================================
-        // ОТОБРАЖЕНИЕ CANVAS КАК ТЕКСТУР
-        // ============================================
-        if (!this.textures.exists('dirtTex')) {
-            this.textures.addCanvas('dirtTex', this.dirtCanvas);
-        }
-        if (!this.textures.exists('soapTex')) {
-            this.textures.addCanvas('soapTex', this.soapCanvas);
-        }
+        // Графика (рисуем раз в кадр)
+        this.dirtGfx = this.add.graphics().setDepth(1);
+        this.soapGfx = this.add.graphics().setDepth(2);
         
-        this.dirtSprite = this.add.image(this.carpetX, this.carpetY, 'dirtTex');
-        this.dirtSprite.setDisplaySize(this.carpetW, this.carpetH);
-        this.dirtSprite.setDepth(1);
-        
-        this.soapSprite = this.add.image(this.carpetX, this.carpetY, 'soapTex');
-        this.soapSprite.setDisplaySize(this.carpetW, this.carpetH);
-        this.soapSprite.setDepth(2);
+        // ✅ Флаг «нужно перерисовать»
+        this.needRedrawDirt = true;
+        this.needRedrawSoap = true;
         
         this.carpetBounds = new Phaser.Geom.Rectangle(
             this.carpetX - this.carpetW/2, this.carpetY - this.carpetH/2,
@@ -237,7 +186,6 @@ class MainScene extends Phaser.Scene {
             .setDepth(10).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.openShop());
         
-        // Кнопки
         const btnY = 1200;
         this.soapBtnBg = this.add.rectangle(180, btnY, 280, 80, 0x4A90D9).setDepth(10);
         this.soapBtnBg.setStrokeStyle(4, 0xFFFFFF);
@@ -277,31 +225,54 @@ class MainScene extends Phaser.Scene {
     }
 
     // ============================================
-    // ОБНОВЛЕНИЕ CANVAS-ТЕКСТУР (только изменённые ячейки)
+    // ОТРИСОВКА — ТОЛЬКО КОГДА ЕСТЬ ФЛАГ
     // ============================================
-    updateDirtPixel(index) {
-        const dirt = this.dirtGrid[index];
-        const i = index * 4;
-        const d = this.dirtImageData.data;
-        d[i+3] = Math.floor(dirt * 140); // alpha
+    drawDirt() {
+        this.dirtGfx.clear();
+        const cx = this.carpetX - this.carpetW / 2;
+        const cy = this.carpetY - this.carpetH / 2;
+        const cs = this.gridCellSize;
+        const cols = this.gridCols;
+        
+        for (let row = 0; row < this.gridRows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const dirt = this.dirtGrid[row * cols + col];
+                if (dirt < 0.05) continue;
+                const px = cx + col * cs;
+                const py = cy + row * cs;
+                this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.55);
+                this.dirtGfx.fillRect(px, py, cs, cs);
+            }
+        }
+        this.needRedrawDirt = false;
     }
 
-    updateSoapPixel(index) {
-        const soap = this.soapGrid[index];
-        const i = index * 4;
-        const s = this.soapImageData.data;
-        s[i] = 255; s[i+1] = 255; s[i+2] = 255;
-        s[i+3] = Math.floor(soap * 180); // alpha
+    drawSoap() {
+        this.soapGfx.clear();
+        const cx = this.carpetX - this.carpetW / 2;
+        const cy = this.carpetY - this.carpetH / 2;
+        const cs = this.gridCellSize;
+        const cols = this.gridCols;
+        
+        for (let row = 0; row < this.gridRows; row++) {
+            for (let col = 0; col < cols; col++) {
+                const soap = this.soapGrid[row * cols + col];
+                if (soap < 0.05) continue;
+                const px = cx + col * cs;
+                const py = cy + row * cs;
+                this.soapGfx.fillStyle(0xFFFFFF, soap * 0.45);
+                this.soapGfx.fillRect(px, py, cs, cs);
+            }
+        }
+        this.needRedrawSoap = false;
     }
 
-    flushDirt() {
-        this.dirtCtx.putImageData(this.dirtImageData, 0, 0);
-        this.dirtSprite.texture.refresh();
-    }
-
-    flushSoap() {
-        this.soapCtx.putImageData(this.soapImageData, 0, 0);
-        this.soapSprite.texture.refresh();
+    // ============================================
+    // ОБНОВЛЕНИЕ КАЖДЫЙ КАДР — перерисовка если нужно
+    // ============================================
+    update() {
+        if (this.needRedrawDirt) this.drawDirt();
+        if (this.needRedrawSoap) this.drawSoap();
     }
 
     setupCleaning() {
@@ -317,9 +288,10 @@ class MainScene extends Phaser.Scene {
             const localX = pointer.x - (this.carpetX - this.carpetW/2);
             const localY = pointer.y - (this.carpetY - this.carpetH/2);
             
+            // Пропуск слишком близких точек
             const dx = localX - this.lastLocalX;
             const dy = localY - this.lastLocalY;
-            if (dx*dx + dy*dy < 100) return; // пропуск близких точек
+            if (dx*dx + dy*dy < 64) return;
             
             this.lastLocalX = localX;
             this.lastLocalY = localY;
@@ -340,20 +312,13 @@ class MainScene extends Phaser.Scene {
         this.input.on('pointerup', () => {
             this.isPointerDown = false;
             this.brush.setVisible(false);
-            this.flushDirt();
-            this.flushSoap();
         });
         this.input.on('pointerout', () => {
             this.isPointerDown = false;
             this.brush.setVisible(false);
-            this.flushDirt();
-            this.flushSoap();
         });
     }
 
-    // ============================================
-    // ПРИМЕНЕНИЕ — БЕЗ ПЕРЕРИСОВКИ КАЖДЫЙ РАЗ
-    // ============================================
     applyTool(localX, localY) {
         const radius = CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus);
         const cs = this.gridCellSize;
@@ -383,32 +348,27 @@ class MainScene extends Phaser.Scene {
                 if (this.currentTool === 'soap') {
                     if (this.soapGrid[index] < 1.0) {
                         this.soapGrid[index] = Math.min(1.0, this.soapGrid[index] + CONFIG.soapPower * falloff);
-                        this.updateSoapPixel(index);
                         soapChanged = true;
                     }
                 } else {
                     if (this.soapGrid[index] < CONFIG.soapThreshold) continue;
                     if (this.dirtGrid[index] > 0) {
                         this.dirtGrid[index] = Math.max(0, this.dirtGrid[index] - CONFIG.eraseStrength * falloff);
-                        this.updateDirtPixel(index);
                         dirtChanged = true;
-                        
-                        // Мыло расходуется
                         this.soapGrid[index] = Math.max(0, this.soapGrid[index] - 0.1);
-                        this.updateSoapPixel(index);
                         soapChanged = true;
                     }
                 }
             }
         }
         
-        // ✅ Обновляем canvas ТОЛЬКО ОДИН РАЗ в конце
+        // ✅ Только ставим флаг, перерисовка будет в update()
         if (dirtChanged) {
-            this.flushDirt();
+            this.needRedrawDirt = true;
             this.recalcProgress();
         }
         if (soapChanged) {
-            this.flushSoap();
+            this.needRedrawSoap = true;
         }
     }
 
@@ -448,19 +408,10 @@ class MainScene extends Phaser.Scene {
         await saveGame();
         this.showMessage(`+${reward} 💰!`);
         
-        // Сброс
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
-        const d = this.dirtImageData.data;
-        for (let i = 0; i < d.length; i += 4) {
-            d[i] = 42; d[i+1] = 26; d[i+2] = 10; d[i+3] = 140;
-        }
-        const s = this.soapImageData.data;
-        for (let i = 0; i < s.length; i += 4) {
-            s[i+3] = 0;
-        }
-        this.flushDirt();
-        this.flushSoap();
+        this.needRedrawDirt = true;
+        this.needRedrawSoap = true;
         this.cleanProgress = 0;
         this.updateProgressBar();
     }
@@ -528,9 +479,6 @@ class MainScene extends Phaser.Scene {
     }
 }
 
-// ============================================
-// ЗАПУСК
-// ============================================
 const phaserConfig = {
     type: Phaser.CANVAS,
     width: 720, height: 1280,
