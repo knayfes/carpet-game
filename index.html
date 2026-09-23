@@ -38,7 +38,6 @@ const CONFIG = {
     
     progressThreshold: 1.0,
     
-    // ✅ Кнопка "ДОБИТЬ" — порог и длительность
     finishButtonThreshold: 0.99,
     finishButtonDuration: 1000,
     
@@ -288,7 +287,7 @@ class MainScene extends Phaser.Scene {
         this.celebrationShown = false;
         
         this.inputLocked = false;
-        this.finishButtonActive = false;   // ✅ флаг для кнопки "ДОБИТЬ"
+        this.finishButtonActive = false;
         this.finishAnimating = false;
         
         this.noFoodText = null;
@@ -350,12 +349,12 @@ class MainScene extends Phaser.Scene {
             this.swatterBtnText.setVisible(false);
         }
         
-        // ✅ Кнопка "ДОБИТЬ" — скрыта, пока прогресс < 99%
-        this.finishBtnBg = this.add.rectangle(W/2, 1030, 320, 70, 0xFFD700).setDepth(10);
-        this.finishBtnBg.setStrokeStyle(5, 0xFFFFFF);
-        this.finishBtnText = this.add.text(W/2, 1030, '🧹 ДОБИТЬ', {
+        // ✅ Кнопка "ДОБИТЬ" — на y=1000, глубина 15-16 (выше других)
+        this.finishBtnBg = this.add.rectangle(W/2, 1000, 340, 75, 0xFFD700).setDepth(15);
+        this.finishBtnBg.setStrokeStyle(6, 0xFFFFFF);
+        this.finishBtnText = this.add.text(W/2, 1000, '🧹 ДОБИТЬ', {
             ...TEXT_STYLES.button('#000000', 30)
-        }).setOrigin(0.5).setDepth(11);
+        }).setOrigin(0.5).setDepth(16);
         
         this.finishBtnBg.setVisible(false);
         this.finishBtnText.setVisible(false);
@@ -363,9 +362,9 @@ class MainScene extends Phaser.Scene {
         this.finishBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.finishCarpetFast());
         
-        // Основная кнопка "ПОЛУЧИТЬ ДЕНЬГИ" (невидимая, но работает через finishCarpet)
-        this.add.text(W/2, 1100, 'ПОЛУЧИТЬ ДЕНЬГИ', {
-            ...TEXT_STYLES.button('#00FF00', 28),
+        // Кнопка "ПОЛУЧИТЬ ДЕНЬГИ" — на y=1080
+        this.add.text(W/2, 1080, 'ПОЛУЧИТЬ ДЕНЬГИ', {
+            ...TEXT_STYLES.button('#00FF00', 26),
             backgroundColor: '#000000', padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => this.finishCarpet());
@@ -383,10 +382,12 @@ class MainScene extends Phaser.Scene {
         if (this.finishButtonActive) return;
         this.finishButtonActive = true;
         
+        console.log('Кнопка ДОБИТЬ: показана');
+        
         this.finishBtnBg.setVisible(true);
         this.finishBtnText.setVisible(true);
         
-        // Пульсация кнопки
+        // Пульсация
         this.tweens.add({
             targets: [this.finishBtnBg, this.finishBtnText],
             scaleX: 1.08,
@@ -419,6 +420,8 @@ class MainScene extends Phaser.Scene {
         this.hideFinishButton();
         this.unlockInput();
         
+        console.log('Кнопка ДОБИТЬ: запуск анимации');
+        
         // Собираем оставшиеся грязные ячейки
         const dirtyCells = [];
         const cols = this.gridCols;
@@ -436,7 +439,6 @@ class MainScene extends Phaser.Scene {
             return;
         }
         
-        // За 1 секунду = 20 тиков по 50 мс
         const tickDelay = 50;
         const totalTicks = CONFIG.finishButtonDuration / tickDelay;
         const cellsPerTick = Math.max(1, Math.ceil(dirtyCells.length / totalTicks));
@@ -450,7 +452,6 @@ class MainScene extends Phaser.Scene {
                 for (let i = 0; i < cellsPerTick && index < dirtyCells.length; i++) {
                     const cell = dirtyCells[index];
                     
-                    // ✅ Звёздочка на месте ячейки
                     const px = this.carpetX - this.carpetW/2 + cell.col * this.gridCellSize + this.gridCellSize/2;
                     const py = this.carpetY - this.carpetH/2 + cell.row * this.gridCellSize + this.gridCellSize/2;
                     
@@ -591,7 +592,6 @@ class MainScene extends Phaser.Scene {
         
         this.showSwatEffect(x, y);
         
-        let killedAny = false;
         const radius = CONFIG.swatterRadius;
         const radiusSq = radius * radius;
         
@@ -603,11 +603,8 @@ class MainScene extends Phaser.Scene {
             const dy = bug.y - y;
             if (dx*dx + dy*dy <= radiusSq) {
                 this.killBug(bug);
-                killedAny = true;
             }
         }
-        
-        return killedAny;
     }
     
     showSwatEffect(x, y) {
@@ -1174,7 +1171,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ recalcProgress теперь показывает кнопку "ДОБИТЬ" вместо автодоочистки
     recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
@@ -1188,7 +1184,7 @@ class MainScene extends Phaser.Scene {
             }
             if (allClean) {
                 this.cleanProgress = 1.0;
-                this.hideFinishButton();   // ✅ кнопка не нужна, всё чисто
+                this.hideFinishButton();
                 if (!this.celebrationShown) {
                     this.celebrationShown = true;
                     this.spawnCelebration();
@@ -1196,7 +1192,7 @@ class MainScene extends Phaser.Scene {
                 }
             } else {
                 this.cleanProgress = 0.99;
-                // ✅ Показываем кнопку "ДОБИТЬ"
+                console.log('Прогресс 99%, показываем кнопку ДОБИТЬ');
                 this.showFinishButton();
             }
         } else {
@@ -1402,6 +1398,7 @@ class MainScene extends Phaser.Scene {
         if (!canBuyNewCarpet()) return;
         
         this.unlockInput();
+        this.hideFinishButton();
         
         GameState.money = 0;
         GameState.toolLevel = CONFIG.startToolLevel;
