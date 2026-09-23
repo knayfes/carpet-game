@@ -35,13 +35,16 @@ const CONFIG = {
     soapThreshold: 0.01,
     eraseStrength: 0.9,
     
-    // ✅ 98% реальной чистоты = 100% в игре
     progressThreshold: 0.98,
     
-    // Штраф за большой радиус
     bigRadiusThreshold: 70,
     rewardPenaltyPerPixel: 0.02,
-    minRewardMultiplier: 0.3
+    minRewardMultiplier: 0.3,
+    
+    // ✅ Звёздочки
+    starChance: 0.35,          // шанс появления звезды за одно движение (35%)
+    starLifetime: 800,         // сколько живёт звезда (мс)
+    starCount: 1               // сколько звёзд за раз
 };
 
 const SAVE_KEY = 'carpetGameStats_v2';
@@ -105,9 +108,6 @@ async function saveGame() {
     } catch (e) {}
 }
 
-// ============================================
-// ВСПОМОГАТЕЛЬНЫЕ
-// ============================================
 function getCurrentRadius() {
     return Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
 }
@@ -166,9 +166,9 @@ class MainScene extends Phaser.Scene {
             this.carpetImg.setDepth(0);
         } else {
             this.carpetImg = this.add.rectangle(
-                this.carpetX, this.carpetY, this.carpetW, this.carpetH, 0x8B4513
+                this.carpetX, this.carpetY, this.carpetW, this.carpetH, 0xC97A3F
             );
-            this.carpetImg.setStrokeStyle(6, 0x654321);
+            this.carpetImg.setStrokeStyle(6, 0x8B4513);
             this.carpetImg.setDepth(0);
         }
         
@@ -200,6 +200,9 @@ class MainScene extends Phaser.Scene {
         
         this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
+        
+        // ✅ Контейнер для звёздочек (чтобы были поверх ковра, но под UI)
+        this.starsLayer = this.add.container(0, 0).setDepth(5);
         
         // UI
         this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, {
@@ -261,6 +264,43 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    // ============================================
+    // ✅ ЗВЁЗДОЧКИ
+    // ============================================
+    spawnStars(x, y) {
+        // Проверяем шанс появления
+        if (Math.random() > CONFIG.starChance) return;
+        
+        const count = CONFIG.starCount;
+        for (let i = 0; i < count; i++) {
+            // Создаём звезду как текст (⭐ или ✨)
+            const star = this.add.text(x, y, Math.random() > 0.5 ? '⭐' : '✨', {
+                fontSize: (20 + Math.random() * 15) + 'px',
+                fontFamily: 'Arial'
+            }).setOrigin(0.5);
+            star.setDepth(5);
+            
+            // Случайное направление разлёта
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 30 + Math.random() * 60;
+            const targetX = x + Math.cos(angle) * distance;
+            const targetY = y + Math.sin(angle) * distance - 40; // чуть вверх
+            
+            // Анимация: разлёт + исчезновение
+            this.tweens.add({
+                targets: star,
+                x: targetX,
+                y: targetY,
+                alpha: { from: 1, to: 0 },
+                scale: { from: 1, to: 0.3 },
+                angle: { from: 0, to: (Math.random() - 0.5) * 360 },
+                duration: CONFIG.starLifetime,
+                ease: 'Cubic.easeOut',
+                onComplete: () => star.destroy()
+            });
+        }
+    }
+
     drawDirt() {
         this.dirtGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
@@ -271,11 +311,16 @@ class MainScene extends Phaser.Scene {
         for (let row = 0; row < this.gridRows; row++) {
             for (let col = 0; col < cols; col++) {
                 const dirt = this.dirtGrid[row * cols + col];
-                if (dirt < 0.05) continue;
                 const px = cx + col * cs;
                 const py = cy + row * cs;
-                this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.65);
-                this.dirtGfx.fillRect(px, py, cs, cs);
+                
+                if (dirt > 0.05) {
+                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.65);
+                    this.dirtGfx.fillRect(px, py, cs, cs);
+                } else {
+                    this.dirtGfx.fillStyle(0xFFFFFF, 0.08);
+                    this.dirtGfx.fillRect(px, py, cs, cs);
+                }
             }
         }
         this.needRedrawDirt = false;
@@ -362,6 +407,7 @@ class MainScene extends Phaser.Scene {
         const radiusSq = radius * radius;
         let dirtChanged = false;
         let soapChanged = false;
+        let erasedSomething = false;
         
         for (let row = minRow; row <= maxRow; row++) {
             for (let col = minCol; col <= maxCol; col++) {
@@ -383,13 +429,23 @@ class MainScene extends Phaser.Scene {
                 } else {
                     if (this.soapGrid[index] < CONFIG.soapThreshold) continue;
                     if (this.dirtGrid[index] > 0.01) {
-                        this.dirtGrid[index] = Math.max(0, this.dirtGrid[index] - CONFIG.eraseStrength * falloff);
+                        const before = this.dirtGrid[index];
+                        this.dirtGrid[index] = Math.max(0, before - CONFIG.eraseStrength * falloff);
                         dirtChanged = true;
+                        erasedSomething = true;
                         this.soapGrid[index] = Math.max(0, this.soapGrid[index] - 0.05);
                         soapChanged = true;
                     }
                 }
             }
+        }
+        
+        // ✅ Звёздочка вылетает, только когда реально стирается грязь
+        if (erasedSomething) {
+            // Координаты на экране
+            const screenX = localX + (this.carpetX - this.carpetW/2);
+            const screenY = localY + (this.carpetY - this.carpetH/2);
+            this.spawnStars(screenX, screenY);
         }
         
         if (dirtChanged) {
@@ -401,7 +457,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ Прогресс: 98%+ показывается как 100%
     recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
@@ -409,12 +464,9 @@ class MainScene extends Phaser.Scene {
             total += (1 - this.dirtGrid[i]);
         }
         this.cleanProgress = total / cells;
-        
-        // Если реально почищено на 98% — считаем за 100%
         if (this.cleanProgress >= CONFIG.progressThreshold) {
             this.cleanProgress = 1.0;
         }
-        
         this.updateProgressBar();
     }
 
