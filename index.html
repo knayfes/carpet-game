@@ -258,13 +258,8 @@ class MainScene extends Phaser.Scene {
         this.drawCarpet();
         
         this.gridCellSize = 20;
-        // ✅ Сетка меньше на 2 ячейки (по 1 с каждого края)
-        this.gridCols = Math.ceil(this.carpetW / this.gridCellSize) - 2;
-        this.gridRows = Math.ceil(this.carpetH / this.gridCellSize) - 2;
-        
-        // ✅ Сдвиг для отрисовки и координат
-        this.gridOffsetX = this.carpetX - this.carpetW / 2 + this.gridCellSize;
-        this.gridOffsetY = this.carpetY - this.carpetH / 2 + this.gridCellSize;
+        this.gridCols = Math.ceil(this.carpetW / this.gridCellSize);
+        this.gridRows = Math.ceil(this.carpetH / this.gridCellSize);
         
         this.dirtGrid = new Float32Array(this.gridCols * this.gridRows);
         this.soapGrid = new Float32Array(this.gridCols * this.gridRows);
@@ -324,6 +319,7 @@ class MainScene extends Phaser.Scene {
             .setDepth(10).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.openShop());
         
+        // ✅ Кнопки — 2 на 1-м ковре по центру, 3 со 2-го
         const btnY = 1200;
         const hasSwatter = GameState.carpetIndex >= 2;
         
@@ -827,13 +823,12 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ drawDirt со сдвигом на 1 ячейку внутрь
     drawDirt() {
         this.dirtGfx.clear();
+        const cx = this.carpetX - this.carpetW / 2;
+        const cy = this.carpetY - this.carpetH / 2;
         const cs = this.gridCellSize;
         const cols = this.gridCols;
-        const cx = this.gridOffsetX;
-        const cy = this.gridOffsetY;
         
         for (let row = 0; row < this.gridRows; row++) {
             for (let col = 0; col < cols; col++) {
@@ -853,14 +848,12 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ drawSoap со сдвигом на 1 ячейку внутрь
     drawSoap() {
         this.soapGfx.clear();
+        const cx = this.carpetX - this.carpetW / 2;
+        const cy = this.carpetY - this.carpetH / 2;
         const cs = this.gridCellSize;
         const cols = this.gridCols;
-        const cx = this.gridOffsetX;
-        const cy = this.gridOffsetY;
-        
         for (let row = 0; row < this.gridRows; row++) {
             for (let col = 0; col < cols; col++) {
                 const soap = this.soapGrid[row * cols + col];
@@ -991,7 +984,6 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    // ✅ applyTool со сдвигом на 1 ячейку внутрь
     applyTool(localX, localY) {
         if (this.shopOpen) return;
         
@@ -1010,14 +1002,10 @@ class MainScene extends Phaser.Scene {
         const cs = this.gridCellSize;
         const cols = this.gridCols;
         
-        // ✅ Сдвигаем координаты на 1 ячейку внутрь
-        const adjLocalX = localX - cs;
-        const adjLocalY = localY - cs;
-        
-        const minCol = Math.max(0, Math.floor((adjLocalX - radius) / cs));
-        const maxCol = Math.min(cols - 1, Math.floor((adjLocalX + radius) / cs));
-        const minRow = Math.max(0, Math.floor((adjLocalY - radius) / cs));
-        const maxRow = Math.min(this.gridRows - 1, Math.floor((adjLocalY + radius) / cs));
+        const minCol = Math.max(0, Math.floor((localX - radius) / cs));
+        const maxCol = Math.min(cols - 1, Math.floor((localX + radius) / cs));
+        const minRow = Math.max(0, Math.floor((localY - radius) / cs));
+        const maxRow = Math.min(this.gridRows - 1, Math.floor((localY + radius) / cs));
         
         const radiusSq = radius * radius;
         let dirtChanged = false, soapChanged = false, erasedSomething = false;
@@ -1026,8 +1014,8 @@ class MainScene extends Phaser.Scene {
             for (let col = minCol; col <= maxCol; col++) {
                 const ccx = col * cs + cs / 2;
                 const ccy = row * cs + cs / 2;
-                const dx = ccx - adjLocalX;
-                const dy = ccy - adjLocalY;
+                const dx = ccx - localX;
+                const dy = ccy - localY;
                 const distSq = dx*dx + dy*dy;
                 if (distSq > radiusSq) continue;
                 
@@ -1311,6 +1299,7 @@ class MainScene extends Phaser.Scene {
         this.bugs.forEach(bug => bug.destroy());
         this.bugs = [];
         
+        // ✅ Показываем мухобойку и сдвигаем МЫЛО и СМЫТЬ влево
         if (GameState.carpetIndex >= 2) {
             this.swatterBtnBg.setVisible(true);
             this.swatterBtnText.setVisible(true);
