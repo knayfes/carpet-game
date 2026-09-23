@@ -35,18 +35,17 @@ const CONFIG = {
     soapThreshold: 0.01,
     eraseStrength: 0.9,
     
-    progressThreshold: 0.98,
+    // ✅ Честный порог — 100%
+    progressThreshold: 1.0,
     
     bigRadiusThreshold: 70,
     rewardPenaltyPerPixel: 0.02,
     minRewardMultiplier: 0.3,
     
-    // ✅ Меньше звёзд при чистке
     starChance: 0.2,
     starLifetime: 700,
     starCount: 1,
     
-    // ✅ Меньше звёзд в салюте
     finishStarCount: 25,
     finishStarDuration: 1800
 };
@@ -206,9 +205,6 @@ class MainScene extends Phaser.Scene {
         this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
         
-        // ✅ Слой звёзд — вынесен отдельно, чтобы можно было очистить
-        this.starsLayer = this.add.container(0, 0).setDepth(5);
-        
         // UI
         this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, {
             fontSize: '36px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
@@ -269,9 +265,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ============================================
-    // ЗВЁЗДОЧКИ ПРИ ЧИСТКЕ
-    // ============================================
     spawnStars(x, y) {
         if (Math.random() > CONFIG.starChance) return;
         
@@ -300,9 +293,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ============================================
-    // САЛЮТ ПРИ 100%
-    // ============================================
     spawnCelebration() {
         const W = 720, H = 1280;
         const count = CONFIG.finishStarCount;
@@ -505,6 +495,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    // ✅ Честный прогресс — 100% только когда весь ковёр чист
     recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
@@ -513,13 +504,22 @@ class MainScene extends Phaser.Scene {
         }
         this.cleanProgress = total / cells;
         
-        if (this.cleanProgress >= CONFIG.progressThreshold) {
-            this.cleanProgress = 1.0;
-            
-            if (!this.celebrationShown) {
-                this.celebrationShown = true;
-                this.spawnCelebration();
-                this.showMessage('Ковёр чистый! ✨');
+        // Проверяем, что реально все ячейки чистые (погрешность 0.05)
+        if (this.cleanProgress >= 0.9999) {
+            let allClean = true;
+            for (let i = 0; i < cells; i++) {
+                if (this.dirtGrid[i] > 0.05) { allClean = false; break; }
+            }
+            if (allClean) {
+                this.cleanProgress = 1.0;
+                
+                if (!this.celebrationShown) {
+                    this.celebrationShown = true;
+                    this.spawnCelebration();
+                    this.showMessage('Ковёр чистый! ✨');
+                }
+            } else {
+                this.cleanProgress = 0.99;
             }
         }
         
@@ -534,7 +534,7 @@ class MainScene extends Phaser.Scene {
 
     async finishCarpet() {
         if (this.cleanProgress < 1.0) {
-            this.showMessage('Ковёр ещё грязный!');
+            this.showMessage('Ковёр ещё грязный! Нужно 100%.');
             return;
         }
         
@@ -558,22 +558,21 @@ class MainScene extends Phaser.Scene {
             this.showMessage(`+${reward} 💰!`);
         }
         
-        // ✅ Убираем все висящие звёзды
+        // Убираем все висящие звёзды
         this.children.list.forEach(child => {
             if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) {
                 child.destroy();
             }
         });
         
-        // Сброс прогресса
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
         this.needRedrawDirt = true;
         this.needRedrawSoap = true;
         this.cleanProgress = 0;
         this.celebrationShown = false;
-        this.isPointerDown = false;   // ✅ Сброс тача, чтобы можно было чистить
-        this.lastLocalX = -9999;      // ✅ Сброс последней позиции
+        this.isPointerDown = false;
+        this.lastLocalX = -9999;
         this.lastLocalY = -9999;
         this.updateProgressBar();
     }
