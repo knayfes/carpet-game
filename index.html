@@ -25,11 +25,11 @@
 // ⚙️ НАСТРОЙКИ
 // ============================================
 const CONFIG = {
-    startMoney: 0, startFood: 3, startToolLevel: 1,
-    foodPrice: 10, toolBasePrice: 50,
+    startMoney: 10, startFood: 3, startToolLevel: 1,
+    foodPrice: 20, toolBasePrice: 50,
     rewardMin: 50, rewardMax: 100,
-    brushRadius: 30, toolRadiusBonus: 0.05,
-    eraseStrength: 0.15, finishThreshold: 1.0,
+    brushRadius: 35, toolRadiusBonus: 0.05,
+    eraseStrength: 0.5, finishThreshold: 1.0,
     soapThreshold: 0.3
 };
 
@@ -309,13 +309,13 @@ class MainScene extends Phaser.Scene {
                 
                 // ✅ ГРЯЗЬ: максимум 0.5 прозрачности — ковёр всегда виден
                 if (dirt > 0.05) {
-                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 1.2);
+                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.8);
                     this.dirtGfx.fillRect(px, py, cs, cs);
                 }
                 
                 // Мыло: белая пена
                 if (soap > 0.05) {
-                    this.soapGfx.fillStyle(0xFFFFFF, soap * 0.8);
+                    this.soapGfx.fillStyle(0xFFFFFF, soap * 0.5);
                     this.soapGfx.fillRect(px, py, cs, cs);
                 }
             }
