@@ -22,20 +22,24 @@
 
 <script>
 // ============================================
-// ⚙️ НАСТРОЙКИ
+// ⚙️ НАСТРОЙКИ — ОПТИМИЗИРОВАННЫЕ
 // ============================================
 const CONFIG = {
     startMoney: 10, startFood: 3, startToolLevel: 1,
-    foodPrice: 20, toolBasePrice: 50,
+    foodPrice: 10, toolBasePrice: 50,
     rewardMin: 50, rewardMax: 100,
-    brushRadius: 35, toolRadiusBonus: 0.05,
-    eraseStrength: 0.5, finishThreshold: 1.0,
-    soapThreshold: 0.3
+    
+    brushRadius: 35,
+    toolRadiusBonus: 0.05,
+    
+    // ✅ БЫСТРОЕ СТИРАНИЕ
+    soapPower: 1.0,         // мыло наносится мгновенно за 1 проход
+    eraseStrength: 0.9,     // смывание: 90% за проход → 2 прохода = чисто
+    soapThreshold: 0.02,    // почти не нужно мыла, чтобы смывать
+    
+    finishThreshold: 1.0
 };
 
-// ============================================
-// 🖼️ КАРТИНКА КОВРА
-// ============================================
 const CARPET_IMAGE = 'carpet.png';
 
 // ============================================
@@ -52,43 +56,35 @@ let ysdk = null;
 // ============================================
 async function initYandexSDK() {
     try {
-        if (typeof YaGames === 'undefined') throw new Error('YaGames не определён');
+        if (typeof YaGames === 'undefined') throw new Error('no SDK');
         ysdk = await YaGames.init();
-        console.log('✅ Yandex SDK загружен');
         const stats = await ysdk.player.getStats(['money', 'food', 'toolLevel']);
         if (stats.money !== undefined) GameState.money = Number(stats.money) || 0;
         if (stats.food !== undefined) GameState.food = Number(stats.food) || 3;
         if (stats.toolLevel !== undefined) GameState.toolLevel = Number(stats.toolLevel) || 1;
+        console.log('✅ SDK загружен');
     } catch (e) {
-        console.log('⚠️ SDK не загружен. Заглушка.');
         ysdk = {
             player: {
                 getStats: async () => {
-                    const saved = localStorage.getItem('carpetGameStats');
-                    return saved ? JSON.parse(saved) : {};
+                    const s = localStorage.getItem('carpetGameStats');
+                    return s ? JSON.parse(s) : {};
                 },
-                setStats: async (stats) => {
-                    localStorage.setItem('carpetGameStats', JSON.stringify(stats));
-                }
+                setStats: async (stats) => localStorage.setItem('carpetGameStats', JSON.stringify(stats))
             },
             adv: {
-                showRewardedVideo: (opts) => {
-                    if (opts?.callbacks?.onRewarded) opts.callbacks.onRewarded();
-                    if (opts?.callbacks?.onClose) opts.callbacks.onClose();
-                },
-                showFullscreenAdv: (opts) => {
-                    if (opts?.callbacks?.onClose) opts.callbacks.onClose();
-                }
+                showRewardedVideo: (o) => { if (o?.callbacks?.onRewarded) o.callbacks.onRewarded(); if (o?.callbacks?.onClose) o.callbacks.onClose(); },
+                showFullscreenAdv: (o) => { if (o?.callbacks?.onClose) o.callbacks.onClose(); }
             },
             features: { LoadingAPI: { ready: () => {} } }
         };
-        const saved = localStorage.getItem('carpetGameStats');
-        if (saved) {
+        const s = localStorage.getItem('carpetGameStats');
+        if (s) {
             try {
-                const data = JSON.parse(saved);
-                if (data.money !== undefined) GameState.money = Number(data.money) || 0;
-                if (data.food !== undefined) GameState.food = Number(data.food) || 3;
-                if (data.toolLevel !== undefined) GameState.toolLevel = Number(data.toolLevel) || 1;
+                const d = JSON.parse(s);
+                if (d.money !== undefined) GameState.money = Number(d.money) || 0;
+                if (d.food !== undefined) GameState.food = Number(d.food) || 3;
+                if (d.toolLevel !== undefined) GameState.toolLevel = Number(d.toolLevel) || 1;
             } catch (err) {}
         }
     }
@@ -111,15 +107,13 @@ class PreloadScene extends Phaser.Scene {
 
     preload() {
         if (CARPET_IMAGE) this.load.image('carpet', CARPET_IMAGE);
-        
-        const w = this.cameras.main.width;
-        const h = this.cameras.main.height;
+        const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w/2, h/2 - 50, 'Загрузка...', {
             fontSize: '40px', fill: '#FFFFFF', fontFamily: 'Arial'
         }).setOrigin(0.5);
         this.add.rectangle(w/2, h/2 + 30, 400, 30, 0x333333);
         const bar = this.add.rectangle(w/2 - 200, h/2 + 30, 0, 26, 0x00FF00).setOrigin(0, 0.5);
-        this.load.on('progress', (value) => { bar.width = 400 * value; });
+        this.load.on('progress', (v) => { bar.width = 400 * v; });
     }
 
     create() {
@@ -146,39 +140,23 @@ class MainScene extends Phaser.Scene {
         this.carpetX = W/2;
         this.carpetY = 700;
         
-        // ============================================
-        // СЛОЙ 1: КОВЁР (внизу)
-        // ============================================
+        // Ковёр
         if (this.textures.exists('carpet')) {
             this.carpetImg = this.add.image(this.carpetX, this.carpetY, 'carpet');
             this.carpetImg.setDisplaySize(this.carpetW, this.carpetH);
             this.carpetImg.setDepth(0);
-            console.log('✅ Ковёр загружен из carpet.png');
+            console.log('✅ Ковёр загружен');
         } else {
             this.carpetImg = this.add.rectangle(
                 this.carpetX, this.carpetY, this.carpetW, this.carpetH, 0x8B4513
             );
             this.carpetImg.setStrokeStyle(6, 0x654321);
             this.carpetImg.setDepth(0);
-            console.log('⚠️ carpet.png НЕ загружен, используется заглушка');
+            console.log('⚠️ Заглушка ковра');
         }
         
-        // ============================================
-        // СЛОЙ 2: ГРЯЗЬ (полупрозрачная, поверх ковра)
-        // ============================================
-        this.dirtGfx = this.add.graphics();
-        this.dirtGfx.setDepth(1);
-        
-        // ============================================
-        // СЛОЙ 3: МЫЛО (поверх грязи)
-        // ============================================
-        this.soapGfx = this.add.graphics();
-        this.soapGfx.setDepth(2);
-        
-        // ============================================
-        // СЕТКА
-        // ============================================
-        this.gridCellSize = 10;
+        // ✅ Сетка крупнее (20px вместо 10) — быстрее и без пропусков
+        this.gridCellSize = 20;
         this.gridCols = Math.ceil(this.carpetW / this.gridCellSize);
         this.gridRows = Math.ceil(this.carpetH / this.gridCellSize);
         
@@ -194,34 +172,34 @@ class MainScene extends Phaser.Scene {
             }
         }
         
+        // Графика
+        this.dirtGfx = this.add.graphics().setDepth(1);
+        this.soapGfx = this.add.graphics().setDepth(2);
+        
         this.drawAll();
         
         this.carpetBounds = new Phaser.Geom.Rectangle(
-            this.carpetX - this.carpetW/2,
-            this.carpetY - this.carpetH/2,
+            this.carpetX - this.carpetW/2, this.carpetY - this.carpetH/2,
             this.carpetW, this.carpetH
         );
         
         this.cleanProgress = 0;
         this.isPointerDown = false;
         this.currentTool = 'soap';
+        this.lastLocalX = -9999;
+        this.lastLocalY = -9999;
         
-        // Кисть (поверх всего)
-        this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15);
-        this.brush.setDepth(3);
+        // Кисть
+        this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
         
-        // ============================================
-        // UI (самый верхний слой)
-        // ============================================
+        // UI
         this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, {
             fontSize: '36px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
         }).setDepth(10);
-        
         this.foodText = this.add.text(30, 80, '🍞 ' + GameState.food, {
             fontSize: '28px', fill: '#FFFFFF', fontFamily: 'Arial'
         }).setDepth(10);
-        
         this.toolText = this.add.text(30, 120, '🧹 Радиус: ' + CONFIG.brushRadius, {
             fontSize: '20px', fill: '#AAAAAA', fontFamily: 'Arial'
         }).setDepth(10);
@@ -233,15 +211,11 @@ class MainScene extends Phaser.Scene {
         }).setOrigin(0.5).setDepth(10);
         
         this.add.text(640, 40, '🛒', { fontSize: '48px' })
-            .setDepth(10)
-            .setInteractive({ useHandCursor: true })
+            .setDepth(10).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.openShop());
         
-        // ============================================
-        // КНОПКИ
-        // ============================================
+        // Кнопки
         const btnY = 1200;
-        
         this.soapBtnBg = this.add.rectangle(180, btnY, 280, 80, 0x4A90D9).setDepth(10);
         this.soapBtnBg.setStrokeStyle(4, 0xFFFFFF);
         this.soapBtnText = this.add.text(180, btnY, '🧼 МЫЛО', {
@@ -260,10 +234,8 @@ class MainScene extends Phaser.Scene {
         
         this.add.text(W/2, 1100, 'ПОЛУЧИТЬ ДЕНЬГИ', {
             fontSize: '28px', fill: '#00FF00', fontStyle: 'bold',
-            backgroundColor: '#000000', padding: { x: 20, y: 10 },
-            fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(10)
-          .setInteractive({ useHandCursor: true })
+            backgroundColor: '#000000', padding: { x: 20, y: 10 }, fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => this.finishCarpet());
         
         this.selectTool('soap');
@@ -273,25 +245,14 @@ class MainScene extends Phaser.Scene {
     selectTool(tool) {
         this.currentTool = tool;
         if (tool === 'soap') {
-            this.soapBtnBg.setFillStyle(0x4A90D9);
-            this.soapBtnBg.setStrokeStyle(4, 0xFFFFFF);
-            this.soapBtnText.setColor('#FFFFFF');
-            this.washBtnBg.setFillStyle(0x555555);
-            this.washBtnBg.setStrokeStyle(4, 0x888888);
-            this.washBtnText.setColor('#AAAAAA');
+            this.soapBtnBg.setFillStyle(0x4A90D9); this.soapBtnBg.setStrokeStyle(4, 0xFFFFFF); this.soapBtnText.setColor('#FFFFFF');
+            this.washBtnBg.setFillStyle(0x555555); this.washBtnBg.setStrokeStyle(4, 0x888888); this.washBtnText.setColor('#AAAAAA');
         } else {
-            this.soapBtnBg.setFillStyle(0x555555);
-            this.soapBtnBg.setStrokeStyle(4, 0x888888);
-            this.soapBtnText.setColor('#AAAAAA');
-            this.washBtnBg.setFillStyle(0x4A90D9);
-            this.washBtnBg.setStrokeStyle(4, 0xFFFFFF);
-            this.washBtnText.setColor('#FFFFFF');
+            this.soapBtnBg.setFillStyle(0x555555); this.soapBtnBg.setStrokeStyle(4, 0x888888); this.soapBtnText.setColor('#AAAAAA');
+            this.washBtnBg.setFillStyle(0x4A90D9); this.washBtnBg.setStrokeStyle(4, 0xFFFFFF); this.washBtnText.setColor('#FFFFFF');
         }
     }
 
-    // ============================================
-    // ОТРИСОВКА — ГРЯЗЬ ПОЛУПРОЗРАЧНАЯ, КОВЁР ВИДЕН
-    // ============================================
     drawAll() {
         this.dirtGfx.clear();
         this.soapGfx.clear();
@@ -307,15 +268,12 @@ class MainScene extends Phaser.Scene {
                 const px = cx + x * cs;
                 const py = cy + y * cs;
                 
-                // ✅ ГРЯЗЬ: максимум 0.5 прозрачности — ковёр всегда виден
                 if (dirt > 0.05) {
-                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.8);
+                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.55);
                     this.dirtGfx.fillRect(px, py, cs, cs);
                 }
-                
-                // Мыло: белая пена
                 if (soap > 0.05) {
-                    this.soapGfx.fillStyle(0xFFFFFF, soap * 0.5);
+                    this.soapGfx.fillStyle(0xFFFFFF, soap * 0.45);
                     this.soapGfx.fillRect(px, py, cs, cs);
                 }
             }
@@ -328,17 +286,28 @@ class MainScene extends Phaser.Scene {
         
         const handlePointer = (pointer) => {
             this.brush.setPosition(pointer.x, pointer.y);
-            this.brush.setVisible(
-                GameState.food > 0 &&
-                Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y)
-            );
-            if (GameState.food <= 0) return;
-            if (!Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y)) return;
-            this.applyTool(pointer.x, pointer.y);
+            const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+            this.brush.setVisible(GameState.food > 0 && inBounds);
+            if (GameState.food <= 0 || !inBounds) return;
+            
+            const localX = pointer.x - (this.carpetX - this.carpetW/2);
+            const localY = pointer.y - (this.carpetY - this.carpetH/2);
+            
+            // ✅ Пропускаем слишком близкие точки (ускорение)
+            const dx = localX - this.lastLocalX;
+            const dy = localY - this.lastLocalY;
+            if (dx*dx + dy*dy < 25) return;
+            
+            this.lastLocalX = localX;
+            this.lastLocalY = localY;
+            
+            this.applyTool(localX, localY);
         };
         
         this.input.on('pointerdown', (pointer) => {
             this.isPointerDown = true;
+            this.lastLocalX = -9999;
+            this.lastLocalY = -9999;
             handlePointer(pointer);
         });
         this.input.on('pointermove', (pointer) => {
@@ -355,9 +324,8 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    applyTool(screenX, screenY) {
-        const localX = screenX - (this.carpetX - this.carpetW/2);
-        const localY = screenY - (this.carpetY - this.carpetH/2);
+    // ✅ ОПТИМИЗИРОВАННОЕ ПРИМЕНЕНИЕ
+    applyTool(localX, localY) {
         const radius = CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus);
         const cs = this.gridCellSize;
         
@@ -366,6 +334,7 @@ class MainScene extends Phaser.Scene {
         const minRow = Math.max(0, Math.floor((localY - radius) / cs));
         const maxRow = Math.min(this.gridRows - 1, Math.floor((localY + radius) / cs));
         
+        const radiusSq = radius * radius;
         let changed = false;
         
         for (let row = minRow; row <= maxRow; row++) {
@@ -374,19 +343,26 @@ class MainScene extends Phaser.Scene {
                 const ccy = row * cs + cs / 2;
                 const dx = ccx - localX;
                 const dy = ccy - localY;
-                const dist = Math.sqrt(dx*dx + dy*dy);
-                if (dist > radius) continue;
-                const falloff = 1 - (dist / radius);
+                const distSq = dx*dx + dy*dy;
+                if (distSq > radiusSq) continue;
+                
+                const falloff = 1 - Math.sqrt(distSq) / radius;
                 
                 if (this.currentTool === 'soap') {
+                    // ✅ МЫЛО: мгновенно, за 1 проход
                     const before = this.soapGrid[row][col];
-                    this.soapGrid[row][col] = Math.min(1.0, before + 0.3 * falloff);
+                    this.soapGrid[row][col] = Math.min(1.0, before + CONFIG.soapPower * falloff);
                     if (this.soapGrid[row][col] !== before) changed = true;
                 } else {
+                    // ✅ СМЫВАНИЕ: работает даже с минимумом мыла
                     if (this.soapGrid[row][col] < CONFIG.soapThreshold) continue;
+                    
                     const before = this.dirtGrid[row][col];
                     this.dirtGrid[row][col] = Math.max(0, before - CONFIG.eraseStrength * falloff);
-                    this.soapGrid[row][col] = Math.max(0, this.soapGrid[row][col] - 0.1 * falloff);
+                    
+                    // Мыло чуть-чуть расходуется
+                    this.soapGrid[row][col] = Math.max(0, this.soapGrid[row][col] - 0.05);
+                    
                     if (this.dirtGrid[row][col] !== before) changed = true;
                 }
             }
@@ -399,14 +375,14 @@ class MainScene extends Phaser.Scene {
     }
 
     recalcProgress() {
-        let totalCleaned = 0;
+        let total = 0;
         const cells = this.gridCols * this.gridRows;
         for (let y = 0; y < this.gridRows; y++) {
             for (let x = 0; x < this.gridCols; x++) {
-                totalCleaned += (1 - this.dirtGrid[y][x]);
+                total += (1 - this.dirtGrid[y][x]);
             }
         }
-        this.cleanProgress = totalCleaned / cells;
+        this.cleanProgress = total / cells;
         if (this.cleanProgress >= 0.9999) {
             let allClean = true;
             for (let y = 0; y < this.gridRows; y++) {
@@ -421,9 +397,9 @@ class MainScene extends Phaser.Scene {
     }
 
     updateProgressBar() {
-        const percent = Math.min(100, Math.floor(this.cleanProgress * 100));
+        const p = Math.min(100, Math.floor(this.cleanProgress * 100));
         this.progressBar.width = 400 * this.cleanProgress;
-        this.progressText.setText(percent + '%');
+        this.progressText.setText(p + '%');
     }
 
     async finishCarpet() {
@@ -431,9 +407,7 @@ class MainScene extends Phaser.Scene {
             this.showMessage('Ковёр ещё грязный! Нужно 100%.');
             return;
         }
-        const reward = Math.floor(
-            CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)
-        ) * GameState.toolLevel;
+        const reward = Math.floor(CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)) * GameState.toolLevel;
         GameState.money += reward;
         GameState.food -= 1;
         this.moneyText.setText('💰 ' + GameState.money);
@@ -453,77 +427,62 @@ class MainScene extends Phaser.Scene {
 
     openShop() {
         const W = 720, H = 1280;
-        const elements = [];
-        const overlay = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.85).setDepth(20);
-        overlay.setInteractive();
-        elements.push(overlay);
+        const els = [];
+        const ov = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.85).setDepth(20);
+        ov.setInteractive(); els.push(ov);
         const bg = this.add.rectangle(W/2, H/2, 600, 800, 0x333333).setDepth(21);
-        bg.setStrokeStyle(4, 0xFFD700);
-        elements.push(bg);
-        elements.push(this.add.text(W/2, 280, 'МАГАЗИН', {
+        bg.setStrokeStyle(4, 0xFFD700); els.push(bg);
+        els.push(this.add.text(W/2, 280, 'МАГАЗИН', {
             fontSize: '48px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(22));
         
-        const foodBtn = this.add.text(W/2, 450,
-            `Купить еду (${CONFIG.foodPrice}💰)\n🍞 +1`, {
+        const fb = this.add.text(W/2, 450, `Купить еду (${CONFIG.foodPrice}💰)\n🍞 +1`, {
             fontSize: '32px', fill: '#FFFFFF', align: 'center',
-            backgroundColor: '#444444', padding: { x: 30, y: 15 },
-            fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(22)
-          .setInteractive({ useHandCursor: true })
+            backgroundColor: '#444444', padding: { x: 30, y: 15 }, fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
           .on('pointerdown', async () => {
             if (GameState.money >= CONFIG.foodPrice) {
-                GameState.money -= CONFIG.foodPrice;
-                GameState.food += 1;
+                GameState.money -= CONFIG.foodPrice; GameState.food += 1;
                 this.moneyText.setText('💰 ' + GameState.money);
                 this.foodText.setText('🍞 ' + GameState.food);
-                await saveGame();
-                this.showMessage('Куплена еда!');
+                await saveGame(); this.showMessage('Куплена еда!');
             } else this.showMessage('Не хватает денег!');
         });
-        elements.push(foodBtn);
+        els.push(fb);
         
-        const toolCost = GameState.toolLevel * CONFIG.toolBasePrice;
-        const curR = Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
-        const newR = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
-        
-        const toolBtn = this.add.text(W/2, 620,
-            `Улучшить щётку (${toolCost}💰)\nРадиус: ${curR} → ${newR}`, {
+        const tc = GameState.toolLevel * CONFIG.toolBasePrice;
+        const cr = Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
+        const nr = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
+        const tb = this.add.text(W/2, 620, `Улучшить щётку (${tc}💰)\nРадиус: ${cr} → ${nr}`, {
             fontSize: '28px', fill: '#FFFFFF', align: 'center',
-            backgroundColor: '#444444', padding: { x: 30, y: 15 },
-            fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(22)
-          .setInteractive({ useHandCursor: true })
+            backgroundColor: '#444444', padding: { x: 30, y: 15 }, fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
           .on('pointerdown', async () => {
             const cost = GameState.toolLevel * CONFIG.toolBasePrice;
             if (GameState.money >= cost) {
-                GameState.money -= cost;
-                GameState.toolLevel += 1;
+                GameState.money -= cost; GameState.toolLevel += 1;
                 this.moneyText.setText('💰 ' + GameState.money);
                 const r = Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
                 this.toolText.setText('🧹 Радиус: ' + r);
-                await saveGame();
-                this.showMessage('Щётка улучшена!');
-                const newCost = GameState.toolLevel * CONFIG.toolBasePrice;
-                const newR2 = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
-                toolBtn.setText(`Улучшить щётку (${newCost}💰)\nРадиус: ${r} → ${newR2}`);
+                await saveGame(); this.showMessage('Щётка улучшена!');
+                const nc = GameState.toolLevel * CONFIG.toolBasePrice;
+                const nr2 = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
+                tb.setText(`Улучшить щётку (${nc}💰)\nРадиус: ${r} → ${nr2}`);
             } else this.showMessage('Не хватает денег!');
         });
-        elements.push(toolBtn);
+        els.push(tb);
         
-        const closeBtn = this.add.text(620, 280, '✖', {
+        const cb = this.add.text(620, 280, '✖', {
             fontSize: '48px', fill: '#FF4444', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(22)
-          .setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => { elements.forEach(el => el.destroy()); });
-        elements.push(closeBtn);
+        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => { els.forEach(el => el.destroy()); });
+        els.push(cb);
     }
 
     showMessage(text) {
         const msg = this.add.text(360, 1000, text, {
             fontSize: '32px', fill: '#FFFF00', fontStyle: 'bold',
-            backgroundColor: '#000000', padding: { x: 20, y: 10 },
-            fontFamily: 'Arial'
+            backgroundColor: '#000000', padding: { x: 20, y: 10 }, fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(30);
         this.time.delayedCall(1500, () => msg.destroy());
     }
