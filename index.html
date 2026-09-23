@@ -38,9 +38,9 @@ const CONFIG = {
     
     progressThreshold: 1.0,
     
-    // ✅ Автодоочистка с 99% за 5 секунд
+    // ✅ Автодоочистка с 99% за 12 секунд
     autoCleanThreshold: 0.99,
-    autoCleanDuration: 5000,
+    autoCleanDuration: 12000,
     
     newCarpetRadiusRequired: 70,
     newCarpetBasePrice: 5000,
@@ -491,7 +491,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ Обычная грязь без подсветки
     drawDirt() {
         this.dirtGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
@@ -689,7 +688,7 @@ class MainScene extends Phaser.Scene {
         this.updateProgressBar();
     }
 
-    // ✅ АВТОДООЧИСТКА
+    // ✅ АВТОДООЧИСТКА — 12 секунд
     startAutoClean() {
         if (this.autoCleanStarted) return;
         this.autoCleanStarted = true;
@@ -711,13 +710,15 @@ class MainScene extends Phaser.Scene {
             return;
         }
         
-        const totalTicks = CONFIG.autoCleanDuration / 50;
+        // ✅ 12000 мс / 100 мс = 120 тиков
+        const tickDelay = 100;
+        const totalTicks = CONFIG.autoCleanDuration / tickDelay;
         const cellsPerTick = Math.max(1, Math.ceil(dirtyCells.length / totalTicks));
         
         let index = 0;
         
         this.autoCleanTimer = this.time.addEvent({
-            delay: 50,
+            delay: tickDelay,
             repeat: totalTicks,
             callback: () => {
                 for (let i = 0; i < cellsPerTick && index < dirtyCells.length; i++) {
@@ -748,9 +749,16 @@ class MainScene extends Phaser.Scene {
         this.updateProgressBar();
     }
 
+    // ✅ ФИНАЛ АВТОДООЧИСТКИ — полный сброс тача
     finishAutoClean() {
         this.cleanProgress = 1.0;
         this.updateProgressBar();
+        
+        // ✅ Сброс тача, чтобы можно было чистить дальше
+        this.isPointerDown = false;
+        this.lastLocalX = -9999;
+        this.lastLocalY = -9999;
+        this.brush.setVisible(false);
         
         if (!this.celebrationShown) {
             this.celebrationShown = true;
@@ -804,13 +812,14 @@ class MainScene extends Phaser.Scene {
         this.cleanProgress = 0;
         this.celebrationShown = false;
         
-        // ✅ Сброс автодоочистки
+        // ✅ Полный сброс автодоочистки
         this.autoCleanStarted = false;
         if (this.autoCleanTimer) {
             this.autoCleanTimer.remove();
             this.autoCleanTimer = null;
         }
         
+        // ✅ Сброс тача
         this.isPointerDown = false;
         this.lastLocalX = -9999;
         this.lastLocalY = -9999;
@@ -969,6 +978,7 @@ class MainScene extends Phaser.Scene {
             this.autoCleanTimer = null;
         }
         
+        // ✅ Сброс тача
         this.isPointerDown = false;
         this.lastLocalX = -9999;
         this.lastLocalY = -9999;
