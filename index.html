@@ -61,8 +61,8 @@ const CONFIG = {
     
     bugCountBase: 4,
     bugCountIncrease: 1,
-    // ✅ Жуки быстрее (было 60)
-    bugSpeed: 75,
+    // ✅ Жуки ещё быстрее (было 75)
+    bugSpeed: 90,
     bugFadeDuration: 400,
     
     swatterRadius: 50,
@@ -258,12 +258,13 @@ class MainScene extends Phaser.Scene {
         this.carpetContainer = this.add.container(0, 0).setDepth(0);
         this.drawCarpet();
         
+        // ✅ Сетка на всю ширину/высоту (края вернулись)
         this.gridCellSize = 20;
-        this.gridCols = Math.ceil(this.carpetW / this.gridCellSize) - 2;
-        this.gridRows = Math.ceil(this.carpetH / this.gridCellSize) - 2;
+        this.gridCols = Math.ceil(this.carpetW / this.gridCellSize);
+        this.gridRows = Math.ceil(this.carpetH / this.gridCellSize);
         
-        this.gridOffsetX = this.carpetX - this.carpetW / 2 + this.gridCellSize;
-        this.gridOffsetY = this.carpetY - this.carpetH / 2 + this.gridCellSize;
+        this.gridOffsetX = this.carpetX - this.carpetW / 2;
+        this.gridOffsetY = this.carpetY - this.carpetH / 2;
         
         this.dirtGrid = new Float32Array(this.gridCols * this.gridRows);
         this.soapGrid = new Float32Array(this.gridCols * this.gridRows);
@@ -851,7 +852,7 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ Мыло плотнее (0.45 вместо 0.3)
+    // ✅ Мыло ещё плотнее (0.6)
     drawSoap() {
         this.soapGfx.clear();
         const cs = this.gridCellSize;
@@ -865,7 +866,7 @@ class MainScene extends Phaser.Scene {
                 if (soap < 0.05) continue;
                 const px = cx + col * cs;
                 const py = cy + row * cs;
-                this.soapGfx.fillStyle(0x88CCFF, soap * 0.45);
+                this.soapGfx.fillStyle(0x88CCFF, soap * 0.6);
                 this.soapGfx.fillRect(px, py, cs, cs);
             }
         }
@@ -1007,8 +1008,8 @@ class MainScene extends Phaser.Scene {
         const cs = this.gridCellSize;
         const cols = this.gridCols;
         
-        const adjLocalX = localX - cs;
-        const adjLocalY = localY - cs;
+        const adjLocalX = localX;
+        const adjLocalY = localY;
         
         const minCol = Math.max(0, Math.floor((adjLocalX - radius) / cs));
         const maxCol = Math.min(cols - 1, Math.floor((adjLocalX + radius) / cs));
