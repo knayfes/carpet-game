@@ -35,32 +35,89 @@ const CONFIG = {
     soapThreshold: 0.01,
     eraseStrength: 0.9,
     
-    // ✅ Честный порог — 100%
+    // Порог завершения — 100%
     progressThreshold: 1.0,
     
-    bigRadiusThreshold: 70,
-    rewardPenaltyPerPixel: 0.02,
+    // ✅ Радиус, при котором открывается "Новый ковёр"
+    newCarpetRadiusRequired: 70,
+    
+    // ✅ Базовая цена нового ковра (умножается на номер ковра)
+    newCarpetBasePrice: 5000,
+    
+    // ✅ Множитель заработка за каждый новый ковёр
+    rewardMultiplierPerCarpet: 1.25,
+    
+    // ✅ Штраф за радиус: начинается с 60, +5 за каждый новый ковёр
+    penaltyStartRadius: 60,
+    penaltyIncreasePerCarpet: 5,
+    penaltyPerPixel: 0.02,
     minRewardMultiplier: 0.3,
     
+    // Звёздочки
     starChance: 0.2,
     starLifetime: 700,
     starCount: 1,
-    
     finishStarCount: 25,
-    finishStarDuration: 1800
+    finishStarDuration: 1800,
+    
+    // Всего ковров (файлов в image/carpet/)
+    totalCarpets: 5
 };
 
-const SAVE_KEY = 'carpetGameStats_v2';
-const CARPET_IMAGE = 'carpet.png';
+const SAVE_KEY = 'carpetGameStats_v3';  // Новый ключ — сбросит старые сохранения
 
 // ============================================
 // СОСТОЯНИЕ
 // ============================================
 const GameState = {
-    money: CONFIG.startMoney, food: CONFIG.startFood,
-    toolLevel: CONFIG.startToolLevel
+    money: CONFIG.startMoney,
+    food: CONFIG.startFood,
+    toolLevel: CONFIG.startToolLevel,
+    carpetIndex: 1,           // текущий ковёр (1..5)
+    carpetLevel: 0            // сколько раз покупали "новый ковёр"
 };
 let ysdk = null;
+
+// ============================================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ============================================
+
+// Текущий радиус щётки
+function getCurrentRadius() {
+    return Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
+}
+
+// Множитель заработка (растёт ×1.25 за каждый новый ковёр)
+function getRewardMultiplier() {
+    return Math.pow(CONFIG.rewardMultiplierPerCarpet, GameState.carpetLevel);
+}
+
+// Текущий порог штрафа за радиус
+function getPenaltyStartRadius() {
+    return CONFIG.penaltyStartRadius + (GameState.carpetLevel * CONFIG.penaltyIncreasePerCarpet);
+}
+
+// Штраф за слишком большой радиус
+function getRadiusPenaltyMultiplier() {
+    const radius = getCurrentRadius();
+    const threshold = getPenaltyStartRadius();
+    if (radius <= threshold) return 1.0;
+    const excess = radius - threshold;
+    const penalty = excess * CONFIG.penaltyPerPixel;
+    return Math.max(CONFIG.minRewardMultiplier, 1.0 - penalty);
+}
+
+// Цена нового ковра
+function getNewCarpetPrice() {
+    return CONFIG.newCarpetBasePrice * GameState.carpetIndex;
+}
+
+// Проверка: можно ли купить новый ковёр
+function canBuyNewCarpet() {
+    return getCurrentRadius() >= CONFIG.newCarpetRadiusRequired
+        && GameState.money >= getNewCarpetPrice()
+        && GameState.carpetIndex < CONFIG.totalCarpets;
+}
 
 // ============================================
 // YANDEX SDK
@@ -69,10 +126,12 @@ async function initYandexSDK() {
     try {
         if (typeof YaGames === 'undefined') throw new Error('no SDK');
         ysdk = await YaGames.init();
-        const stats = await ysdk.player.getStats(['money', 'food', 'toolLevel']);
+        const stats = await ysdk.player.getStats(['money', 'food', 'toolLevel', 'carpetIndex', 'carpetLevel']);
         if (stats.money !== undefined) GameState.money = Number(stats.money) || 0;
         if (stats.food !== undefined) GameState.food = Number(stats.food) || 3;
         if (stats.toolLevel !== undefined) GameState.toolLevel = Number(stats.toolLevel) || 1;
+        if (stats.carpetIndex !== undefined) GameState.carpetIndex = Number(stats.carpetIndex) || 1;
+        if (stats.carpetLevel !== undefined) GameState.carpetLevel = Number(stats.carpetLevel) || 0;
     } catch (e) {
         ysdk = {
             player: {
@@ -97,6 +156,8 @@ async function initYandexSDK() {
                 if (d.money !== undefined) GameState.money = Number(d.money) || 0;
                 if (d.food !== undefined) GameState.food = Number(d.food) || 3;
                 if (d.toolLevel !== undefined) GameState.toolLevel = Number(d.toolLevel) || 1;
+                if (d.carpetIndex !== undefined) GameState.carpetIndex = Number(d.carpetIndex) || 1;
+                if (d.carpetLevel !== undefined) GameState.carpetLevel = Number(d.carpetLevel) || 0;
             } catch (err) {}
         }
     }
@@ -106,21 +167,13 @@ async function saveGame() {
     if (!ysdk) return;
     try {
         await ysdk.player.setStats({
-            money: GameState.money, food: GameState.food, toolLevel: GameState.toolLevel
+            money: GameState.money,
+            food: GameState.food,
+            toolLevel: GameState.toolLevel,
+            carpetIndex: GameState.carpetIndex,
+            carpetLevel: GameState.carpetLevel
         });
     } catch (e) {}
-}
-
-function getCurrentRadius() {
-    return Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
-}
-
-function getRewardMultiplier() {
-    const radius = getCurrentRadius();
-    if (radius <= CONFIG.bigRadiusThreshold) return 1.0;
-    const excess = radius - CONFIG.bigRadiusThreshold;
-    const penalty = excess * CONFIG.rewardPenaltyPerPixel;
-    return Math.max(CONFIG.minRewardMultiplier, 1.0 - penalty);
 }
 
 // ============================================
@@ -129,7 +182,11 @@ function getRewardMultiplier() {
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
-        if (CARPET_IMAGE) this.load.image('carpet', CARPET_IMAGE);
+        // ✅ Загружаем все 5 ковров из папки image/carpet/
+        for (let i = 1; i <= CONFIG.totalCarpets; i++) {
+            this.load.image('carpet' + i, `image/carpet/carpet${i}.png`);
+        }
+        
         const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w/2, h/2 - 50, 'Загрузка...', {
             fontSize: '40px', fill: '#FFFFFF', fontFamily: 'Arial'
@@ -155,27 +212,21 @@ class MainScene extends Phaser.Scene {
         if (ysdk?.features?.LoadingAPI) ysdk.features.LoadingAPI.ready();
         
         const W = 720, H = 1280;
-        this.add.rectangle(W/2, H/2, W, H, 0x2a2a2a);
         
         this.carpetW = 500;
         this.carpetH = 700;
         this.carpetX = W/2;
         this.carpetY = 700;
         
-        // Ковёр
-        if (this.textures.exists('carpet')) {
-            this.carpetImg = this.add.image(this.carpetX, this.carpetY, 'carpet');
-            this.carpetImg.setDisplaySize(this.carpetW, this.carpetH);
-            this.carpetImg.setDepth(0);
-        } else {
-            this.carpetImg = this.add.rectangle(
-                this.carpetX, this.carpetY, this.carpetW, this.carpetH, 0xC97A3F
-            );
-            this.carpetImg.setStrokeStyle(6, 0x8B4513);
-            this.carpetImg.setDepth(0);
-        }
+        // ✅ Слой комнаты (фон)
+        this.roomGfx = this.add.graphics().setDepth(-10);
+        this.drawRoom();
         
-        // Сетка
+        // ✅ Слой ковра
+        this.carpetContainer = this.add.container(0, 0).setDepth(0);
+        this.drawCarpet();
+        
+        // Сетка грязи
         this.gridCellSize = 20;
         this.gridCols = Math.ceil(this.carpetW / this.gridCellSize);
         this.gridRows = Math.ceil(this.carpetH / this.gridCellSize);
@@ -205,7 +256,9 @@ class MainScene extends Phaser.Scene {
         this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
         
+        // ============================================
         // UI
+        // ============================================
         this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, {
             fontSize: '36px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
         }).setDepth(10);
@@ -213,6 +266,9 @@ class MainScene extends Phaser.Scene {
             fontSize: '28px', fill: '#FFFFFF', fontFamily: 'Arial'
         }).setDepth(10);
         this.toolText = this.add.text(30, 120, '🧹 Радиус: ' + getCurrentRadius(), {
+            fontSize: '20px', fill: '#AAAAAA', fontFamily: 'Arial'
+        }).setDepth(10);
+        this.carpetText = this.add.text(30, 150, '🟫 Ковёр: ' + GameState.carpetIndex + '/' + CONFIG.totalCarpets, {
             fontSize: '20px', fill: '#AAAAAA', fontFamily: 'Arial'
         }).setDepth(10);
         
@@ -226,7 +282,7 @@ class MainScene extends Phaser.Scene {
             .setDepth(10).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.openShop());
         
-        // Кнопки
+        // Кнопки мыло/смыть
         const btnY = 1200;
         this.soapBtnBg = this.add.rectangle(180, btnY, 280, 80, 0x4A90D9).setDepth(10);
         this.soapBtnBg.setStrokeStyle(4, 0xFFFFFF);
@@ -244,6 +300,7 @@ class MainScene extends Phaser.Scene {
         this.washBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.selectTool('wash'));
         
+        // Кнопка получить деньги
         this.add.text(W/2, 1100, 'ПОЛУЧИТЬ ДЕНЬГИ', {
             fontSize: '28px', fill: '#00FF00', fontStyle: 'bold',
             backgroundColor: '#000000', padding: { x: 20, y: 10 }, fontFamily: 'Arial'
@@ -252,6 +309,173 @@ class MainScene extends Phaser.Scene {
         
         this.selectTool('soap');
         this.setupCleaning();
+    }
+
+    // ============================================
+    // ✅ ПРОГРАММНАЯ КОМНАТА
+    // ============================================
+    drawRoom() {
+        const W = 720, H = 1280;
+        const level = GameState.carpetLevel;
+        const g = this.roomGfx;
+        g.clear();
+        
+        // Стиль чередуется: чётный уровень — уютная, нечётный — современная
+        const isCozy = (level % 2 === 0);
+        
+        if (isCozy) {
+            // ===== УЮТНАЯ КОМНАТА =====
+            // Обои в полоску
+            const wallColors = [0xE8D5B7, 0xD4B896, 0xC9A87C, 0xB89A6A, 0xA8895A];
+            const wallColor = wallColors[level % wallColors.length];
+            g.fillStyle(wallColor, 1);
+            g.fillRect(0, 0, W, 900);
+            
+            // Полоски на обоях
+            for (let x = 0; x < W; x += 60) {
+                g.fillStyle(0x000000, 0.05);
+                g.fillRect(x, 0, 30, 900);
+            }
+            
+            // Деревянный пол
+            g.fillStyle(0x8B5A2B, 1);
+            g.fillRect(0, 900, W, H - 900);
+            
+            // Доски пола
+            for (let y = 900; y < H; y += 40) {
+                g.fillStyle(0x000000, 0.15);
+                g.fillRect(0, y, W, 3);
+            }
+            for (let x = 0; x < W; x += 100) {
+                g.fillStyle(0x000000, 0.1);
+                g.fillRect(x, 900, 2, H - 900);
+            }
+            
+            // Плинтус
+            g.fillStyle(0x5C3A1E, 1);
+            g.fillRect(0, 880, W, 20);
+            
+            // Окно с солнцем
+            g.fillStyle(0x87CEEB, 1);
+            g.fillRect(80, 150, 200, 250);
+            g.fillStyle(0xFFFFFF, 1);
+            g.fillRect(80, 150, 200, 250);
+            g.lineStyle(8, 0x5C3A1E, 1);
+            g.strokeRect(80, 150, 200, 250);
+            // Рамы
+            g.fillStyle(0x5C3A1E, 1);
+            g.fillRect(175, 150, 10, 250);
+            g.fillRect(80, 270, 200, 10);
+            // Солнце
+            g.fillStyle(0xFFEB3B, 0.8);
+            g.fillCircle(240, 200, 35);
+            
+            // Картина на стене
+            g.fillStyle(0x8B4513, 1);
+            g.fillRect(480, 200, 150, 120);
+            g.fillStyle(0x87CEEB, 1);
+            g.fillRect(490, 210, 130, 100);
+            g.fillStyle(0x228B22, 1);
+            g.fillTriangle(490, 310, 555, 240, 620, 310);
+            
+        } else {
+            // ===== СОВРЕМЕННАЯ КОМНАТА =====
+            // Градиентная стена
+            const colors = [0x2C3E50, 0x34495E, 0x1A252F, 0x3D5A80, 0x293241];
+            const wallColor = colors[level % colors.length];
+            g.fillStyle(wallColor, 1);
+            g.fillRect(0, 0, W, 900);
+            
+            // Неоновая полоса
+            g.fillStyle(0x00E5FF, 0.5);
+            g.fillRect(0, 400, W, 4);
+            g.fillStyle(0xFF00E5, 0.5);
+            g.fillRect(0, 500, W, 4);
+            
+            // Глянцевый пол
+            g.fillStyle(0x1a1a1a, 1);
+            g.fillRect(0, 900, W, H - 900);
+            
+            // Отражение на полу
+            for (let i = 0; i < 5; i++) {
+                g.fillStyle(0x00E5FF, 0.05);
+                g.fillRect(0, 900 + i * 40, W, 10);
+            }
+            
+            // Геометрические фигуры на стене
+            g.lineStyle(3, 0x00E5FF, 0.6);
+            g.strokeCircle(600, 250, 80);
+            g.lineStyle(3, 0xFF00E5, 0.6);
+            g.strokeRect(100, 180, 120, 120);
+            
+            // Плинтус
+            g.fillStyle(0x000000, 1);
+            g.fillRect(0, 880, W, 20);
+        }
+    }
+
+    // ============================================
+    // ✅ КОВЁР (картинка или заглушка)
+    // ============================================
+    drawCarpet() {
+        // Очищаем старый контейнер
+        this.carpetContainer.removeAll(true);
+        
+        const carpetKey = 'carpet' + GameState.carpetIndex;
+        
+        if (this.textures.exists(carpetKey)) {
+            // ✅ Картинка загружена
+            const img = this.add.image(this.carpetX, this.carpetY, carpetKey);
+            img.setDisplaySize(this.carpetW, this.carpetH);
+            this.carpetContainer.add(img);
+        } else {
+            // ✅ Программная заглушка — меняется с каждым ковром
+            const g = this.add.graphics();
+            const cx = this.carpetX - this.carpetW / 2;
+            const cy = this.carpetY - this.carpetH / 2;
+            
+            // Палитра для разных ковров
+            const palettes = [
+                { main: 0x8B4513, accent: 0xFFD700, border: 0x654321 },  // коричневый с золотом
+                { main: 0x8B0000, accent: 0xFFE4B5, border: 0x5C0000 },  // тёмно-красный
+                { main: 0x191970, accent: 0xC0C0C0, border: 0x0F0F40 },  // тёмно-синий
+                { main: 0x2E8B57, accent: 0xFFE4E1, border: 0x1F5F3A },  // зелёный
+                { main: 0x4B0082, accent: 0xFFD700, border: 0x2F0050 }   // фиолетовый
+            ];
+            const p = palettes[(GameState.carpetIndex - 1) % palettes.length];
+            
+            // Основной цвет
+            g.fillStyle(p.main, 1);
+            g.fillRect(cx, cy, this.carpetW, this.carpetH);
+            
+            // Кайма
+            g.lineStyle(20, p.border, 1);
+            g.strokeRect(cx + 10, cy + 10, this.carpetW - 20, this.carpetH - 20);
+            
+            // Узор — ромбы в центре
+            g.lineStyle(4, p.accent, 0.7);
+            for (let i = 0; i < 3; i++) {
+                const size = 100 - i * 30;
+                const x = this.carpetX;
+                const y = this.carpetY;
+                g.beginPath();
+                g.moveTo(x, y - size);
+                g.lineTo(x + size, y);
+                g.lineTo(x, y + size);
+                g.lineTo(x - size, y);
+                g.closePath();
+                g.strokePath();
+            }
+            
+            // Точки в углах
+            g.fillStyle(p.accent, 1);
+            g.fillCircle(cx + 50, cy + 50, 12);
+            g.fillCircle(cx + this.carpetW - 50, cy + 50, 12);
+            g.fillCircle(cx + 50, cy + this.carpetH - 50, 12);
+            g.fillCircle(cx + this.carpetW - 50, cy + this.carpetH - 50, 12);
+            
+            this.carpetContainer.add(g);
+        }
     }
 
     selectTool(tool) {
@@ -267,27 +491,16 @@ class MainScene extends Phaser.Scene {
 
     spawnStars(x, y) {
         if (Math.random() > CONFIG.starChance) return;
-        
         for (let i = 0; i < CONFIG.starCount; i++) {
             const star = this.add.text(x, y, Math.random() > 0.5 ? '⭐' : '✨', {
-                fontSize: (20 + Math.random() * 15) + 'px',
-                fontFamily: 'Arial'
+                fontSize: (20 + Math.random() * 15) + 'px', fontFamily: 'Arial'
             }).setOrigin(0.5).setDepth(5);
-            
             const angle = Math.random() * Math.PI * 2;
             const distance = 30 + Math.random() * 60;
-            const targetX = x + Math.cos(angle) * distance;
-            const targetY = y + Math.sin(angle) * distance - 40;
-            
             this.tweens.add({
-                targets: star,
-                x: targetX,
-                y: targetY,
-                alpha: { from: 1, to: 0 },
-                scale: { from: 1, to: 0.3 },
-                angle: { from: 0, to: (Math.random() - 0.5) * 360 },
-                duration: CONFIG.starLifetime,
-                ease: 'Cubic.easeOut',
+                targets: star, x: x + Math.cos(angle) * distance, y: y + Math.sin(angle) * distance - 40,
+                alpha: { from: 1, to: 0 }, scale: { from: 1, to: 0.3 },
+                duration: CONFIG.starLifetime, ease: 'Cubic.easeOut',
                 onComplete: () => star.destroy()
             });
         }
@@ -295,45 +508,25 @@ class MainScene extends Phaser.Scene {
 
     spawnCelebration() {
         const W = 720, H = 1280;
-        const count = CONFIG.finishStarCount;
-        const duration = CONFIG.finishStarDuration;
         const symbols = ['⭐', '✨', '🌟', '💫'];
-        
-        for (let i = 0; i < count; i++) {
+        for (let i = 0; i < CONFIG.finishStarCount; i++) {
             const startX = Math.random() * W;
             const startY = Math.random() * H;
             const symbol = symbols[Math.floor(Math.random() * symbols.length)];
-            const size = 25 + Math.random() * 30;
-            
             const star = this.add.text(startX, startY, symbol, {
-                fontSize: size + 'px',
-                fontFamily: 'Arial'
+                fontSize: (25 + Math.random() * 30) + 'px', fontFamily: 'Arial'
             }).setOrigin(0.5).setDepth(15);
-            
             const delay = Math.random() * 600;
             const angle = Math.random() * Math.PI * 2;
             const distance = 60 + Math.random() * 150;
-            const targetX = startX + Math.cos(angle) * distance;
-            const targetY = startY + Math.sin(angle) * distance;
-            
             this.tweens.add({
-                targets: star,
-                x: targetX,
-                y: targetY,
-                alpha: { from: 0, to: 1 },
-                scale: { from: 0.3, to: 1.2 },
-                angle: { from: 0, to: (Math.random() - 0.5) * 540 },
-                delay: delay,
-                duration: duration * 0.4,
-                ease: 'Back.easeOut',
+                targets: star, x: startX + Math.cos(angle) * distance, y: startY + Math.sin(angle) * distance,
+                alpha: { from: 0, to: 1 }, scale: { from: 0.3, to: 1.2 },
+                delay: delay, duration: CONFIG.finishStarDuration * 0.4, ease: 'Back.easeOut',
                 onComplete: () => {
                     this.tweens.add({
-                        targets: star,
-                        alpha: 0,
-                        scale: 0.2,
-                        y: star.y - 60,
-                        duration: duration * 0.6,
-                        ease: 'Cubic.easeIn',
+                        targets: star, alpha: 0, scale: 0.2, y: star.y - 60,
+                        duration: CONFIG.finishStarDuration * 0.6, ease: 'Cubic.easeIn',
                         onComplete: () => star.destroy()
                     });
                 }
@@ -347,13 +540,11 @@ class MainScene extends Phaser.Scene {
         const cy = this.carpetY - this.carpetH / 2;
         const cs = this.gridCellSize;
         const cols = this.gridCols;
-        
         for (let row = 0; row < this.gridRows; row++) {
             for (let col = 0; col < cols; col++) {
                 const dirt = this.dirtGrid[row * cols + col];
                 const px = cx + col * cs;
                 const py = cy + row * cs;
-                
                 if (dirt > 0.05) {
                     this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.65);
                     this.dirtGfx.fillRect(px, py, cs, cs);
@@ -372,7 +563,6 @@ class MainScene extends Phaser.Scene {
         const cy = this.carpetY - this.carpetH / 2;
         const cs = this.gridCellSize;
         const cols = this.gridCols;
-        
         for (let row = 0; row < this.gridRows; row++) {
             for (let col = 0; col < cols; col++) {
                 const soap = this.soapGrid[row * cols + col];
@@ -410,7 +600,6 @@ class MainScene extends Phaser.Scene {
             
             this.lastLocalX = localX;
             this.lastLocalY = localY;
-            
             this.applyTool(localX, localY);
         };
         
@@ -445,9 +634,7 @@ class MainScene extends Phaser.Scene {
         const maxRow = Math.min(this.gridRows - 1, Math.floor((localY + radius) / cs));
         
         const radiusSq = radius * radius;
-        let dirtChanged = false;
-        let soapChanged = false;
-        let erasedSomething = false;
+        let dirtChanged = false, soapChanged = false, erasedSomething = false;
         
         for (let row = minRow; row <= maxRow; row++) {
             for (let col = minCol; col <= maxCol; col++) {
@@ -469,8 +656,7 @@ class MainScene extends Phaser.Scene {
                 } else {
                     if (this.soapGrid[index] < CONFIG.soapThreshold) continue;
                     if (this.dirtGrid[index] > 0.01) {
-                        const before = this.dirtGrid[index];
-                        this.dirtGrid[index] = Math.max(0, before - CONFIG.eraseStrength * falloff);
+                        this.dirtGrid[index] = Math.max(0, this.dirtGrid[index] - CONFIG.eraseStrength * falloff);
                         dirtChanged = true;
                         erasedSomething = true;
                         this.soapGrid[index] = Math.max(0, this.soapGrid[index] - 0.05);
@@ -495,16 +681,12 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ Честный прогресс — 100% только когда весь ковёр чист
     recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
-        for (let i = 0; i < cells; i++) {
-            total += (1 - this.dirtGrid[i]);
-        }
+        for (let i = 0; i < cells; i++) total += (1 - this.dirtGrid[i]);
         this.cleanProgress = total / cells;
         
-        // Проверяем, что реально все ячейки чистые (погрешность 0.05)
         if (this.cleanProgress >= 0.9999) {
             let allClean = true;
             for (let i = 0; i < cells; i++) {
@@ -512,167 +694,10 @@ class MainScene extends Phaser.Scene {
             }
             if (allClean) {
                 this.cleanProgress = 1.0;
-                
                 if (!this.celebrationShown) {
                     this.celebrationShown = true;
                     this.spawnCelebration();
                     this.showMessage('Ковёр чистый! ✨');
                 }
             } else {
-                this.cleanProgress = 0.99;
-            }
-        }
-        
-        this.updateProgressBar();
-    }
-
-    updateProgressBar() {
-        const p = Math.min(100, Math.floor(this.cleanProgress * 100));
-        this.progressBar.width = 400 * this.cleanProgress;
-        this.progressText.setText(p + '%');
-    }
-
-    async finishCarpet() {
-        if (this.cleanProgress < 1.0) {
-            this.showMessage('Ковёр ещё грязный! Нужно 100%.');
-            return;
-        }
-        
-        const baseReward = Math.floor(
-            CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)
-        );
-        const multiplier = getRewardMultiplier();
-        const reward = Math.floor(baseReward * GameState.toolLevel * multiplier);
-        
-        GameState.money += reward;
-        GameState.food -= 1;
-        this.moneyText.setText('💰 ' + GameState.money);
-        this.foodText.setText('🍞 ' + GameState.food);
-        await saveGame();
-        
-        const radius = getCurrentRadius();
-        if (radius > CONFIG.bigRadiusThreshold) {
-            const percent = Math.floor(multiplier * 100);
-            this.showMessage(`+${reward} 💰 (радиус ${radius}: ${percent}% награды)`);
-        } else {
-            this.showMessage(`+${reward} 💰!`);
-        }
-        
-        // Убираем все висящие звёзды
-        this.children.list.forEach(child => {
-            if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) {
-                child.destroy();
-            }
-        });
-        
-        this.dirtGrid.fill(1.0);
-        this.soapGrid.fill(0.0);
-        this.needRedrawDirt = true;
-        this.needRedrawSoap = true;
-        this.cleanProgress = 0;
-        this.celebrationShown = false;
-        this.isPointerDown = false;
-        this.lastLocalX = -9999;
-        this.lastLocalY = -9999;
-        this.updateProgressBar();
-    }
-
-    openShop() {
-        const W = 720, H = 1280;
-        const els = [];
-        const ov = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.85).setDepth(20);
-        ov.setInteractive(); els.push(ov);
-        const bg = this.add.rectangle(W/2, H/2, 600, 800, 0x333333).setDepth(21);
-        bg.setStrokeStyle(4, 0xFFD700); els.push(bg);
-        els.push(this.add.text(W/2, 280, 'МАГАЗИН', {
-            fontSize: '48px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(22));
-        
-        const fb = this.add.text(W/2, 450, `Купить еду (${CONFIG.foodPrice}💰)\n🍞 +1`, {
-            fontSize: '32px', fill: '#FFFFFF', align: 'center',
-            backgroundColor: '#444444', padding: { x: 30, y: 15 }, fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
-          .on('pointerdown', async () => {
-            if (GameState.money >= CONFIG.foodPrice) {
-                GameState.money -= CONFIG.foodPrice; GameState.food += 1;
-                this.moneyText.setText('💰 ' + GameState.money);
-                this.foodText.setText('🍞 ' + GameState.food);
-                await saveGame(); this.showMessage('Куплена еда!');
-            } else this.showMessage('Не хватает денег!');
-        });
-        els.push(fb);
-        
-        const tc = GameState.toolLevel * CONFIG.toolBasePrice;
-        const cr = getCurrentRadius();
-        const nr = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
-        
-        let warningText = '';
-        if (nr > CONFIG.bigRadiusThreshold) {
-            const newMult = Math.max(CONFIG.minRewardMultiplier, 1.0 - (nr - CONFIG.bigRadiusThreshold) * CONFIG.rewardPenaltyPerPixel);
-            warningText = `\n⚠️ Награда: ${Math.floor(newMult * 100)}%`;
-        }
-        
-        const tb = this.add.text(W/2, 620, 
-            `Улучшить щётку (${tc}💰)\nРадиус: ${cr} → ${nr}${warningText}`, {
-            fontSize: '28px', fill: warningText ? '#FFAA00' : '#FFFFFF', align: 'center',
-            backgroundColor: '#444444', padding: { x: 30, y: 15 }, fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
-          .on('pointerdown', async () => {
-            const cost = GameState.toolLevel * CONFIG.toolBasePrice;
-            if (GameState.money >= cost) {
-                GameState.money -= cost; GameState.toolLevel += 1;
-                this.moneyText.setText('💰 ' + GameState.money);
-                const r = getCurrentRadius();
-                this.toolText.setText('🧹 Радиус: ' + r);
-                await saveGame(); this.showMessage('Щётка улучшена!');
-                const nc = GameState.toolLevel * CONFIG.toolBasePrice;
-                const nr2 = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
-                
-                let warn2 = '';
-                if (nr2 > CONFIG.bigRadiusThreshold) {
-                    const m2 = Math.max(CONFIG.minRewardMultiplier, 1.0 - (nr2 - CONFIG.bigRadiusThreshold) * CONFIG.rewardPenaltyPerPixel);
-                    warn2 = `\n⚠️ Награда: ${Math.floor(m2 * 100)}%`;
-                }
-                
-                tb.setText(`Улучшить щётку (${nc}💰)\nРадиус: ${r} → ${nr2}${warn2}`);
-                tb.setColor(warn2 ? '#FFAA00' : '#FFFFFF');
-            } else this.showMessage('Не хватает денег!');
-        });
-        els.push(tb);
-        
-        const cb = this.add.text(620, 280, '✖', {
-            fontSize: '48px', fill: '#FF4444', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => { els.forEach(el => el.destroy()); });
-        els.push(cb);
-    }
-
-    showMessage(text) {
-        const msg = this.add.text(360, 1000, text, {
-            fontSize: '28px', fill: '#FFFF00', fontStyle: 'bold',
-            backgroundColor: '#000000', padding: { x: 20, y: 10 }, fontFamily: 'Arial',
-            wordWrap: { width: 600 }
-        }).setOrigin(0.5).setDepth(30);
-        this.time.delayedCall(2000, () => msg.destroy());
-    }
-}
-
-// ============================================
-// ЗАПУСК
-// ============================================
-const phaserConfig = {
-    type: Phaser.CANVAS,
-    width: 720, height: 1280,
-    backgroundColor: '#1a1a1a',
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
-    input: { activePointers: 3, touch: { capture: true } },
-    scene: [PreloadScene, MainScene]
-};
-
-window.addEventListener('load', () => {
-    new Phaser.Game(phaserConfig);
-});
-</script>
-
-</body>
-</html>
+                this.clean
