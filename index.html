@@ -47,7 +47,9 @@ const CONFIG = {
     
     penaltyStartRadius: 60,
     penaltyIncreasePerCarpet: 5,
-    penaltyPerPixel: 0.02,
+    
+    // ✅ Штраф уменьшен с 2% до 1%
+    penaltyPerPixel: 0.01,
     minRewardMultiplier: 0.3,
     
     starChance: 0.2,
@@ -276,7 +278,6 @@ class MainScene extends Phaser.Scene {
         this.autoCleanTimer = null;
         this.inputLocked = false;
         
-        // ✅ Надпись "Нет еды"
         this.noFoodText = null;
         this.noFoodTween = null;
         this.noFoodCooldown = false;
@@ -284,7 +285,6 @@ class MainScene extends Phaser.Scene {
         this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
         
-        // UI
         this.add.rectangle(0, 0, 260, 180, 0x000000, 0.5).setOrigin(0, 0).setDepth(9);
         
         this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, TEXT_STYLES.stat('#FFD700', 34)).setDepth(10);
@@ -324,7 +324,6 @@ class MainScene extends Phaser.Scene {
         this.setupCleaning();
     }
 
-    // ✅ Мигающая надпись "Нет еды"
     showNoFoodWarning() {
         if (this.noFoodCooldown) return;
         this.noFoodCooldown = true;
@@ -622,7 +621,6 @@ class MainScene extends Phaser.Scene {
             const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
             this.brush.setVisible(inBounds);
             
-            // ✅ Не блокируем при отсутствии еды — пусть applyTool покажет предупреждение
             if (!inBounds) return;
             
             const localX = pointer.x - (this.carpetX - this.carpetW/2);
@@ -691,9 +689,7 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    // ✅ applyTool теперь проверяет еду и показывает предупреждение
     applyTool(localX, localY) {
-        // ✅ Проверка еды
         if (GameState.food <= 0) {
             this.showNoFoodWarning();
             return;
@@ -788,11 +784,10 @@ class MainScene extends Phaser.Scene {
         this.updateProgressBar();
     }
 
+    // ✅ Убрано сообщение "Ковёр почти чистый!"
     startAutoClean() {
         if (this.autoCleanStarted) return;
         this.autoCleanStarted = true;
-        
-        this.showMessage('Ковёр почти чистый! ✨');
         
         const dirtyCells = [];
         const cols = this.gridCols;
