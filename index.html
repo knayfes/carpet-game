@@ -259,7 +259,7 @@ class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
         for (let i = 1; i <= CONFIG.totalCarpets; i++) {
-            this.load.image('carpet' + i, `image/carpet/carpet${i}.png`);
+            this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
         }
         
         const w = this.cameras.main.width, h = this.cameras.main.height;
