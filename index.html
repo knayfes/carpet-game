@@ -37,16 +37,14 @@ const CONFIG = {
     
     finishThreshold: 1.0,
     
-    // ✅ Порог радиуса, после которого награда падает
+    // Штраф за большой радиус
     bigRadiusThreshold: 70,
-    
-    // ✅ Насколько падает награда за каждый лишний пиксель радиуса
-    // 0.02 = 2% за каждый пиксель свыше 70
     rewardPenaltyPerPixel: 0.02,
-    
-    // ✅ Минимальный множитель награды (чтобы не упало до нуля)
     minRewardMultiplier: 0.3
 };
+
+// ✅ НОВЫЙ КЛЮЧ СОХРАНЕНИЯ — старые данные игнорируются
+const SAVE_KEY = 'carpetGameStats_v2';
 
 const CARPET_IMAGE = 'carpet.png';
 
@@ -74,10 +72,14 @@ async function initYandexSDK() {
         ysdk = {
             player: {
                 getStats: async () => {
-                    const s = localStorage.getItem('carpetGameStats');
+                    // ✅ Новый ключ
+                    const s = localStorage.getItem(SAVE_KEY);
                     return s ? JSON.parse(s) : {};
                 },
-                setStats: async (stats) => localStorage.setItem('carpetGameStats', JSON.stringify(stats))
+                setStats: async (stats) => {
+                    // ✅ Новый ключ
+                    localStorage.setItem(SAVE_KEY, JSON.stringify(stats));
+                }
             },
             adv: {
                 showRewardedVideo: (o) => { if (o?.callbacks?.onRewarded) o.callbacks.onRewarded(); if (o?.callbacks?.onClose) o.callbacks.onClose(); },
@@ -85,7 +87,8 @@ async function initYandexSDK() {
             },
             features: { LoadingAPI: { ready: () => {} } }
         };
-        const s = localStorage.getItem('carpetGameStats');
+        // ✅ Новый ключ
+        const s = localStorage.getItem(SAVE_KEY);
         if (s) {
             try {
                 const d = JSON.parse(s);
@@ -113,11 +116,9 @@ function getCurrentRadius() {
     return Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
 }
 
-// ✅ Множитель награды: 1.0 при радиусе <= 70, падает дальше
 function getRewardMultiplier() {
     const radius = getCurrentRadius();
     if (radius <= CONFIG.bigRadiusThreshold) return 1.0;
-    
     const excess = radius - CONFIG.bigRadiusThreshold;
     const penalty = excess * CONFIG.rewardPenaltyPerPixel;
     return Math.max(CONFIG.minRewardMultiplier, 1.0 - penalty);
@@ -420,19 +421,15 @@ class MainScene extends Phaser.Scene {
         this.progressText.setText(p + '%');
     }
 
-    // ✅ НАГРАДА С УЧЁТОМ ШТРАФА ЗА БОЛЬШОЙ РАДИУС
     async finishCarpet() {
         if (this.cleanProgress < CONFIG.finishThreshold) {
             this.showMessage('Ковёр ещё грязный! Нужно 100%.');
             return;
         }
         
-        // Базовая награда
         const baseReward = Math.floor(
             CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)
         );
-        
-        // Множитель с учётом радиуса
         const multiplier = getRewardMultiplier();
         const reward = Math.floor(baseReward * GameState.toolLevel * multiplier);
         
@@ -442,7 +439,6 @@ class MainScene extends Phaser.Scene {
         this.foodText.setText('🍞 ' + GameState.food);
         await saveGame();
         
-        // Показываем штраф, если радиус больше 70
         const radius = getCurrentRadius();
         if (radius > CONFIG.bigRadiusThreshold) {
             const percent = Math.floor(multiplier * 100);
@@ -484,7 +480,6 @@ class MainScene extends Phaser.Scene {
         });
         els.push(fb);
         
-        // Кнопка улучшения — показываем радиус и предупреждение
         const tc = GameState.toolLevel * CONFIG.toolBasePrice;
         const cr = getCurrentRadius();
         const nr = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
