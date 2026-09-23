@@ -27,8 +27,6 @@
 const CONFIG = {
     startMoney: 0, startFood: 3, startToolLevel: 1,
     foodPrice: 10, toolBasePrice: 50,
-    
-    // ✅ Заработок уменьшен в 2 раза
     rewardMin: 25, rewardMax: 50,
     
     brushRadius: 40,
@@ -61,7 +59,7 @@ const CONFIG = {
 const SAVE_KEY = 'carpetGameStats_v3';
 
 // ============================================
-// ✅ СТИЛИ ТЕКСТА (обводка + тень + яркие цвета)
+// ✅ СТИЛИ ТЕКСТА
 // ============================================
 const TEXT_STYLES = {
     title: (color = '#FFD700') => ({
@@ -204,7 +202,6 @@ async function saveGame() {
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
-        // ✅ Загрузка ковров из папки image.carpet/
         for (let i = 1; i <= CONFIG.totalCarpets; i++) {
             this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
         }
@@ -486,7 +483,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ ГРЯЗЬ — ТЕМНЕЕ И ПЛОТНЕЕ
+    // ✅ ГРЯЗЬ ВОЗВРАЩЕНА КАК БЫЛА
     drawDirt() {
         this.dirtGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
@@ -501,18 +498,10 @@ class MainScene extends Phaser.Scene {
                 const py = cy + row * cs;
                 
                 if (dirt > 0.05) {
-                    // ✅ Основной слой грязи — темнее и плотнее
-                    this.dirtGfx.fillStyle(0x1a0f05, dirt * 0.9);
+                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.65);
                     this.dirtGfx.fillRect(px, py, cs, cs);
-                    
-                    // ✅ Дополнительные тёмные пятна на самых грязных местах
-                    if (dirt > 0.7) {
-                        this.dirtGfx.fillStyle(0x0a0500, 0.4);
-                        this.dirtGfx.fillCircle(px + cs/2, py + cs/2, cs * 0.4);
-                    }
                 } else {
-                    // Чистый участок — светлая подсветка
-                    this.dirtGfx.fillStyle(0xFFFFFF, 0.12);
+                    this.dirtGfx.fillStyle(0xFFFFFF, 0.08);
                     this.dirtGfx.fillRect(px, py, cs, cs);
                 }
             }
@@ -544,6 +533,7 @@ class MainScene extends Phaser.Scene {
         if (this.needRedrawSoap) this.drawSoap();
     }
 
+    // ✅ ПОЛНОСТЬЮ ПЕРЕПИСАНО — чтобы не залипал тач
     setupCleaning() {
         this.game.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
         this.game.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
@@ -566,21 +556,39 @@ class MainScene extends Phaser.Scene {
             this.applyTool(localX, localY);
         };
         
+        // ✅ Используем pointerdown + pointermove без глобального флага
         this.input.on('pointerdown', (pointer) => {
             this.isPointerDown = true;
             this.lastLocalX = -9999;
             this.lastLocalY = -9999;
             handlePointer(pointer);
         });
+        
         this.input.on('pointermove', (pointer) => {
-            if (!this.isPointerDown && !pointer.isDown) return;
+            // Если палец/мышь зажаты — стираем
+            if (!pointer.isDown) {
+                this.isPointerDown = false;
+                return;
+            }
             handlePointer(pointer);
         });
+        
         this.input.on('pointerup', () => {
             this.isPointerDown = false;
             this.brush.setVisible(false);
+            this.lastLocalX = -9999;
+            this.lastLocalY = -9999;
         });
+        
         this.input.on('pointerout', () => {
+            this.isPointerDown = false;
+            this.brush.setVisible(false);
+            this.lastLocalX = -9999;
+            this.lastLocalY = -9999;
+        });
+        
+        // ✅ Дополнительный сброс при потере фокуса окна
+        window.addEventListener('blur', () => {
             this.isPointerDown = false;
             this.brush.setVisible(false);
         });
@@ -676,6 +684,7 @@ class MainScene extends Phaser.Scene {
         this.progressText.setText(p + '%');
     }
 
+    // ✅ ПОЛНЫЙ СБРОС ПОСЛЕ ПОЛУЧЕНИЯ ДЕНЕГ
     async finishCarpet() {
         if (this.cleanProgress < 1.0) {
             this.showMessage('Ковёр ещё грязный! Нужно 100%.');
@@ -702,22 +711,32 @@ class MainScene extends Phaser.Scene {
         if (radiusPenalty < 1.0) msg += ` (-${Math.floor((1 - radiusPenalty) * 100)}%)`;
         this.showMessage(msg);
         
+        // Убираем висящие звёзды
         this.children.list.forEach(child => {
             if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) {
                 child.destroy();
             }
         });
         
+        // Сброс грязи и мыла
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
         this.needRedrawDirt = true;
         this.needRedrawSoap = true;
         this.cleanProgress = 0;
         this.celebrationShown = false;
+        
+        // ✅ ПОЛНЫЙ СБРОС ТАЧА — чтобы можно было мылить заново
         this.isPointerDown = false;
         this.lastLocalX = -9999;
         this.lastLocalY = -9999;
+        this.brush.setVisible(false);
+        
         this.updateProgressBar();
+        
+        // ✅ Принудительная перерисовка
+        this.drawDirt();
+        this.drawSoap();
     }
 
     openShop() {
@@ -839,7 +858,6 @@ class MainScene extends Phaser.Scene {
         els.push(cb);
     }
 
-    // ✅ ИСПРАВЛЕНО: сброс тача и перерисовка
     async buyNewCarpet() {
         if (!canBuyNewCarpet()) return;
         
@@ -855,7 +873,6 @@ class MainScene extends Phaser.Scene {
         this.drawRoom();
         this.drawCarpet();
         
-        // Сброс грязи и мыла
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
         this.needRedrawDirt = true;
@@ -863,15 +880,13 @@ class MainScene extends Phaser.Scene {
         this.cleanProgress = 0;
         this.celebrationShown = false;
         
-        // ✅ Сброс состояния тача — чтобы можно было чистить новый ковёр
+        // Полный сброс тача
         this.isPointerDown = false;
         this.lastLocalX = -9999;
         this.lastLocalY = -9999;
         this.brush.setVisible(false);
         
         this.updateProgressBar();
-        
-        // ✅ Принудительная перерисовка сразу
         this.drawDirt();
         this.drawSoap();
         
