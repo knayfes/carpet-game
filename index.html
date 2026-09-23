@@ -38,7 +38,6 @@ const CONFIG = {
     
     progressThreshold: 1.0,
     
-    // ✅ Автодоочистка с 99% за 12 секунд
     autoCleanThreshold: 0.99,
     autoCleanDuration: 12000,
     
@@ -57,13 +56,15 @@ const CONFIG = {
     finishStarCount: 25,
     finishStarDuration: 1800,
     
-    totalCarpets: 5
+    totalCarpets: 5,
+    
+    inputLockDuration: 300
 };
 
 const SAVE_KEY = 'carpetGameStats_v3';
 
 // ============================================
-// ✅ СТИЛИ ТЕКСТА
+// СТИЛИ ТЕКСТА
 // ============================================
 const TEXT_STYLES = {
     title: (color = '#FFD700') => ({
@@ -271,9 +272,9 @@ class MainScene extends Phaser.Scene {
         this.lastLocalY = -9999;
         this.celebrationShown = false;
         
-        // ✅ Автодоочистка
         this.autoCleanStarted = false;
         this.autoCleanTimer = null;
+        this.inputLocked = false;
         
         this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
@@ -316,6 +317,23 @@ class MainScene extends Phaser.Scene {
         
         this.selectTool('soap');
         this.setupCleaning();
+    }
+
+    // ✅ Разблокировка ввода через задержку
+    unlockInput() {
+        this.inputLocked = true;
+        this.isPointerDown = false;
+        this.lastLocalX = -9999;
+        this.lastLocalY = -9999;
+        this.brush.setVisible(false);
+        
+        this.time.delayedCall(CONFIG.inputLockDuration, () => {
+            this.inputLocked = false;
+            // Дополнительная страховка
+            this.isPointerDown = false;
+            this.lastLocalX = -9999;
+            this.lastLocalY = -9999;
+        });
     }
 
     drawRoom() {
@@ -545,6 +563,8 @@ class MainScene extends Phaser.Scene {
         this.game.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
         
         const handlePointer = (pointer) => {
+            if (this.inputLocked) return;
+            
             this.brush.setPosition(pointer.x, pointer.y);
             const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
             this.brush.setVisible(GameState.food > 0 && inBounds);
@@ -563,6 +583,7 @@ class MainScene extends Phaser.Scene {
         };
         
         this.input.on('pointerdown', (pointer) => {
+            if (this.inputLocked) return;
             this.isPointerDown = true;
             this.lastLocalX = -9999;
             this.lastLocalY = -9999;
@@ -570,6 +591,7 @@ class MainScene extends Phaser.Scene {
         });
         
         this.input.on('pointermove', (pointer) => {
+            if (this.inputLocked) return;
             if (!pointer.isDown) {
                 this.isPointerDown = false;
                 return;
@@ -591,7 +613,25 @@ class MainScene extends Phaser.Scene {
             this.lastLocalY = -9999;
         });
         
+        // Дополнительные обработчики для мобильных
+        this.input.on('pointerupoutside', () => {
+            this.isPointerDown = false;
+            this.brush.setVisible(false);
+            this.lastLocalX = -9999;
+            this.lastLocalY = -9999;
+        });
+        
         window.addEventListener('blur', () => {
+            this.isPointerDown = false;
+            this.brush.setVisible(false);
+        });
+        
+        document.addEventListener('touchend', () => {
+            this.isPointerDown = false;
+            this.brush.setVisible(false);
+        }, { passive: true });
+        
+        document.addEventListener('mouseup', () => {
             this.isPointerDown = false;
             this.brush.setVisible(false);
         });
@@ -678,7 +718,6 @@ class MainScene extends Phaser.Scene {
             }
         }
         
-        // ✅ Запуск автодоочистки при 99%
         if (this.cleanProgress >= CONFIG.autoCleanThreshold 
             && this.cleanProgress < 1.0 
             && !this.autoCleanStarted) {
@@ -688,7 +727,6 @@ class MainScene extends Phaser.Scene {
         this.updateProgressBar();
     }
 
-    // ✅ АВТОДООЧИСТКА — 12 секунд
     startAutoClean() {
         if (this.autoCleanStarted) return;
         this.autoCleanStarted = true;
@@ -710,7 +748,6 @@ class MainScene extends Phaser.Scene {
             return;
         }
         
-        // ✅ 12000 мс / 100 мс = 120 тиков
         const tickDelay = 100;
         const totalTicks = CONFIG.autoCleanDuration / tickDelay;
         const cellsPerTick = Math.max(1, Math.ceil(dirtyCells.length / totalTicks));
@@ -749,16 +786,11 @@ class MainScene extends Phaser.Scene {
         this.updateProgressBar();
     }
 
-    // ✅ ФИНАЛ АВТОДООЧИСТКИ — полный сброс тача
     finishAutoClean() {
         this.cleanProgress = 1.0;
         this.updateProgressBar();
         
-        // ✅ Сброс тача, чтобы можно было чистить дальше
-        this.isPointerDown = false;
-        this.lastLocalX = -9999;
-        this.lastLocalY = -9999;
-        this.brush.setVisible(false);
+        this.unlockInput();
         
         if (!this.celebrationShown) {
             this.celebrationShown = true;
@@ -778,6 +810,9 @@ class MainScene extends Phaser.Scene {
             this.showMessage('Ковёр ещё грязный! Нужно 100%.');
             return;
         }
+        
+        // ✅ Сначала блокируем ввод, чтобы не было залипания
+        this.unlockInput();
         
         const baseReward = Math.floor(
             CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)
@@ -799,12 +834,14 @@ class MainScene extends Phaser.Scene {
         if (radiusPenalty < 1.0) msg += ` (-${Math.floor((1 - radiusPenalty) * 100)}%)`;
         this.showMessage(msg);
         
+        // Убираем висящие звёзды
         this.children.list.forEach(child => {
             if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) {
                 child.destroy();
             }
         });
         
+        // Сброс грязи и мыла
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
         this.needRedrawDirt = true;
@@ -812,18 +849,12 @@ class MainScene extends Phaser.Scene {
         this.cleanProgress = 0;
         this.celebrationShown = false;
         
-        // ✅ Полный сброс автодоочистки
+        // Сброс автодоочистки
         this.autoCleanStarted = false;
         if (this.autoCleanTimer) {
             this.autoCleanTimer.remove();
             this.autoCleanTimer = null;
         }
-        
-        // ✅ Сброс тача
-        this.isPointerDown = false;
-        this.lastLocalX = -9999;
-        this.lastLocalY = -9999;
-        this.brush.setVisible(false);
         
         this.updateProgressBar();
         this.drawDirt();
@@ -952,6 +983,9 @@ class MainScene extends Phaser.Scene {
     async buyNewCarpet() {
         if (!canBuyNewCarpet()) return;
         
+        // ✅ Блокируем ввод
+        this.unlockInput();
+        
         GameState.money = 0;
         GameState.toolLevel = CONFIG.startToolLevel;
         GameState.carpetIndex += 1;
@@ -971,18 +1005,11 @@ class MainScene extends Phaser.Scene {
         this.cleanProgress = 0;
         this.celebrationShown = false;
         
-        // ✅ Сброс автодоочистки
         this.autoCleanStarted = false;
         if (this.autoCleanTimer) {
             this.autoCleanTimer.remove();
             this.autoCleanTimer = null;
         }
-        
-        // ✅ Сброс тача
-        this.isPointerDown = false;
-        this.lastLocalX = -9999;
-        this.lastLocalY = -9999;
-        this.brush.setVisible(false);
         
         this.updateProgressBar();
         this.drawDirt();
