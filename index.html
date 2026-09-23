@@ -31,14 +31,12 @@ const CONFIG = {
     brushRadius: 40,
     toolRadiusBonus: 0.05,
     
-    // Мыло наносится мягко
     soapPower: 1.0,
     soapThreshold: 0.01,
-    
-    // Смывание — быстрое
     eraseStrength: 0.9,
     
-    finishThreshold: 1.0
+    // ✅ 98% достаточно для завершения
+    finishThreshold: 0.98
 };
 
 const CARPET_IMAGE = 'carpet.png';
@@ -263,6 +261,7 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
+    // ✅ Мыло — лёгкая голубая подсветка, НЕ засвечивает ковёр
     drawSoap() {
         this.soapGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
@@ -276,8 +275,8 @@ class MainScene extends Phaser.Scene {
                 if (soap < 0.05) continue;
                 const px = cx + col * cs;
                 const py = cy + row * cs;
-                // ✅ Мыло лёгкое — alpha 0.15, ковёр остаётся виден
-                this.soapGfx.fillStyle(0xFFFFFF, soap * 0.3);
+                // Голубая подсветка с alpha 0.1 — ковёр не белеет
+                this.soapGfx.fillStyle(0x88CCFF, soap * 0.1);
                 this.soapGfx.fillRect(px, py, cs, cs);
             }
         }
@@ -332,9 +331,6 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    // ============================================
-    // ПРИМЕНЕНИЕ ИНСТРУМЕНТА
-    // ============================================
     applyTool(localX, localY) {
         const radius = CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus);
         const cs = this.gridCellSize;
@@ -371,7 +367,6 @@ class MainScene extends Phaser.Scene {
                     if (this.dirtGrid[index] > 0.01) {
                         this.dirtGrid[index] = Math.max(0, this.dirtGrid[index] - CONFIG.eraseStrength * falloff);
                         dirtChanged = true;
-                        
                         this.soapGrid[index] = Math.max(0, this.soapGrid[index] - 0.05);
                         soapChanged = true;
                     }
@@ -388,6 +383,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    // ✅ Прогресс: если >= 98%, показываем 100%
     recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
@@ -395,13 +391,12 @@ class MainScene extends Phaser.Scene {
             total += (1 - this.dirtGrid[i]);
         }
         this.cleanProgress = total / cells;
-        if (this.cleanProgress >= 0.9999) {
-            let allClean = true;
-            for (let i = 0; i < cells; i++) {
-                if (this.dirtGrid[i] > 0.05) { allClean = false; break; }
-            }
-            this.cleanProgress = allClean ? 1.0 : 0.99;
+        
+        // Если достигли 98% — считаем за 100%
+        if (this.cleanProgress >= CONFIG.finishThreshold) {
+            this.cleanProgress = 1.0;
         }
+        
         this.updateProgressBar();
     }
 
@@ -412,8 +407,8 @@ class MainScene extends Phaser.Scene {
     }
 
     async finishCarpet() {
-        if (this.cleanProgress < CONFIG.finishThreshold) {
-            this.showMessage('Ковёр ещё грязный! Нужно 100%.');
+        if (this.cleanProgress < 1.0) {
+            this.showMessage('Ковёр ещё грязный! Нужно 98%.');
             return;
         }
         const reward = Math.floor(CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)) * GameState.toolLevel;
