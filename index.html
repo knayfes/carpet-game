@@ -323,7 +323,6 @@ class MainScene extends Phaser.Scene {
             .setDepth(10).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.openShop());
         
-        // Кнопки инструментов
         const btnY = 1200;
         
         this.soapBtnBg = this.add.rectangle(120, btnY, 200, 80, 0x4A90D9).setDepth(10);
@@ -349,7 +348,6 @@ class MainScene extends Phaser.Scene {
             this.swatterBtnText.setVisible(false);
         }
         
-        // ✅ Кнопка "ДОБИТЬ" — на y=1000, глубина 15-16 (выше других)
         this.finishBtnBg = this.add.rectangle(W/2, 1000, 340, 75, 0xFFD700).setDepth(15);
         this.finishBtnBg.setStrokeStyle(6, 0xFFFFFF);
         this.finishBtnText = this.add.text(W/2, 1000, '🧹 ДОБИТЬ', {
@@ -362,7 +360,6 @@ class MainScene extends Phaser.Scene {
         this.finishBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.finishCarpetFast());
         
-        // Кнопка "ПОЛУЧИТЬ ДЕНЬГИ" — на y=1080
         this.add.text(W/2, 1080, 'ПОЛУЧИТЬ ДЕНЬГИ', {
             ...TEXT_STYLES.button('#00FF00', 26),
             backgroundColor: '#000000', padding: { x: 25, y: 12 }
@@ -375,19 +372,13 @@ class MainScene extends Phaser.Scene {
         this.spawnBugsIfNeeded();
     }
 
-    // ============================================
-    // ✅ КНОПКА "ДОБИТЬ"
-    // ============================================
     showFinishButton() {
         if (this.finishButtonActive) return;
         this.finishButtonActive = true;
         
-        console.log('Кнопка ДОБИТЬ: показана');
-        
         this.finishBtnBg.setVisible(true);
         this.finishBtnText.setVisible(true);
         
-        // Пульсация
         this.tweens.add({
             targets: [this.finishBtnBg, this.finishBtnText],
             scaleX: 1.08,
@@ -411,7 +402,6 @@ class MainScene extends Phaser.Scene {
         this.finishBtnText.setVisible(false);
     }
     
-    // ✅ Быстрая доочистка за 1 секунду с анимацией
     finishCarpetFast() {
         if (this.finishAnimating) return;
         if (this.cleanProgress < CONFIG.finishButtonThreshold) return;
@@ -420,9 +410,6 @@ class MainScene extends Phaser.Scene {
         this.hideFinishButton();
         this.unlockInput();
         
-        console.log('Кнопка ДОБИТЬ: запуск анимации');
-        
-        // Собираем оставшиеся грязные ячейки
         const dirtyCells = [];
         const cols = this.gridCols;
         for (let row = 0; row < this.gridRows; row++) {
@@ -485,9 +472,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ============================================
-    // ЖУКИ
-    // ============================================
     spawnBugsIfNeeded() {
         if (GameState.carpetIndex < 2) return;
         
@@ -687,9 +671,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ============================================
-    // ПРЕДУПРЕЖДЕНИЯ
-    // ============================================
     showNoFoodWarning() {
         if (this.noFoodCooldown) return;
         this.noFoodCooldown = true;
@@ -954,6 +935,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    // ✅ Грязь плотнее (0.75) + свет чистого участка ярче (0.12)
     drawDirt() {
         this.dirtGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
@@ -968,10 +950,10 @@ class MainScene extends Phaser.Scene {
                 const py = cy + row * cs;
                 
                 if (dirt > 0.05) {
-                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.65);
+                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.75);
                     this.dirtGfx.fillRect(px, py, cs, cs);
                 } else {
-                    this.dirtGfx.fillStyle(0xFFFFFF, 0.08);
+                    this.dirtGfx.fillStyle(0xFFFFFF, 0.12);
                     this.dirtGfx.fillRect(px, py, cs, cs);
                 }
             }
@@ -979,6 +961,7 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
+    // ✅ Мыло заметнее (0.3)
     drawSoap() {
         this.soapGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
@@ -991,7 +974,7 @@ class MainScene extends Phaser.Scene {
                 if (soap < 0.05) continue;
                 const px = cx + col * cs;
                 const py = cy + row * cs;
-                this.soapGfx.fillStyle(0x88CCFF, soap * 0.2);
+                this.soapGfx.fillStyle(0x88CCFF, soap * 0.3);
                 this.soapGfx.fillRect(px, py, cs, cs);
             }
         }
@@ -1192,7 +1175,6 @@ class MainScene extends Phaser.Scene {
                 }
             } else {
                 this.cleanProgress = 0.99;
-                console.log('Прогресс 99%, показываем кнопку ДОБИТЬ');
                 this.showFinishButton();
             }
         } else {
