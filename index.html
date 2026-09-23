@@ -41,14 +41,15 @@ const CONFIG = {
     autoCleanThreshold: 0.99,
     autoCleanDuration: 12000,
     
+    // ✅ Радиус для 1-го ковра = 70, дальше +10
     newCarpetRadiusRequired: 70,
+    newCarpetRadiusIncrease: 10,
+    
     newCarpetBasePrice: 5000,
     rewardMultiplierPerCarpet: 1.25,
     
     penaltyStartRadius: 60,
     penaltyIncreasePerCarpet: 5,
-    
-    // ✅ Штраф уменьшен с 2% до 1%
     penaltyPerPixel: 0.01,
     minRewardMultiplier: 0.3,
     
@@ -127,6 +128,11 @@ function getPenaltyStartRadius() {
     return CONFIG.penaltyStartRadius + (GameState.carpetLevel * CONFIG.penaltyIncreasePerCarpet);
 }
 
+// ✅ Требуемый радиус для покупки следующего ковра
+function getRequiredRadius() {
+    return CONFIG.newCarpetRadiusRequired + (GameState.carpetLevel * CONFIG.newCarpetRadiusIncrease);
+}
+
 function getRadiusPenaltyMultiplier() {
     const radius = getCurrentRadius();
     const threshold = getPenaltyStartRadius();
@@ -141,7 +147,7 @@ function getNewCarpetPrice() {
 }
 
 function canBuyNewCarpet() {
-    return getCurrentRadius() >= CONFIG.newCarpetRadiusRequired
+    return getCurrentRadius() >= getRequiredRadius()
         && GameState.money >= getNewCarpetPrice()
         && GameState.carpetIndex < CONFIG.totalCarpets;
 }
@@ -784,7 +790,6 @@ class MainScene extends Phaser.Scene {
         this.updateProgressBar();
     }
 
-    // ✅ Убрано сообщение "Ковёр почти чистый!"
     startAutoClean() {
         if (this.autoCleanStarted) return;
         this.autoCleanStarted = true;
@@ -962,7 +967,7 @@ class MainScene extends Phaser.Scene {
                 this.toolText.setText('🧹 Радиус: ' + r);
                 await saveGame(); this.showMessage('Щётка улучшена!');
                 
-                if (r >= CONFIG.newCarpetRadiusRequired && GameState.carpetIndex < CONFIG.totalCarpets) {
+                if (r >= getRequiredRadius() && GameState.carpetIndex < CONFIG.totalCarpets) {
                     this.showMessage('Новый ковёр доступен в магазине!');
                 }
                 
@@ -982,7 +987,8 @@ class MainScene extends Phaser.Scene {
         
         const newCarpetPrice = getNewCarpetPrice();
         const canBuy = canBuyNewCarpet();
-        const radiusEnough = getCurrentRadius() >= CONFIG.newCarpetRadiusRequired;
+        const requiredRadius = getRequiredRadius();
+        const radiusEnough = getCurrentRadius() >= requiredRadius;
         const hasNextCarpet = GameState.carpetIndex < CONFIG.totalCarpets;
         
         let newCarpetLabel = '';
@@ -992,7 +998,7 @@ class MainScene extends Phaser.Scene {
             newCarpetLabel = '🏆 ВСЕ КОВРЫ ОТКРЫТЫ';
             newCarpetColor = '#FFD700';
         } else if (!radiusEnough) {
-            newCarpetLabel = `🔒 Нужен радиус ${CONFIG.newCarpetRadiusRequired}\n(сейчас ${getCurrentRadius()})`;
+            newCarpetLabel = `🔒 Нужен радиус ${requiredRadius}\n(сейчас ${getCurrentRadius()})`;
             newCarpetColor = '#AAAAAA';
         } else if (GameState.money < newCarpetPrice) {
             newCarpetLabel = `🆕 НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nНе хватает денег`;
