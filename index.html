@@ -681,7 +681,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    recalcProgress() {
+        recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
         for (let i = 0; i < cells; i++) total += (1 - this.dirtGrid[i]);
@@ -700,4 +700,278 @@ class MainScene extends Phaser.Scene {
                     this.showMessage('Ковёр чистый! ✨');
                 }
             } else {
-                this.clean
+                this.cleanProgress = 0.99;
+            }
+        }
+        
+        this.updateProgressBar();
+    }
+
+    updateProgressBar() {
+        const p = Math.min(100, Math.floor(this.cleanProgress * 100));
+        this.progressBar.width = 400 * this.cleanProgress;
+        this.progressText.setText(p + '%');
+    }
+
+    // ============================================
+    // ПОЛУЧИТЬ ДЕНЬГИ
+    // ============================================
+    async finishCarpet() {
+        if (this.cleanProgress < 1.0) {
+            this.showMessage('Ковёр ещё грязный! Нужно 100%.');
+            return;
+        }
+        
+        // ✅ Базовая награда
+        const baseReward = Math.floor(
+            CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)
+        );
+        
+        // ✅ Множитель за новые ковры (×1.25 каждый)
+        const carpetMultiplier = getRewardMultiplier();
+        
+        // ✅ Штраф за большой радиус
+        const radiusPenalty = getRadiusPenaltyMultiplier();
+        
+        // ✅ Итоговая награда
+        const reward = Math.floor(
+            baseReward * GameState.toolLevel * carpetMultiplier * radiusPenalty
+        );
+        
+        GameState.money += reward;
+        GameState.food -= 1;
+        this.moneyText.setText('💰 ' + GameState.money);
+        this.foodText.setText('🍞 ' + GameState.food);
+        await saveGame();
+        
+        // Сообщение с деталями
+        let msg = `+${reward} 💰`;
+        if (carpetMultiplier > 1.0) {
+            msg += ` (×${carpetMultiplier.toFixed(2)} за ковёр)`;
+        }
+        if (radiusPenalty < 1.0) {
+            msg += ` (-${Math.floor((1 - radiusPenalty) * 100)}% за радиус)`;
+        }
+        this.showMessage(msg);
+        
+        // Убираем висящие звёзды
+        this.children.list.forEach(child => {
+            if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) {
+                child.destroy();
+            }
+        });
+        
+        // Сброс грязи
+        this.dirtGrid.fill(1.0);
+        this.soapGrid.fill(0.0);
+        this.needRedrawDirt = true;
+        this.needRedrawSoap = true;
+        this.cleanProgress = 0;
+        this.celebrationShown = false;
+        this.isPointerDown = false;
+        this.lastLocalX = -9999;
+        this.lastLocalY = -9999;
+        this.updateProgressBar();
+    }
+
+    // ============================================
+    // МАГАЗИН
+    // ============================================
+    openShop() {
+        const W = 720, H = 1280;
+        const els = [];
+        
+        const ov = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.85).setDepth(20);
+        ov.setInteractive(); els.push(ov);
+        const bg = this.add.rectangle(W/2, H/2, 640, 1000, 0x333333).setDepth(21);
+        bg.setStrokeStyle(4, 0xFFD700); els.push(bg);
+        els.push(this.add.text(W/2, 200, 'МАГАЗИН', {
+            fontSize: '48px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(22));
+        
+        // ---- ЕДА ----
+        const fb = this.add.text(W/2, 320, `Купить еду (${CONFIG.foodPrice}💰)\n🍞 +1`, {
+            fontSize: '28px', fill: '#FFFFFF', align: 'center',
+            backgroundColor: '#444444', padding: { x: 30, y: 15 }, fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
+          .on('pointerdown', async () => {
+            if (GameState.money >= CONFIG.foodPrice) {
+                GameState.money -= CONFIG.foodPrice; GameState.food += 1;
+                this.moneyText.setText('💰 ' + GameState.money);
+                this.foodText.setText('🍞 ' + GameState.food);
+                await saveGame(); this.showMessage('Куплена еда!');
+            } else this.showMessage('Не хватает денег!');
+        });
+        els.push(fb);
+        
+        // ---- УЛУЧШЕНИЕ ЩЁТКИ ----
+        const tc = GameState.toolLevel * CONFIG.toolBasePrice;
+        const cr = getCurrentRadius();
+        const nr = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
+        const penaltyStart = getPenaltyStartRadius();
+        
+        let warningText = '';
+        if (nr > penaltyStart) {
+            const newMult = Math.max(CONFIG.minRewardMultiplier, 1.0 - (nr - penaltyStart) * CONFIG.penaltyPerPixel);
+            warningText = `\n⚠️ Награда: ${Math.floor(newMult * 100)}%`;
+        }
+        
+        const tb = this.add.text(W/2, 470,
+            `Улучшить щётку (${tc}💰)\nРадиус: ${cr} → ${nr}${warningText}`, {
+            fontSize: '26px', fill: warningText ? '#FFAA00' : '#FFFFFF', align: 'center',
+            backgroundColor: '#444444', padding: { x: 30, y: 15 }, fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
+          .on('pointerdown', async () => {
+            const cost = GameState.toolLevel * CONFIG.toolBasePrice;
+            if (GameState.money >= cost) {
+                GameState.money -= cost; GameState.toolLevel += 1;
+                this.moneyText.setText('💰 ' + GameState.money);
+                const r = getCurrentRadius();
+                this.toolText.setText('🧹 Радиус: ' + r);
+                await saveGame(); this.showMessage('Щётка улучшена!');
+                
+                // ✅ Если радиус достиг 70 — сообщаем про новый ковёр
+                if (r >= CONFIG.newCarpetRadiusRequired && GameState.carpetIndex < CONFIG.totalCarpets) {
+                    this.showMessage('Новый ковёр доступен в магазине!');
+                }
+                
+                const nc = GameState.toolLevel * CONFIG.toolBasePrice;
+                const nr2 = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
+                const ps2 = getPenaltyStartRadius();
+                let warn2 = '';
+                if (nr2 > ps2) {
+                    const m2 = Math.max(CONFIG.minRewardMultiplier, 1.0 - (nr2 - ps2) * CONFIG.penaltyPerPixel);
+                    warn2 = `\n⚠️ Награда: ${Math.floor(m2 * 100)}%`;
+                }
+                tb.setText(`Улучшить щётку (${nc}💰)\nРадиус: ${r} → ${nr2}${warn2}`);
+                tb.setColor(warn2 ? '#FFAA00' : '#FFFFFF');
+            } else this.showMessage('Не хватает денег!');
+        });
+        els.push(tb);
+        
+        // ---- НОВЫЙ КОВЁР ----
+        const newCarpetPrice = getNewCarpetPrice();
+        const canBuy = canBuyNewCarpet();
+        const radiusEnough = getCurrentRadius() >= CONFIG.newCarpetRadiusRequired;
+        const hasNextCarpet = GameState.carpetIndex < CONFIG.totalCarpets;
+        
+        let newCarpetLabel = '';
+        let newCarpetColor = '#666666';
+        
+        if (!hasNextCarpet) {
+            newCarpetLabel = '🏆 ВСЕ КОВРЫ ОТКРЫТЫ';
+            newCarpetColor = '#FFD700';
+        } else if (!radiusEnough) {
+            newCarpetLabel = `🔒 Нужен радиус ${CONFIG.newCarpetRadiusRequired}\n(сейчас ${getCurrentRadius()})`;
+            newCarpetColor = '#888888';
+        } else if (GameState.money < newCarpetPrice) {
+            newCarpetLabel = `🆕 НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nНе хватает денег`;
+            newCarpetColor = '#888888';
+        } else {
+            newCarpetLabel = `🆕 КУПИТЬ НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nКовёр ${GameState.carpetIndex} → ${GameState.carpetIndex + 1}\n⚠️ Сброс щётки и денег\n✅ Заработок ×1.25 навсегда`;
+            newCarpetColor = '#00FF00';
+        }
+        
+        const nb = this.add.text(W/2, 680, newCarpetLabel, {
+            fontSize: '22px', fill: newCarpetColor, align: 'center',
+            backgroundColor: '#222222', padding: { x: 25, y: 15 }, fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(22);
+        
+        if (canBuy) {
+            nb.setInteractive({ useHandCursor: true })
+              .on('pointerdown', async () => {
+                // Спрашиваем подтверждение через простое сообщение
+                this.showMessage('Ковёр куплен! Всё сброшено.');
+                await this.buyNewCarpet();
+                els.forEach(el => el.destroy());
+              });
+        }
+        els.push(nb);
+        
+        // ---- ИНФО О ТЕКУЩЕМ МНОЖИТЕЛЕ ----
+        const infoText = `Уровень ковра: ${GameState.carpetLevel}\nМножитель: ×${getRewardMultiplier().toFixed(2)}\nШтраф радиуса с: ${getPenaltyStartRadius()}`;
+        const ib = this.add.text(W/2, 880, infoText, {
+            fontSize: '20px', fill: '#CCCCCC', align: 'center',
+            backgroundColor: '#222222', padding: { x: 20, y: 12 }, fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(22);
+        els.push(ib);
+        
+        // ---- ЗАКРЫТЬ ----
+        const cb = this.add.text(620, 200, '✖', {
+            fontSize: '48px', fill: '#FF4444', fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => { els.forEach(el => el.destroy()); });
+        els.push(cb);
+    }
+
+    // ============================================
+    // ✅ ПОКУПКА НОВОГО КОВРА
+    // ============================================
+    async buyNewCarpet() {
+        if (!canBuyNewCarpet()) return;
+        
+        // Списываем деньги
+        GameState.money = 0;
+        
+        // Сбрасываем щётку
+        GameState.toolLevel = CONFIG.startToolLevel;
+        
+        // Переходим на следующий ковёр
+        GameState.carpetIndex += 1;
+        
+        // Увеличиваем уровень ковра (для множителя и штрафа)
+        GameState.carpetLevel += 1;
+        
+        // Обновляем UI
+        this.moneyText.setText('💰 ' + GameState.money);
+        this.toolText.setText('🧹 Радиус: ' + getCurrentRadius());
+        this.carpetText.setText('🟫 Ковёр: ' + GameState.carpetIndex + '/' + CONFIG.totalCarpets);
+        
+        // ✅ Перерисовываем комнату и ковёр
+        this.drawRoom();
+        this.drawCarpet();
+        
+        // Сброс грязи
+        this.dirtGrid.fill(1.0);
+        this.soapGrid.fill(0.0);
+        this.needRedrawDirt = true;
+        this.needRedrawSoap = true;
+        this.cleanProgress = 0;
+        this.celebrationShown = false;
+        this.updateProgressBar();
+        
+        await saveGame();
+        
+        // Праздничный салют при покупке
+        this.spawnCelebration();
+    }
+
+    showMessage(text) {
+        const msg = this.add.text(360, 1000, text, {
+            fontSize: '24px', fill: '#FFFF00', fontStyle: 'bold',
+            backgroundColor: '#000000', padding: { x: 20, y: 10 }, fontFamily: 'Arial',
+            wordWrap: { width: 600 }, align: 'center'
+        }).setOrigin(0.5).setDepth(30);
+        this.time.delayedCall(2200, () => msg.destroy());
+    }
+}
+
+// ============================================
+// ЗАПУСК
+// ============================================
+const phaserConfig = {
+    type: Phaser.CANVAS,
+    width: 720, height: 1280,
+    backgroundColor: '#1a1a1a',
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    input: { activePointers: 3, touch: { capture: true } },
+    scene: [PreloadScene, MainScene]
+};
+
+window.addEventListener('load', () => {
+    new Phaser.Game(phaserConfig);
+});
+</script>
+
+</body>
+</html>
