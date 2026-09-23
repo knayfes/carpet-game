@@ -35,7 +35,8 @@ const CONFIG = {
     soapThreshold: 0.01,
     eraseStrength: 0.9,
     
-    finishThreshold: 1.0,
+    // ✅ 98% реальной чистоты = 100% в игре
+    progressThreshold: 0.98,
     
     // Штраф за большой радиус
     bigRadiusThreshold: 70,
@@ -43,9 +44,7 @@ const CONFIG = {
     minRewardMultiplier: 0.3
 };
 
-// ✅ НОВЫЙ КЛЮЧ СОХРАНЕНИЯ — старые данные игнорируются
 const SAVE_KEY = 'carpetGameStats_v2';
-
 const CARPET_IMAGE = 'carpet.png';
 
 // ============================================
@@ -72,12 +71,10 @@ async function initYandexSDK() {
         ysdk = {
             player: {
                 getStats: async () => {
-                    // ✅ Новый ключ
                     const s = localStorage.getItem(SAVE_KEY);
                     return s ? JSON.parse(s) : {};
                 },
                 setStats: async (stats) => {
-                    // ✅ Новый ключ
                     localStorage.setItem(SAVE_KEY, JSON.stringify(stats));
                 }
             },
@@ -87,7 +84,6 @@ async function initYandexSDK() {
             },
             features: { LoadingAPI: { ready: () => {} } }
         };
-        // ✅ Новый ключ
         const s = localStorage.getItem(SAVE_KEY);
         if (s) {
             try {
@@ -405,6 +401,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    // ✅ Прогресс: 98%+ показывается как 100%
     recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
@@ -412,6 +409,12 @@ class MainScene extends Phaser.Scene {
             total += (1 - this.dirtGrid[i]);
         }
         this.cleanProgress = total / cells;
+        
+        // Если реально почищено на 98% — считаем за 100%
+        if (this.cleanProgress >= CONFIG.progressThreshold) {
+            this.cleanProgress = 1.0;
+        }
+        
         this.updateProgressBar();
     }
 
@@ -422,8 +425,8 @@ class MainScene extends Phaser.Scene {
     }
 
     async finishCarpet() {
-        if (this.cleanProgress < CONFIG.finishThreshold) {
-            this.showMessage('Ковёр ещё грязный! Нужно 100%.');
+        if (this.cleanProgress < 1.0) {
+            this.showMessage('Ковёр ещё грязный!');
             return;
         }
         
