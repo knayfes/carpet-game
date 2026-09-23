@@ -249,7 +249,8 @@ class MainScene extends Phaser.Scene {
         this.carpetW = 500;
         this.carpetH = 700;
         this.carpetX = W/2;
-        this.carpetY = 700;
+        // ✅ Ковёр поднят выше (было 700)
+        this.carpetY = 600;
         
         this.roomGfx = this.add.graphics().setDepth(-10);
         this.drawRoom();
@@ -344,7 +345,7 @@ class MainScene extends Phaser.Scene {
             this.swatterBtnText.setVisible(false);
         }
         
-        // ✅ Кнопка "ПОЛУЧИТЬ ДЕНЬГИ" — выше, так как кнопки "ДОБИТЬ" больше нет
+        // Кнопка "ПОЛУЧИТЬ ДЕНЬГИ" — на y=1050
         this.add.text(W/2, 1050, 'ПОЛУЧИТЬ ДЕНЬГИ', {
             ...TEXT_STYLES.button('#00FF00', 30),
             backgroundColor: '#000000', padding: { x: 30, y: 15 }
@@ -878,7 +879,6 @@ class MainScene extends Phaser.Scene {
             if (this.inputLocked) return;
             if (this.shopOpen) return;
             
-            // ✅ Мухобойка — только визуальный прицел, без удара
             if (this.currentTool === 'swatter') {
                 this.drawSwatter(pointer.x, pointer.y);
                 this.swatterGfx.setVisible(true);
@@ -905,7 +905,6 @@ class MainScene extends Phaser.Scene {
             this.applyTool(localX, localY);
         };
         
-        // ✅ pointerdown — тап. Для мухобойки — удар
         this.input.on('pointerdown', (pointer) => {
             if (this.inputLocked) return;
             if (this.shopOpen) return;
@@ -924,7 +923,6 @@ class MainScene extends Phaser.Scene {
             handlePointer(pointer);
         });
         
-        // ✅ pointermove — для мухобойки только двигаем прицел, без удара
         this.input.on('pointermove', (pointer) => {
             if (this.inputLocked) return;
             if (!pointer.isDown) {
