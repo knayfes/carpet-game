@@ -35,36 +35,119 @@ const CONFIG = {
     soapThreshold: 0.01,
     eraseStrength: 0.9,
     
-    // Порог завершения — 100%
     progressThreshold: 1.0,
     
-    // ✅ Радиус, при котором открывается "Новый ковёр"
     newCarpetRadiusRequired: 70,
-    
-    // ✅ Базовая цена нового ковра (умножается на номер ковра)
     newCarpetBasePrice: 5000,
-    
-    // ✅ Множитель заработка за каждый новый ковёр
     rewardMultiplierPerCarpet: 1.25,
     
-    // ✅ Штраф за радиус: начинается с 60, +5 за каждый новый ковёр
     penaltyStartRadius: 60,
     penaltyIncreasePerCarpet: 5,
     penaltyPerPixel: 0.02,
     minRewardMultiplier: 0.3,
     
-    // Звёздочки
     starChance: 0.2,
     starLifetime: 700,
     starCount: 1,
     finishStarCount: 25,
     finishStarDuration: 1800,
     
-    // Всего ковров (файлов в image/carpet/)
     totalCarpets: 5
 };
 
-const SAVE_KEY = 'carpetGameStats_v3';  // Новый ключ — сбросит старые сохранения
+const SAVE_KEY = 'carpetGameStats_v3';
+
+// ============================================
+// ✅ СТИЛИ ТЕКСТА (обводка + тень + яркие цвета)
+// ============================================
+const TEXT_STYLES = {
+    // Большой заголовок
+    title: (color = '#FFD700') => ({
+        fontSize: '48px',
+        fill: color,
+        fontStyle: 'bold',
+        fontFamily: 'Arial',
+        stroke: '#000000',
+        strokeThickness: 6,
+        shadow: {
+            offsetX: 3, offsetY: 3,
+            color: '#000000',
+            blur: 5,
+            fill: true
+        }
+    }),
+    
+    // Счётчики (деньги, еда, щётка)
+    stat: (color = '#FFFFFF', size = 30) => ({
+        fontSize: size + 'px',
+        fill: color,
+        fontStyle: 'bold',
+        fontFamily: 'Arial',
+        stroke: '#000000',
+        strokeThickness: 5,
+        shadow: {
+            offsetX: 2, offsetY: 2,
+            color: '#000000',
+            blur: 4,
+            fill: true
+        }
+    }),
+    
+    // Кнопки
+    button: (color = '#FFFFFF', size = 28) => ({
+        fontSize: size + 'px',
+        fill: color,
+        fontStyle: 'bold',
+        fontFamily: 'Arial',
+        stroke: '#000000',
+        strokeThickness: 5,
+        shadow: {
+            offsetX: 2, offsetY: 2,
+            color: '#000000',
+            blur: 4,
+            fill: true
+        }
+    }),
+    
+    // Магазин — крупные надписи
+    shop: (color = '#FFFFFF', size = 28) => ({
+        fontSize: size + 'px',
+        fill: color,
+        fontStyle: 'bold',
+        fontFamily: 'Arial',
+        stroke: '#000000',
+        strokeThickness: 4,
+        align: 'center'
+    }),
+    
+    // Магазин — инфо
+    shopInfo: (color = '#FFFFFF', size = 20) => ({
+        fontSize: size + 'px',
+        fill: color,
+        fontFamily: 'Arial',
+        stroke: '#000000',
+        strokeThickness: 3,
+        align: 'center'
+    }),
+    
+    // Сообщения
+    message: (color = '#FFFF00', size = 26) => ({
+        fontSize: size + 'px',
+        fill: color,
+        fontStyle: 'bold',
+        fontFamily: 'Arial',
+        stroke: '#000000',
+        strokeThickness: 5,
+        shadow: {
+            offsetX: 2, offsetY: 2,
+            color: '#000000',
+            blur: 4,
+            fill: true
+        },
+        align: 'center',
+        wordWrap: { width: 640 }
+    })
+};
 
 // ============================================
 // СОСТОЯНИЕ
@@ -73,31 +156,26 @@ const GameState = {
     money: CONFIG.startMoney,
     food: CONFIG.startFood,
     toolLevel: CONFIG.startToolLevel,
-    carpetIndex: 1,           // текущий ковёр (1..5)
-    carpetLevel: 0            // сколько раз покупали "новый ковёр"
+    carpetIndex: 1,
+    carpetLevel: 0
 };
 let ysdk = null;
 
 // ============================================
 // ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
 // ============================================
-
-// Текущий радиус щётки
 function getCurrentRadius() {
     return Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
 }
 
-// Множитель заработка (растёт ×1.25 за каждый новый ковёр)
 function getRewardMultiplier() {
     return Math.pow(CONFIG.rewardMultiplierPerCarpet, GameState.carpetLevel);
 }
 
-// Текущий порог штрафа за радиус
 function getPenaltyStartRadius() {
     return CONFIG.penaltyStartRadius + (GameState.carpetLevel * CONFIG.penaltyIncreasePerCarpet);
 }
 
-// Штраф за слишком большой радиус
 function getRadiusPenaltyMultiplier() {
     const radius = getCurrentRadius();
     const threshold = getPenaltyStartRadius();
@@ -107,12 +185,10 @@ function getRadiusPenaltyMultiplier() {
     return Math.max(CONFIG.minRewardMultiplier, 1.0 - penalty);
 }
 
-// Цена нового ковра
 function getNewCarpetPrice() {
     return CONFIG.newCarpetBasePrice * GameState.carpetIndex;
 }
 
-// Проверка: можно ли купить новый ковёр
 function canBuyNewCarpet() {
     return getCurrentRadius() >= CONFIG.newCarpetRadiusRequired
         && GameState.money >= getNewCarpetPrice()
@@ -182,15 +258,13 @@ async function saveGame() {
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
-        // ✅ Загружаем все 5 ковров из папки image/carpet/
         for (let i = 1; i <= CONFIG.totalCarpets; i++) {
             this.load.image('carpet' + i, `image/carpet/carpet${i}.png`);
         }
         
         const w = this.cameras.main.width, h = this.cameras.main.height;
-        this.add.text(w/2, h/2 - 50, 'Загрузка...', {
-            fontSize: '40px', fill: '#FFFFFF', fontFamily: 'Arial'
-        }).setOrigin(0.5);
+        this.add.text(w/2, h/2 - 50, 'Загрузка...', TEXT_STYLES.title())
+            .setOrigin(0.5);
         this.add.rectangle(w/2, h/2 + 30, 400, 30, 0x333333);
         const bar = this.add.rectangle(w/2 - 200, h/2 + 30, 0, 26, 0x00FF00).setOrigin(0, 0.5);
         this.load.on('progress', (v) => { bar.width = 400 * v; });
@@ -218,15 +292,12 @@ class MainScene extends Phaser.Scene {
         this.carpetX = W/2;
         this.carpetY = 700;
         
-        // ✅ Слой комнаты (фон)
         this.roomGfx = this.add.graphics().setDepth(-10);
         this.drawRoom();
         
-        // ✅ Слой ковра
         this.carpetContainer = this.add.container(0, 0).setDepth(0);
         this.drawCarpet();
         
-        // Сетка грязи
         this.gridCellSize = 20;
         this.gridCols = Math.ceil(this.carpetW / this.gridCellSize);
         this.gridRows = Math.ceil(this.carpetH / this.gridCellSize);
@@ -257,27 +328,28 @@ class MainScene extends Phaser.Scene {
         this.brush.setVisible(false);
         
         // ============================================
-        // UI
+        // ✅ UI — ТЁМНАЯ ПЛАШКА СЗАДИ ДЛЯ ЧИТАЕМОСТИ
         // ============================================
-        this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, {
-            fontSize: '36px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setDepth(10);
-        this.foodText = this.add.text(30, 80, '🍞 ' + GameState.food, {
-            fontSize: '28px', fill: '#FFFFFF', fontFamily: 'Arial'
-        }).setDepth(10);
-        this.toolText = this.add.text(30, 120, '🧹 Радиус: ' + getCurrentRadius(), {
-            fontSize: '20px', fill: '#AAAAAA', fontFamily: 'Arial'
-        }).setDepth(10);
-        this.carpetText = this.add.text(30, 150, '🟫 Ковёр: ' + GameState.carpetIndex + '/' + CONFIG.totalCarpets, {
-            fontSize: '20px', fill: '#AAAAAA', fontFamily: 'Arial'
-        }).setDepth(10);
+        this.uiPanel = this.add.rectangle(0, 0, 260, 180, 0x000000, 0.5)
+            .setOrigin(0, 0).setDepth(9);
         
+        this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, TEXT_STYLES.stat('#FFD700', 34))
+            .setDepth(10);
+        this.foodText = this.add.text(30, 80, '🍞 ' + GameState.food, TEXT_STYLES.stat('#FFFFFF', 26))
+            .setDepth(10);
+        this.toolText = this.add.text(30, 118, '🧹 Радиус: ' + getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 20))
+            .setDepth(10);
+        this.carpetText = this.add.text(30, 148, '🟫 Ковёр: ' + GameState.carpetIndex + '/' + CONFIG.totalCarpets, TEXT_STYLES.stat('#FFD700', 20))
+            .setDepth(10);
+        
+        // Прогресс-бар
+        this.add.rectangle(W/2, 200, 400, 30, 0x000000, 0.6).setDepth(10);
         this.add.rectangle(W/2, 200, 400, 30, 0x333333).setDepth(10);
         this.progressBar = this.add.rectangle(W/2 - 200, 200, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
-        this.progressText = this.add.text(W/2, 200, '0%', {
-            fontSize: '22px', fill: '#FFFFFF', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(10);
+        this.progressText = this.add.text(W/2, 200, '0%', TEXT_STYLES.stat('#FFFFFF', 22))
+            .setOrigin(0.5).setDepth(11);
         
+        // Магазин
         this.add.text(640, 40, '🛒', { fontSize: '48px' })
             .setDepth(10).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.openShop());
@@ -285,25 +357,24 @@ class MainScene extends Phaser.Scene {
         // Кнопки мыло/смыть
         const btnY = 1200;
         this.soapBtnBg = this.add.rectangle(180, btnY, 280, 80, 0x4A90D9).setDepth(10);
-        this.soapBtnBg.setStrokeStyle(4, 0xFFFFFF);
-        this.soapBtnText = this.add.text(180, btnY, '🧼 МЫЛО', {
-            fontSize: '28px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(11);
+        this.soapBtnBg.setStrokeStyle(5, 0xFFFFFF);
+        this.soapBtnText = this.add.text(180, btnY, '🧼 МЫЛО', TEXT_STYLES.button('#FFFFFF', 28))
+            .setOrigin(0.5).setDepth(11);
         this.soapBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.selectTool('soap'));
         
         this.washBtnBg = this.add.rectangle(540, btnY, 280, 80, 0x555555).setDepth(10);
-        this.washBtnBg.setStrokeStyle(4, 0x888888);
-        this.washBtnText = this.add.text(540, btnY, '💧 СМЫТЬ', {
-            fontSize: '28px', fill: '#AAAAAA', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(11);
+        this.washBtnBg.setStrokeStyle(5, 0x888888);
+        this.washBtnText = this.add.text(540, btnY, '💧 СМЫТЬ', TEXT_STYLES.button('#AAAAAA', 28))
+            .setOrigin(0.5).setDepth(11);
         this.washBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.selectTool('wash'));
         
-        // Кнопка получить деньги
+        // Получить деньги
         this.add.text(W/2, 1100, 'ПОЛУЧИТЬ ДЕНЬГИ', {
-            fontSize: '28px', fill: '#00FF00', fontStyle: 'bold',
-            backgroundColor: '#000000', padding: { x: 20, y: 10 }, fontFamily: 'Arial'
+            ...TEXT_STYLES.button('#00FF00', 30),
+            backgroundColor: '#000000',
+            padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => this.finishCarpet());
         
@@ -311,37 +382,28 @@ class MainScene extends Phaser.Scene {
         this.setupCleaning();
     }
 
-    // ============================================
-    // ✅ ПРОГРАММНАЯ КОМНАТА
-    // ============================================
     drawRoom() {
         const W = 720, H = 1280;
         const level = GameState.carpetLevel;
         const g = this.roomGfx;
         g.clear();
         
-        // Стиль чередуется: чётный уровень — уютная, нечётный — современная
         const isCozy = (level % 2 === 0);
         
         if (isCozy) {
-            // ===== УЮТНАЯ КОМНАТА =====
-            // Обои в полоску
             const wallColors = [0xE8D5B7, 0xD4B896, 0xC9A87C, 0xB89A6A, 0xA8895A];
             const wallColor = wallColors[level % wallColors.length];
             g.fillStyle(wallColor, 1);
             g.fillRect(0, 0, W, 900);
             
-            // Полоски на обоях
             for (let x = 0; x < W; x += 60) {
                 g.fillStyle(0x000000, 0.05);
                 g.fillRect(x, 0, 30, 900);
             }
             
-            // Деревянный пол
             g.fillStyle(0x8B5A2B, 1);
             g.fillRect(0, 900, W, H - 900);
             
-            // Доски пола
             for (let y = 900; y < H; y += 40) {
                 g.fillStyle(0x000000, 0.15);
                 g.fillRect(0, y, W, 3);
@@ -351,26 +413,21 @@ class MainScene extends Phaser.Scene {
                 g.fillRect(x, 900, 2, H - 900);
             }
             
-            // Плинтус
             g.fillStyle(0x5C3A1E, 1);
             g.fillRect(0, 880, W, 20);
             
-            // Окно с солнцем
             g.fillStyle(0x87CEEB, 1);
             g.fillRect(80, 150, 200, 250);
             g.fillStyle(0xFFFFFF, 1);
             g.fillRect(80, 150, 200, 250);
             g.lineStyle(8, 0x5C3A1E, 1);
             g.strokeRect(80, 150, 200, 250);
-            // Рамы
             g.fillStyle(0x5C3A1E, 1);
             g.fillRect(175, 150, 10, 250);
             g.fillRect(80, 270, 200, 10);
-            // Солнце
             g.fillStyle(0xFFEB3B, 0.8);
             g.fillCircle(240, 200, 35);
             
-            // Картина на стене
             g.fillStyle(0x8B4513, 1);
             g.fillRect(480, 200, 150, 120);
             g.fillStyle(0x87CEEB, 1);
@@ -379,80 +436,63 @@ class MainScene extends Phaser.Scene {
             g.fillTriangle(490, 310, 555, 240, 620, 310);
             
         } else {
-            // ===== СОВРЕМЕННАЯ КОМНАТА =====
-            // Градиентная стена
             const colors = [0x2C3E50, 0x34495E, 0x1A252F, 0x3D5A80, 0x293241];
             const wallColor = colors[level % colors.length];
             g.fillStyle(wallColor, 1);
             g.fillRect(0, 0, W, 900);
             
-            // Неоновая полоса
             g.fillStyle(0x00E5FF, 0.5);
             g.fillRect(0, 400, W, 4);
             g.fillStyle(0xFF00E5, 0.5);
             g.fillRect(0, 500, W, 4);
             
-            // Глянцевый пол
             g.fillStyle(0x1a1a1a, 1);
             g.fillRect(0, 900, W, H - 900);
             
-            // Отражение на полу
             for (let i = 0; i < 5; i++) {
                 g.fillStyle(0x00E5FF, 0.05);
                 g.fillRect(0, 900 + i * 40, W, 10);
             }
             
-            // Геометрические фигуры на стене
             g.lineStyle(3, 0x00E5FF, 0.6);
             g.strokeCircle(600, 250, 80);
             g.lineStyle(3, 0xFF00E5, 0.6);
             g.strokeRect(100, 180, 120, 120);
             
-            // Плинтус
             g.fillStyle(0x000000, 1);
             g.fillRect(0, 880, W, 20);
         }
     }
 
-    // ============================================
-    // ✅ КОВЁР (картинка или заглушка)
-    // ============================================
     drawCarpet() {
-        // Очищаем старый контейнер
         this.carpetContainer.removeAll(true);
         
         const carpetKey = 'carpet' + GameState.carpetIndex;
         
         if (this.textures.exists(carpetKey)) {
-            // ✅ Картинка загружена
             const img = this.add.image(this.carpetX, this.carpetY, carpetKey);
             img.setDisplaySize(this.carpetW, this.carpetH);
             this.carpetContainer.add(img);
         } else {
-            // ✅ Программная заглушка — меняется с каждым ковром
             const g = this.add.graphics();
             const cx = this.carpetX - this.carpetW / 2;
             const cy = this.carpetY - this.carpetH / 2;
             
-            // Палитра для разных ковров
             const palettes = [
-                { main: 0x8B4513, accent: 0xFFD700, border: 0x654321 },  // коричневый с золотом
-                { main: 0x8B0000, accent: 0xFFE4B5, border: 0x5C0000 },  // тёмно-красный
-                { main: 0x191970, accent: 0xC0C0C0, border: 0x0F0F40 },  // тёмно-синий
-                { main: 0x2E8B57, accent: 0xFFE4E1, border: 0x1F5F3A },  // зелёный
-                { main: 0x4B0082, accent: 0xFFD700, border: 0x2F0050 }   // фиолетовый
+                { main: 0x8B4513, accent: 0xFFD700, border: 0x654321 },
+                { main: 0x8B0000, accent: 0xFFE4B5, border: 0x5C0000 },
+                { main: 0x191970, accent: 0xC0C0C0, border: 0x0F0F40 },
+                { main: 0x2E8B57, accent: 0xFFE4E1, border: 0x1F5F3A },
+                { main: 0x4B0082, accent: 0xFFD700, border: 0x2F0050 }
             ];
             const p = palettes[(GameState.carpetIndex - 1) % palettes.length];
             
-            // Основной цвет
             g.fillStyle(p.main, 1);
             g.fillRect(cx, cy, this.carpetW, this.carpetH);
             
-            // Кайма
             g.lineStyle(20, p.border, 1);
             g.strokeRect(cx + 10, cy + 10, this.carpetW - 20, this.carpetH - 20);
             
-            // Узор — ромбы в центре
             g.lineStyle(4, p.accent, 0.7);
             for (let i = 0; i < 3; i++) {
                 const size = 100 - i * 30;
@@ -467,7 +507,6 @@ class MainScene extends Phaser.Scene {
                 g.strokePath();
             }
             
-            // Точки в углах
             g.fillStyle(p.accent, 1);
             g.fillCircle(cx + 50, cy + 50, 12);
             g.fillCircle(cx + this.carpetW - 50, cy + 50, 12);
@@ -481,11 +520,11 @@ class MainScene extends Phaser.Scene {
     selectTool(tool) {
         this.currentTool = tool;
         if (tool === 'soap') {
-            this.soapBtnBg.setFillStyle(0x4A90D9); this.soapBtnBg.setStrokeStyle(4, 0xFFFFFF); this.soapBtnText.setColor('#FFFFFF');
-            this.washBtnBg.setFillStyle(0x555555); this.washBtnBg.setStrokeStyle(4, 0x888888); this.washBtnText.setColor('#AAAAAA');
+            this.soapBtnBg.setFillStyle(0x4A90D9); this.soapBtnBg.setStrokeStyle(5, 0xFFFFFF); this.soapBtnText.setColor('#FFFFFF');
+            this.washBtnBg.setFillStyle(0x555555); this.washBtnBg.setStrokeStyle(5, 0x888888); this.washBtnText.setColor('#AAAAAA');
         } else {
-            this.soapBtnBg.setFillStyle(0x555555); this.soapBtnBg.setStrokeStyle(4, 0x888888); this.soapBtnText.setColor('#AAAAAA');
-            this.washBtnBg.setFillStyle(0x4A90D9); this.washBtnBg.setStrokeStyle(4, 0xFFFFFF); this.washBtnText.setColor('#FFFFFF');
+            this.soapBtnBg.setFillStyle(0x555555); this.soapBtnBg.setStrokeStyle(5, 0x888888); this.soapBtnText.setColor('#AAAAAA');
+            this.washBtnBg.setFillStyle(0x4A90D9); this.washBtnBg.setStrokeStyle(5, 0xFFFFFF); this.washBtnText.setColor('#FFFFFF');
         }
     }
 
@@ -681,7 +720,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-        recalcProgress() {
+    recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
         for (let i = 0; i < cells; i++) total += (1 - this.dirtGrid[i]);
@@ -713,27 +752,17 @@ class MainScene extends Phaser.Scene {
         this.progressText.setText(p + '%');
     }
 
-    // ============================================
-    // ПОЛУЧИТЬ ДЕНЬГИ
-    // ============================================
     async finishCarpet() {
         if (this.cleanProgress < 1.0) {
             this.showMessage('Ковёр ещё грязный! Нужно 100%.');
             return;
         }
         
-        // ✅ Базовая награда
         const baseReward = Math.floor(
             CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)
         );
-        
-        // ✅ Множитель за новые ковры (×1.25 каждый)
         const carpetMultiplier = getRewardMultiplier();
-        
-        // ✅ Штраф за большой радиус
         const radiusPenalty = getRadiusPenaltyMultiplier();
-        
-        // ✅ Итоговая награда
         const reward = Math.floor(
             baseReward * GameState.toolLevel * carpetMultiplier * radiusPenalty
         );
@@ -744,24 +773,21 @@ class MainScene extends Phaser.Scene {
         this.foodText.setText('🍞 ' + GameState.food);
         await saveGame();
         
-        // Сообщение с деталями
         let msg = `+${reward} 💰`;
         if (carpetMultiplier > 1.0) {
-            msg += ` (×${carpetMultiplier.toFixed(2)} за ковёр)`;
+            msg += ` (×${carpetMultiplier.toFixed(2)})`;
         }
         if (radiusPenalty < 1.0) {
-            msg += ` (-${Math.floor((1 - radiusPenalty) * 100)}% за радиус)`;
+            msg += ` (-${Math.floor((1 - radiusPenalty) * 100)}%)`;
         }
         this.showMessage(msg);
         
-        // Убираем висящие звёзды
         this.children.list.forEach(child => {
             if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) {
                 child.destroy();
             }
         });
         
-        // Сброс грязи
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
         this.needRedrawDirt = true;
@@ -774,25 +800,21 @@ class MainScene extends Phaser.Scene {
         this.updateProgressBar();
     }
 
-    // ============================================
-    // МАГАЗИН
-    // ============================================
     openShop() {
         const W = 720, H = 1280;
         const els = [];
         
-        const ov = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.85).setDepth(20);
+        const ov = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.9).setDepth(20);
         ov.setInteractive(); els.push(ov);
-        const bg = this.add.rectangle(W/2, H/2, 640, 1000, 0x333333).setDepth(21);
-        bg.setStrokeStyle(4, 0xFFD700); els.push(bg);
-        els.push(this.add.text(W/2, 200, 'МАГАЗИН', {
-            fontSize: '48px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(22));
+        const bg = this.add.rectangle(W/2, H/2, 660, 1040, 0x2a2a2a).setDepth(21);
+        bg.setStrokeStyle(5, 0xFFD700); els.push(bg);
+        els.push(this.add.text(W/2, 190, 'МАГАЗИН', TEXT_STYLES.title()).setOrigin(0.5).setDepth(22));
         
-        // ---- ЕДА ----
-        const fb = this.add.text(W/2, 320, `Купить еду (${CONFIG.foodPrice}💰)\n🍞 +1`, {
-            fontSize: '28px', fill: '#FFFFFF', align: 'center',
-            backgroundColor: '#444444', padding: { x: 30, y: 15 }, fontFamily: 'Arial'
+        // ЕДА
+        const fb = this.add.text(W/2, 310, `Купить еду (${CONFIG.foodPrice}💰)\n🍞 +1`, {
+            ...TEXT_STYLES.shop('#FFFFFF', 28),
+            backgroundColor: '#444444',
+            padding: { x: 30, y: 15 }
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
           .on('pointerdown', async () => {
             if (GameState.money >= CONFIG.foodPrice) {
@@ -804,7 +826,7 @@ class MainScene extends Phaser.Scene {
         });
         els.push(fb);
         
-        // ---- УЛУЧШЕНИЕ ЩЁТКИ ----
+        // УЛУЧШЕНИЕ ЩЁТКИ
         const tc = GameState.toolLevel * CONFIG.toolBasePrice;
         const cr = getCurrentRadius();
         const nr = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
@@ -816,10 +838,11 @@ class MainScene extends Phaser.Scene {
             warningText = `\n⚠️ Награда: ${Math.floor(newMult * 100)}%`;
         }
         
-        const tb = this.add.text(W/2, 470,
+        const tb = this.add.text(W/2, 480,
             `Улучшить щётку (${tc}💰)\nРадиус: ${cr} → ${nr}${warningText}`, {
-            fontSize: '26px', fill: warningText ? '#FFAA00' : '#FFFFFF', align: 'center',
-            backgroundColor: '#444444', padding: { x: 30, y: 15 }, fontFamily: 'Arial'
+            ...TEXT_STYLES.shop(warningText ? '#FFAA00' : '#FFFFFF', 26),
+            backgroundColor: '#444444',
+            padding: { x: 30, y: 15 }
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
           .on('pointerdown', async () => {
             const cost = GameState.toolLevel * CONFIG.toolBasePrice;
@@ -830,7 +853,6 @@ class MainScene extends Phaser.Scene {
                 this.toolText.setText('🧹 Радиус: ' + r);
                 await saveGame(); this.showMessage('Щётка улучшена!');
                 
-                // ✅ Если радиус достиг 70 — сообщаем про новый ковёр
                 if (r >= CONFIG.newCarpetRadiusRequired && GameState.carpetIndex < CONFIG.totalCarpets) {
                     this.showMessage('Новый ковёр доступен в магазине!');
                 }
@@ -849,38 +871,38 @@ class MainScene extends Phaser.Scene {
         });
         els.push(tb);
         
-        // ---- НОВЫЙ КОВЁР ----
+        // НОВЫЙ КОВЁР
         const newCarpetPrice = getNewCarpetPrice();
         const canBuy = canBuyNewCarpet();
         const radiusEnough = getCurrentRadius() >= CONFIG.newCarpetRadiusRequired;
         const hasNextCarpet = GameState.carpetIndex < CONFIG.totalCarpets;
         
         let newCarpetLabel = '';
-        let newCarpetColor = '#666666';
+        let newCarpetColor = '#888888';
         
         if (!hasNextCarpet) {
             newCarpetLabel = '🏆 ВСЕ КОВРЫ ОТКРЫТЫ';
             newCarpetColor = '#FFD700';
         } else if (!radiusEnough) {
             newCarpetLabel = `🔒 Нужен радиус ${CONFIG.newCarpetRadiusRequired}\n(сейчас ${getCurrentRadius()})`;
-            newCarpetColor = '#888888';
+            newCarpetColor = '#AAAAAA';
         } else if (GameState.money < newCarpetPrice) {
             newCarpetLabel = `🆕 НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nНе хватает денег`;
-            newCarpetColor = '#888888';
+            newCarpetColor = '#AAAAAA';
         } else {
             newCarpetLabel = `🆕 КУПИТЬ НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nКовёр ${GameState.carpetIndex} → ${GameState.carpetIndex + 1}\n⚠️ Сброс щётки и денег\n✅ Заработок ×1.25 навсегда`;
             newCarpetColor = '#00FF00';
         }
         
-        const nb = this.add.text(W/2, 680, newCarpetLabel, {
-            fontSize: '22px', fill: newCarpetColor, align: 'center',
-            backgroundColor: '#222222', padding: { x: 25, y: 15 }, fontFamily: 'Arial'
+        const nb = this.add.text(W/2, 700, newCarpetLabel, {
+            ...TEXT_STYLES.shop(newCarpetColor, 22),
+            backgroundColor: '#1a1a1a',
+            padding: { x: 25, y: 15 }
         }).setOrigin(0.5).setDepth(22);
         
         if (canBuy) {
             nb.setInteractive({ useHandCursor: true })
               .on('pointerdown', async () => {
-                // Спрашиваем подтверждение через простое сообщение
                 this.showMessage('Ковёр куплен! Всё сброшено.');
                 await this.buyNewCarpet();
                 els.forEach(el => el.destroy());
@@ -888,50 +910,39 @@ class MainScene extends Phaser.Scene {
         }
         els.push(nb);
         
-        // ---- ИНФО О ТЕКУЩЕМ МНОЖИТЕЛЕ ----
+        // ИНФО
         const infoText = `Уровень ковра: ${GameState.carpetLevel}\nМножитель: ×${getRewardMultiplier().toFixed(2)}\nШтраф радиуса с: ${getPenaltyStartRadius()}`;
-        const ib = this.add.text(W/2, 880, infoText, {
-            fontSize: '20px', fill: '#CCCCCC', align: 'center',
-            backgroundColor: '#222222', padding: { x: 20, y: 12 }, fontFamily: 'Arial'
+        const ib = this.add.text(W/2, 900, infoText, {
+            ...TEXT_STYLES.shopInfo('#CCCCCC', 20),
+            backgroundColor: '#1a1a1a',
+            padding: { x: 20, y: 12 }
         }).setOrigin(0.5).setDepth(22);
         els.push(ib);
         
-        // ---- ЗАКРЫТЬ ----
-        const cb = this.add.text(620, 200, '✖', {
-            fontSize: '48px', fill: '#FF4444', fontFamily: 'Arial'
+        // ЗАКРЫТЬ
+        const cb = this.add.text(620, 190, '✖', {
+            fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', fontFamily: 'Arial',
+            stroke: '#000000', strokeThickness: 6
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => { els.forEach(el => el.destroy()); });
         els.push(cb);
     }
 
-    // ============================================
-    // ✅ ПОКУПКА НОВОГО КОВРА
-    // ============================================
     async buyNewCarpet() {
         if (!canBuyNewCarpet()) return;
         
-        // Списываем деньги
         GameState.money = 0;
-        
-        // Сбрасываем щётку
         GameState.toolLevel = CONFIG.startToolLevel;
-        
-        // Переходим на следующий ковёр
         GameState.carpetIndex += 1;
-        
-        // Увеличиваем уровень ковра (для множителя и штрафа)
         GameState.carpetLevel += 1;
         
-        // Обновляем UI
         this.moneyText.setText('💰 ' + GameState.money);
         this.toolText.setText('🧹 Радиус: ' + getCurrentRadius());
         this.carpetText.setText('🟫 Ковёр: ' + GameState.carpetIndex + '/' + CONFIG.totalCarpets);
         
-        // ✅ Перерисовываем комнату и ковёр
         this.drawRoom();
         this.drawCarpet();
         
-        // Сброс грязи
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
         this.needRedrawDirt = true;
@@ -941,16 +952,14 @@ class MainScene extends Phaser.Scene {
         this.updateProgressBar();
         
         await saveGame();
-        
-        // Праздничный салют при покупке
         this.spawnCelebration();
     }
 
     showMessage(text) {
         const msg = this.add.text(360, 1000, text, {
-            fontSize: '24px', fill: '#FFFF00', fontStyle: 'bold',
-            backgroundColor: '#000000', padding: { x: 20, y: 10 }, fontFamily: 'Arial',
-            wordWrap: { width: 600 }, align: 'center'
+            ...TEXT_STYLES.message('#FFFF00', 26),
+            backgroundColor: '#000000',
+            padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(30);
         this.time.delayedCall(2200, () => msg.destroy());
     }
