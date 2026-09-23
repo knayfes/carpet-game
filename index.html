@@ -31,12 +31,12 @@ const CONFIG = {
     brushRadius: 40,
     toolRadiusBonus: 0.05,
     
-    // Мыло наносится с запасом
-    soapPower: 2.0,
-    
-    // Смывание — работает почти без мыла
-    eraseStrength: 0.9,
+    // Мыло наносится мягко
+    soapPower: 1.0,
     soapThreshold: 0.01,
+    
+    // Смывание — быстрое
+    eraseStrength: 0.9,
     
     finishThreshold: 1.0
 };
@@ -151,9 +151,7 @@ class MainScene extends Phaser.Scene {
             this.carpetImg.setDepth(0);
         }
         
-        // ============================================
-        // СЕТКА
-        // ============================================
+        // Сетка
         this.gridCellSize = 20;
         this.gridCols = Math.ceil(this.carpetW / this.gridCellSize);
         this.gridRows = Math.ceil(this.carpetH / this.gridCellSize);
@@ -162,7 +160,6 @@ class MainScene extends Phaser.Scene {
         this.soapGrid = new Float32Array(this.gridCols * this.gridRows);
         this.dirtGrid.fill(1.0);
         
-        // Графика
         this.dirtGfx = this.add.graphics().setDepth(1);
         this.soapGfx = this.add.graphics().setDepth(2);
         
@@ -180,13 +177,10 @@ class MainScene extends Phaser.Scene {
         this.lastLocalX = -9999;
         this.lastLocalY = -9999;
         
-        // Кисть
         this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
         
-        // ============================================
         // UI
-        // ============================================
         this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, {
             fontSize: '36px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
         }).setDepth(10);
@@ -207,9 +201,7 @@ class MainScene extends Phaser.Scene {
             .setDepth(10).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.openShop());
         
-        // ============================================
-        // КНОПКИ
-        // ============================================
+        // Кнопки
         const btnY = 1200;
         this.soapBtnBg = this.add.rectangle(180, btnY, 280, 80, 0x4A90D9).setDepth(10);
         this.soapBtnBg.setStrokeStyle(4, 0xFFFFFF);
@@ -284,7 +276,8 @@ class MainScene extends Phaser.Scene {
                 if (soap < 0.05) continue;
                 const px = cx + col * cs;
                 const py = cy + row * cs;
-                this.soapGfx.fillStyle(0xFFFFFF, soap * 0.45);
+                // ✅ Мыло лёгкое — alpha 0.15, ковёр остаётся виден
+                this.soapGfx.fillStyle(0xFFFFFF, soap * 0.15);
                 this.soapGfx.fillRect(px, py, cs, cs);
             }
         }
@@ -340,7 +333,7 @@ class MainScene extends Phaser.Scene {
     }
 
     // ============================================
-    // ПРИМЕНЕНИЕ ИНСТРУМЕНТА — ИСПРАВЛЕНО
+    // ПРИМЕНЕНИЕ ИНСТРУМЕНТА
     // ============================================
     applyTool(localX, localY) {
         const radius = CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus);
@@ -365,7 +358,6 @@ class MainScene extends Phaser.Scene {
                 const distSq = dx*dx + dy*dy;
                 if (distSq > radiusSq) continue;
                 
-                // ✅ Минимум 0.5 — даже на краю кисти работает
                 const falloff = Math.max(0.5, 1 - Math.sqrt(distSq) / radius);
                 const index = row * cols + col;
                 
