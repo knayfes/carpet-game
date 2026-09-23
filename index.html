@@ -35,8 +35,8 @@ const CONFIG = {
     soapThreshold: 0.01,
     eraseStrength: 0.9,
     
-    // ✅ 98% достаточно для завершения
-    finishThreshold: 0.98
+    // ✅ 99% — порог для засчёта в 100%
+    finishThreshold: 0.99
 };
 
 const CARPET_IMAGE = 'carpet.png';
@@ -254,14 +254,15 @@ class MainScene extends Phaser.Scene {
                 if (dirt < 0.05) continue;
                 const px = cx + col * cs;
                 const py = cy + row * cs;
-                this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.55);
+                // ✅ Грязь чуть плотнее
+                this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.65);
                 this.dirtGfx.fillRect(px, py, cs, cs);
             }
         }
         this.needRedrawDirt = false;
     }
 
-    // ✅ Мыло — лёгкая голубая подсветка, НЕ засвечивает ковёр
+    // ✅ Мыло — чуть плотнее, но всё ещё не засвечивает
     drawSoap() {
         this.soapGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
@@ -275,8 +276,8 @@ class MainScene extends Phaser.Scene {
                 if (soap < 0.05) continue;
                 const px = cx + col * cs;
                 const py = cy + row * cs;
-                // Голубая подсветка с alpha 0.1 — ковёр не белеет
-                this.soapGfx.fillStyle(0x88CCFF, soap * 0.1);
+                // ✅ Чуть плотнее, но всё ещё мягкое
+                this.soapGfx.fillStyle(0x88CCFF, soap * 0.2);
                 this.soapGfx.fillRect(px, py, cs, cs);
             }
         }
@@ -383,7 +384,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ Прогресс: если >= 98%, показываем 100%
+    // ✅ Прогресс идёт до 99%, потом пишет 100%
     recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
@@ -392,7 +393,7 @@ class MainScene extends Phaser.Scene {
         }
         this.cleanProgress = total / cells;
         
-        // Если достигли 98% — считаем за 100%
+        // Когда реально почищено на 99% — считаем за 100%
         if (this.cleanProgress >= CONFIG.finishThreshold) {
             this.cleanProgress = 1.0;
         }
@@ -408,7 +409,7 @@ class MainScene extends Phaser.Scene {
 
     async finishCarpet() {
         if (this.cleanProgress < 1.0) {
-            this.showMessage('Ковёр ещё грязный! Нужно 98%.');
+            this.showMessage('Ковёр ещё грязный! Нужно 99%.');
             return;
         }
         const reward = Math.floor(CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)) * GameState.toolLevel;
