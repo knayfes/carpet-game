@@ -38,9 +38,9 @@ const CONFIG = {
     
     progressThreshold: 1.0,
     
-    autoCleanThreshold: 0.99,
-    autoCleanDuration: 12000,
-    autoCleanIdleDelay: 10000,
+    // ✅ Кнопка "ДОБИТЬ" — порог и длительность
+    finishButtonThreshold: 0.99,
+    finishButtonDuration: 1000,
     
     newCarpetRadiusRequired: 70,
     newCarpetRadiusIncrease: 10,
@@ -63,15 +63,13 @@ const CONFIG = {
     
     inputLockDuration: 300,
     
-    // ✅ Жуки
     bugCountBase: 4,
     bugCountIncrease: 1,
     bugSpeed: 60,
     bugFadeDuration: 400,
     
-    // ✅ Мухобойка
-    swatterRadius: 50,        // радиус удара мухобойки
-    swatterCooldown: 200      // задержка между ударами (мс)
+    swatterRadius: 50,
+    swatterCooldown: 200
 };
 
 const SAVE_KEY = 'carpetGameStats_v3';
@@ -284,16 +282,14 @@ class MainScene extends Phaser.Scene {
         
         this.cleanProgress = 0;
         this.isPointerDown = false;
-        this.currentTool = 'soap';   // 'soap' | 'wash' | 'swatter'
+        this.currentTool = 'soap';
         this.lastLocalX = -9999;
         this.lastLocalY = -9999;
         this.celebrationShown = false;
         
-        this.autoCleanStarted = false;
-        this.autoCleanTimer = null;
-        this.autoCleanIdleTimer = null;
-        this.autoCleanPending = false;
         this.inputLocked = false;
+        this.finishButtonActive = false;   // ✅ флаг для кнопки "ДОБИТЬ"
+        this.finishAnimating = false;
         
         this.noFoodText = null;
         this.noFoodTween = null;
@@ -309,7 +305,6 @@ class MainScene extends Phaser.Scene {
         this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
         
-        // ✅ Мухобойка (визуальный круг)
         this.swatterGfx = this.add.graphics().setDepth(6);
         this.swatterGfx.setVisible(false);
         
@@ -329,38 +324,48 @@ class MainScene extends Phaser.Scene {
             .setDepth(10).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.openShop());
         
-        // ✅ Кнопки инструментов — 3 штуки
+        // Кнопки инструментов
         const btnY = 1200;
         
-        // Кнопка МЫЛО
         this.soapBtnBg = this.add.rectangle(120, btnY, 200, 80, 0x4A90D9).setDepth(10);
         this.soapBtnBg.setStrokeStyle(5, 0xFFFFFF);
         this.soapBtnText = this.add.text(120, btnY, '🧼 МЫЛО', TEXT_STYLES.button('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
         this.soapBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.selectTool('soap'));
         
-        // Кнопка СМЫТЬ
         this.washBtnBg = this.add.rectangle(360, btnY, 200, 80, 0x555555).setDepth(10);
         this.washBtnBg.setStrokeStyle(5, 0x888888);
         this.washBtnText = this.add.text(360, btnY, '💧 СМЫТЬ', TEXT_STYLES.button('#AAAAAA', 22)).setOrigin(0.5).setDepth(11);
         this.washBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.selectTool('wash'));
         
-        // ✅ Кнопка МУХОБОЙКА (появляется со 2-го ковра)
         this.swatterBtnBg = this.add.rectangle(600, btnY, 200, 80, 0x555555).setDepth(10);
         this.swatterBtnBg.setStrokeStyle(5, 0x888888);
-        this.swatterBtnText = this.add.text(600, btnY, '🪰 МУХОБОЙКА', TEXT_STYLES.button('#AAAAAA', 20)).setOrigin(0.5).setDepth(11);
+        this.swatterBtnText = this.add.text(600, btnY, '🪰 МУХОБОЙКА', TEXT_STYLES.button('#AAAAAA', 18)).setOrigin(0.5).setDepth(11);
         this.swatterBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.selectTool('swatter'));
         
-        // Скрываем мухобойку на 1-м ковре
         if (GameState.carpetIndex < 2) {
             this.swatterBtnBg.setVisible(false);
             this.swatterBtnText.setVisible(false);
         }
         
+        // ✅ Кнопка "ДОБИТЬ" — скрыта, пока прогресс < 99%
+        this.finishBtnBg = this.add.rectangle(W/2, 1030, 320, 70, 0xFFD700).setDepth(10);
+        this.finishBtnBg.setStrokeStyle(5, 0xFFFFFF);
+        this.finishBtnText = this.add.text(W/2, 1030, '🧹 ДОБИТЬ', {
+            ...TEXT_STYLES.button('#000000', 30)
+        }).setOrigin(0.5).setDepth(11);
+        
+        this.finishBtnBg.setVisible(false);
+        this.finishBtnText.setVisible(false);
+        
+        this.finishBtnBg.setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.finishCarpetFast());
+        
+        // Основная кнопка "ПОЛУЧИТЬ ДЕНЬГИ" (невидимая, но работает через finishCarpet)
         this.add.text(W/2, 1100, 'ПОЛУЧИТЬ ДЕНЬГИ', {
-            ...TEXT_STYLES.button('#00FF00', 30),
+            ...TEXT_STYLES.button('#00FF00', 28),
             backgroundColor: '#000000', padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => this.finishCarpet());
@@ -369,6 +374,114 @@ class MainScene extends Phaser.Scene {
         this.setupCleaning();
         
         this.spawnBugsIfNeeded();
+    }
+
+    // ============================================
+    // ✅ КНОПКА "ДОБИТЬ"
+    // ============================================
+    showFinishButton() {
+        if (this.finishButtonActive) return;
+        this.finishButtonActive = true;
+        
+        this.finishBtnBg.setVisible(true);
+        this.finishBtnText.setVisible(true);
+        
+        // Пульсация кнопки
+        this.tweens.add({
+            targets: [this.finishBtnBg, this.finishBtnText],
+            scaleX: 1.08,
+            scaleY: 1.08,
+            duration: 500,
+            yoyo: true,
+            repeat: -1,
+            ease: 'Sine.easeInOut'
+        });
+    }
+    
+    hideFinishButton() {
+        if (!this.finishButtonActive) return;
+        this.finishButtonActive = false;
+        
+        this.tweens.killTweensOf([this.finishBtnBg, this.finishBtnText]);
+        this.finishBtnBg.setScale(1);
+        this.finishBtnText.setScale(1);
+        
+        this.finishBtnBg.setVisible(false);
+        this.finishBtnText.setVisible(false);
+    }
+    
+    // ✅ Быстрая доочистка за 1 секунду с анимацией
+    finishCarpetFast() {
+        if (this.finishAnimating) return;
+        if (this.cleanProgress < CONFIG.finishButtonThreshold) return;
+        
+        this.finishAnimating = true;
+        this.hideFinishButton();
+        this.unlockInput();
+        
+        // Собираем оставшиеся грязные ячейки
+        const dirtyCells = [];
+        const cols = this.gridCols;
+        for (let row = 0; row < this.gridRows; row++) {
+            for (let col = 0; col < cols; col++) {
+                if (this.dirtGrid[row * cols + col] > 0.05) {
+                    dirtyCells.push({ row, col });
+                }
+            }
+        }
+        
+        if (dirtyCells.length === 0) {
+            this.finishAnimating = false;
+            this.finishAutoCleanEffect();
+            return;
+        }
+        
+        // За 1 секунду = 20 тиков по 50 мс
+        const tickDelay = 50;
+        const totalTicks = CONFIG.finishButtonDuration / tickDelay;
+        const cellsPerTick = Math.max(1, Math.ceil(dirtyCells.length / totalTicks));
+        
+        let index = 0;
+        
+        this.time.addEvent({
+            delay: tickDelay,
+            repeat: totalTicks,
+            callback: () => {
+                for (let i = 0; i < cellsPerTick && index < dirtyCells.length; i++) {
+                    const cell = dirtyCells[index];
+                    
+                    // ✅ Звёздочка на месте ячейки
+                    const px = this.carpetX - this.carpetW/2 + cell.col * this.gridCellSize + this.gridCellSize/2;
+                    const py = this.carpetY - this.carpetH/2 + cell.row * this.gridCellSize + this.gridCellSize/2;
+                    
+                    if (Math.random() < 0.3) {
+                        this.spawnStarsAt(px, py);
+                    }
+                    
+                    this.dirtGrid[cell.row * cols + cell.col] = 0;
+                    index++;
+                }
+                
+                this.needRedrawDirt = true;
+                this.recalcProgressSilent();
+                
+                if (index >= dirtyCells.length) {
+                    this.finishAnimating = false;
+                    this.finishAutoCleanEffect();
+                }
+            }
+        });
+    }
+    
+    finishAutoCleanEffect() {
+        this.cleanProgress = 1.0;
+        this.updateProgressBar();
+        
+        if (!this.celebrationShown) {
+            this.celebrationShown = true;
+            this.spawnCelebration();
+            this.showMessage('Ковёр чистый! ✨');
+        }
     }
 
     // ============================================
@@ -471,16 +584,13 @@ class MainScene extends Phaser.Scene {
         });
     }
     
-    // ✅ Удар мухобойкой в точке
     swatAt(x, y) {
         const now = this.time.now;
         if (now - this.swatterCooldownTime < CONFIG.swatterCooldown) return;
         this.swatterCooldownTime = now;
         
-        // Визуальный эффект удара
         this.showSwatEffect(x, y);
         
-        // Проверяем попадание по жукам
         let killedAny = false;
         const radius = CONFIG.swatterRadius;
         const radiusSq = radius * radius;
@@ -500,7 +610,6 @@ class MainScene extends Phaser.Scene {
         return killedAny;
     }
     
-    // ✅ Эффект удара мухобойки
     showSwatEffect(x, y) {
         const effect = this.add.text(x, y, '💥', {
             fontSize: '60px', fontFamily: 'Arial'
@@ -516,15 +625,12 @@ class MainScene extends Phaser.Scene {
         });
     }
     
-    // ✅ Отрисовка мухобойки под пальцем
     drawSwatter(x, y) {
         this.swatterGfx.clear();
         
-        // Красный круг-прицел
         this.swatterGfx.lineStyle(6, 0xFF4444, 0.8);
         this.swatterGfx.strokeCircle(x, y, CONFIG.swatterRadius);
         
-        // Внутренний крест
         this.swatterGfx.lineStyle(4, 0xFF8888, 0.6);
         this.swatterGfx.beginPath();
         this.swatterGfx.moveTo(x - 15, y);
@@ -580,33 +686,6 @@ class MainScene extends Phaser.Scene {
             
             if (Math.random() < 0.005) {
                 bug.bugAngle += (Math.random() - 0.5) * 1.5;
-            }
-        }
-    }
-
-    // ============================================
-    // АВТОДООЧИСТКА
-    // ============================================
-    scheduleAutoClean() {
-        if (this.autoCleanStarted || this.autoCleanPending) return;
-        this.autoCleanPending = true;
-        
-        this.autoCleanIdleTimer = this.time.delayedCall(CONFIG.autoCleanIdleDelay, () => {
-            this.autoCleanPending = false;
-            if (this.cleanProgress >= CONFIG.autoCleanThreshold 
-                && this.cleanProgress < 1.0 
-                && !this.autoCleanStarted) {
-                this.startAutoClean();
-            }
-        });
-    }
-
-    cancelAutoClean() {
-        if (this.autoCleanPending) {
-            this.autoCleanPending = false;
-            if (this.autoCleanIdleTimer) {
-                this.autoCleanIdleTimer.remove();
-                this.autoCleanIdleTimer = null;
             }
         }
     }
@@ -809,25 +888,21 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ Выбор инструмента (теперь 3: soap, wash, swatter)
     selectTool(tool) {
         this.currentTool = tool;
         
-        // Мыло
         if (tool === 'soap') {
             this.soapBtnBg.setFillStyle(0x4A90D9); this.soapBtnBg.setStrokeStyle(5, 0xFFFFFF); this.soapBtnText.setColor('#FFFFFF');
         } else {
             this.soapBtnBg.setFillStyle(0x555555); this.soapBtnBg.setStrokeStyle(5, 0x888888); this.soapBtnText.setColor('#AAAAAA');
         }
         
-        // Смыть
         if (tool === 'wash') {
             this.washBtnBg.setFillStyle(0x4A90D9); this.washBtnBg.setStrokeStyle(5, 0xFFFFFF); this.washBtnText.setColor('#FFFFFF');
         } else {
             this.washBtnBg.setFillStyle(0x555555); this.washBtnBg.setStrokeStyle(5, 0x888888); this.washBtnText.setColor('#AAAAAA');
         }
         
-        // Мухобойка
         if (tool === 'swatter') {
             this.swatterBtnBg.setFillStyle(0xFF4444); this.swatterBtnBg.setStrokeStyle(5, 0xFFFFFF); this.swatterBtnText.setColor('#FFFFFF');
             this.brush.setVisible(false);
@@ -938,21 +1013,19 @@ class MainScene extends Phaser.Scene {
         
         const handlePointer = (pointer) => {
             if (this.inputLocked) return;
+            if (this.finishAnimating) return;
             
-            // ✅ Мухобойка — другой режим
             if (this.currentTool === 'swatter') {
                 this.drawSwatter(pointer.x, pointer.y);
                 this.swatterGfx.setVisible(true);
                 this.brush.setVisible(false);
                 
-                // Только при зажатом пальце — удар
                 if (pointer.isDown) {
                     this.swatAt(pointer.x, pointer.y);
                 }
                 return;
             }
             
-            // Обычная кисть
             this.swatterGfx.setVisible(false);
             this.brush.setPosition(pointer.x, pointer.y);
             const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
@@ -1038,14 +1111,11 @@ class MainScene extends Phaser.Scene {
             return;
         }
         
-        // ✅ Проверка живых жуков — нельзя чистить
         const aliveBugs = this.bugs.filter(bug => !bug.isDead);
         if (aliveBugs.length > 0) {
             this.showBugWarning();
             return;
         }
-        
-        this.cancelAutoClean();
         
         const radius = getCurrentRadius();
         const cs = this.gridCellSize;
@@ -1104,6 +1174,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    // ✅ recalcProgress теперь показывает кнопку "ДОБИТЬ" вместо автодоочистки
     recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
@@ -1117,6 +1188,7 @@ class MainScene extends Phaser.Scene {
             }
             if (allClean) {
                 this.cleanProgress = 1.0;
+                this.hideFinishButton();   // ✅ кнопка не нужна, всё чисто
                 if (!this.celebrationShown) {
                     this.celebrationShown = true;
                     this.spawnCelebration();
@@ -1124,65 +1196,14 @@ class MainScene extends Phaser.Scene {
                 }
             } else {
                 this.cleanProgress = 0.99;
+                // ✅ Показываем кнопку "ДОБИТЬ"
+                this.showFinishButton();
             }
-        }
-        
-        if (this.cleanProgress >= CONFIG.autoCleanThreshold 
-            && this.cleanProgress < 1.0 
-            && !this.autoCleanStarted) {
-            this.scheduleAutoClean();
+        } else {
+            this.hideFinishButton();
         }
         
         this.updateProgressBar();
-    }
-
-    startAutoClean() {
-        if (this.autoCleanStarted) return;
-        this.autoCleanStarted = true;
-        
-        const dirtyCells = [];
-        const cols = this.gridCols;
-        for (let row = 0; row < this.gridRows; row++) {
-            for (let col = 0; col < cols; col++) {
-                if (this.dirtGrid[row * cols + col] > 0.05) {
-                    dirtyCells.push({ row, col });
-                }
-            }
-        }
-        
-        if (dirtyCells.length === 0) {
-            this.finishAutoClean();
-            return;
-        }
-        
-        const tickDelay = 100;
-        const totalTicks = CONFIG.autoCleanDuration / tickDelay;
-        const cellsPerTick = Math.max(1, Math.ceil(dirtyCells.length / totalTicks));
-        
-        let index = 0;
-        
-        this.autoCleanTimer = this.time.addEvent({
-            delay: tickDelay,
-            repeat: totalTicks,
-            callback: () => {
-                for (let i = 0; i < cellsPerTick && index < dirtyCells.length; i++) {
-                    const cell = dirtyCells[index];
-                    this.dirtGrid[cell.row * cols + cell.col] = 0;
-                    index++;
-                }
-                
-                this.needRedrawDirt = true;
-                this.recalcProgressSilent();
-                
-                if (index >= dirtyCells.length) {
-                    if (this.autoCleanTimer) {
-                        this.autoCleanTimer.remove();
-                        this.autoCleanTimer = null;
-                    }
-                    this.finishAutoClean();
-                }
-            }
-        });
     }
 
     recalcProgressSilent() {
@@ -1191,25 +1212,6 @@ class MainScene extends Phaser.Scene {
         for (let i = 0; i < cells; i++) total += (1 - this.dirtGrid[i]);
         this.cleanProgress = total / cells;
         this.updateProgressBar();
-    }
-
-    finishAutoClean() {
-        this.cleanProgress = 1.0;
-        this.updateProgressBar();
-        
-        this.autoCleanPending = false;
-        if (this.autoCleanIdleTimer) {
-            this.autoCleanIdleTimer.remove();
-            this.autoCleanIdleTimer = null;
-        }
-        
-        this.unlockInput();
-        
-        if (!this.celebrationShown) {
-            this.celebrationShown = true;
-            this.spawnCelebration();
-            this.showMessage('Ковёр чистый! ✨');
-        }
     }
 
     updateProgressBar() {
@@ -1224,7 +1226,6 @@ class MainScene extends Phaser.Scene {
             return;
         }
         
-        // ✅ Проверка живых жуков
         const aliveBugs = this.bugs.filter(bug => !bug.isDead);
         if (aliveBugs.length > 0) {
             this.showBugWarning();
@@ -1232,6 +1233,7 @@ class MainScene extends Phaser.Scene {
         }
         
         this.unlockInput();
+        this.hideFinishButton();
         
         const baseReward = Math.floor(
             CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)
@@ -1268,18 +1270,6 @@ class MainScene extends Phaser.Scene {
         this.needRedrawSoap = true;
         this.cleanProgress = 0;
         this.celebrationShown = false;
-        
-        this.autoCleanStarted = false;
-        if (this.autoCleanTimer) {
-            this.autoCleanTimer.remove();
-            this.autoCleanTimer = null;
-        }
-        
-        this.autoCleanPending = false;
-        if (this.autoCleanIdleTimer) {
-            this.autoCleanIdleTimer.remove();
-            this.autoCleanIdleTimer = null;
-        }
         
         this.updateProgressBar();
         this.drawDirt();
@@ -1432,22 +1422,9 @@ class MainScene extends Phaser.Scene {
         this.cleanProgress = 0;
         this.celebrationShown = false;
         
-        this.autoCleanStarted = false;
-        if (this.autoCleanTimer) {
-            this.autoCleanTimer.remove();
-            this.autoCleanTimer = null;
-        }
-        
-        this.autoCleanPending = false;
-        if (this.autoCleanIdleTimer) {
-            this.autoCleanIdleTimer.remove();
-            this.autoCleanIdleTimer = null;
-        }
-        
         this.bugs.forEach(bug => bug.destroy());
         this.bugs = [];
         
-        // ✅ Показываем мухобойку со 2-го ковра
         if (GameState.carpetIndex >= 2) {
             this.swatterBtnBg.setVisible(true);
             this.swatterBtnText.setVisible(true);
