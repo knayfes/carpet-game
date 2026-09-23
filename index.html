@@ -249,7 +249,6 @@ class MainScene extends Phaser.Scene {
         this.carpetW = 500;
         this.carpetH = 700;
         this.carpetX = W/2;
-        // ✅ Ковёр поднят выше (было 700)
         this.carpetY = 600;
         
         this.roomGfx = this.add.graphics().setDepth(-10);
@@ -320,32 +319,35 @@ class MainScene extends Phaser.Scene {
             .setDepth(10).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.openShop());
         
+        // ✅ Кнопки — 2 на 1-м ковре по центру, 3 со 2-го
         const btnY = 1200;
+        const hasSwatter = GameState.carpetIndex >= 2;
         
-        this.soapBtnBg = this.add.rectangle(120, btnY, 200, 80, 0x4A90D9).setDepth(10);
+        const soapX = hasSwatter ? 120 : 240;
+        const washX = hasSwatter ? 360 : 480;
+        const swatterX = 600;
+        
+        this.soapBtnBg = this.add.rectangle(soapX, btnY, 200, 80, 0x4A90D9).setDepth(10);
         this.soapBtnBg.setStrokeStyle(5, 0xFFFFFF);
-        this.soapBtnText = this.add.text(120, btnY, '🧼 МЫЛО', TEXT_STYLES.button('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
+        this.soapBtnText = this.add.text(soapX, btnY, '🧼 МЫЛО', TEXT_STYLES.button('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
         this.soapBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.selectTool('soap'));
         
-        this.washBtnBg = this.add.rectangle(360, btnY, 200, 80, 0x555555).setDepth(10);
+        this.washBtnBg = this.add.rectangle(washX, btnY, 200, 80, 0x555555).setDepth(10);
         this.washBtnBg.setStrokeStyle(5, 0x888888);
-        this.washBtnText = this.add.text(360, btnY, '💧 СМЫТЬ', TEXT_STYLES.button('#AAAAAA', 22)).setOrigin(0.5).setDepth(11);
+        this.washBtnText = this.add.text(washX, btnY, '💧 СМЫТЬ', TEXT_STYLES.button('#AAAAAA', 22)).setOrigin(0.5).setDepth(11);
         this.washBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.selectTool('wash'));
         
-        this.swatterBtnBg = this.add.rectangle(600, btnY, 200, 80, 0x555555).setDepth(10);
+        this.swatterBtnBg = this.add.rectangle(swatterX, btnY, 200, 80, 0x555555).setDepth(10);
         this.swatterBtnBg.setStrokeStyle(5, 0x888888);
-        this.swatterBtnText = this.add.text(600, btnY, '🪰 МУХОБОЙКА', TEXT_STYLES.button('#AAAAAA', 18)).setOrigin(0.5).setDepth(11);
+        this.swatterBtnText = this.add.text(swatterX, btnY, '🪰 МУХОБОЙКА', TEXT_STYLES.button('#AAAAAA', 18)).setOrigin(0.5).setDepth(11);
         this.swatterBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.selectTool('swatter'));
         
-        if (GameState.carpetIndex < 2) {
-            this.swatterBtnBg.setVisible(false);
-            this.swatterBtnText.setVisible(false);
-        }
+        this.swatterBtnBg.setVisible(hasSwatter);
+        this.swatterBtnText.setVisible(hasSwatter);
         
-        // Кнопка "ПОЛУЧИТЬ ДЕНЬГИ" — на y=1050
         this.add.text(W/2, 1050, 'ПОЛУЧИТЬ ДЕНЬГИ', {
             ...TEXT_STYLES.button('#00FF00', 30),
             backgroundColor: '#000000', padding: { x: 30, y: 15 }
@@ -1297,9 +1299,15 @@ class MainScene extends Phaser.Scene {
         this.bugs.forEach(bug => bug.destroy());
         this.bugs = [];
         
+        // ✅ Показываем мухобойку и сдвигаем МЫЛО и СМЫТЬ влево
         if (GameState.carpetIndex >= 2) {
             this.swatterBtnBg.setVisible(true);
             this.swatterBtnText.setVisible(true);
+            
+            this.soapBtnBg.setX(120);
+            this.soapBtnText.setX(120);
+            this.washBtnBg.setX(360);
+            this.washBtnText.setX(360);
         }
         
         this.updateProgressBar();
