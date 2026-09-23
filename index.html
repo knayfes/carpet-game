@@ -276,6 +276,11 @@ class MainScene extends Phaser.Scene {
         this.autoCleanTimer = null;
         this.inputLocked = false;
         
+        // ✅ Надпись "Нет еды"
+        this.noFoodText = null;
+        this.noFoodTween = null;
+        this.noFoodCooldown = false;
+        
         this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
         
@@ -319,7 +324,56 @@ class MainScene extends Phaser.Scene {
         this.setupCleaning();
     }
 
-    // ✅ Разблокировка ввода через задержку
+    // ✅ Мигающая надпись "Нет еды"
+    showNoFoodWarning() {
+        if (this.noFoodCooldown) return;
+        this.noFoodCooldown = true;
+        
+        if (this.noFoodText) {
+            if (this.noFoodTween) this.noFoodTween.remove();
+            this.noFoodText.destroy();
+            this.noFoodText = null;
+        }
+        
+        const W = 720;
+        const H = 640;
+        
+        this.noFoodText = this.add.text(W/2, H, '🍞 НЕТ ЕДЫ!\nКУПИ В МАГАЗИНЕ', {
+            fontSize: '56px',
+            fill: '#FF0000',
+            fontStyle: 'bold',
+            fontFamily: 'Arial',
+            align: 'center',
+            stroke: '#000000',
+            strokeThickness: 8,
+            shadow: {
+                offsetX: 3, offsetY: 3,
+                color: '#000000',
+                blur: 5,
+                fill: true
+            }
+        }).setOrigin(0.5).setDepth(50);
+        
+        this.noFoodTween = this.tweens.add({
+            targets: this.noFoodText,
+            alpha: { from: 1, to: 0.2 },
+            duration: 400,
+            yoyo: true,
+            repeat: 4,
+            onComplete: () => {
+                if (this.noFoodText) {
+                    this.noFoodText.destroy();
+                    this.noFoodText = null;
+                }
+                this.noFoodTween = null;
+            }
+        });
+        
+        this.time.delayedCall(1500, () => {
+            this.noFoodCooldown = false;
+        });
+    }
+
     unlockInput() {
         this.inputLocked = true;
         this.isPointerDown = false;
@@ -329,7 +383,6 @@ class MainScene extends Phaser.Scene {
         
         this.time.delayedCall(CONFIG.inputLockDuration, () => {
             this.inputLocked = false;
-            // Дополнительная страховка
             this.isPointerDown = false;
             this.lastLocalX = -9999;
             this.lastLocalY = -9999;
@@ -567,8 +620,10 @@ class MainScene extends Phaser.Scene {
             
             this.brush.setPosition(pointer.x, pointer.y);
             const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-            this.brush.setVisible(GameState.food > 0 && inBounds);
-            if (GameState.food <= 0 || !inBounds) return;
+            this.brush.setVisible(inBounds);
+            
+            // ✅ Не блокируем при отсутствии еды — пусть applyTool покажет предупреждение
+            if (!inBounds) return;
             
             const localX = pointer.x - (this.carpetX - this.carpetW/2);
             const localY = pointer.y - (this.carpetY - this.carpetH/2);
@@ -613,7 +668,6 @@ class MainScene extends Phaser.Scene {
             this.lastLocalY = -9999;
         });
         
-        // Дополнительные обработчики для мобильных
         this.input.on('pointerupoutside', () => {
             this.isPointerDown = false;
             this.brush.setVisible(false);
@@ -637,7 +691,14 @@ class MainScene extends Phaser.Scene {
         });
     }
 
+    // ✅ applyTool теперь проверяет еду и показывает предупреждение
     applyTool(localX, localY) {
+        // ✅ Проверка еды
+        if (GameState.food <= 0) {
+            this.showNoFoodWarning();
+            return;
+        }
+        
         const radius = getCurrentRadius();
         const cs = this.gridCellSize;
         const cols = this.gridCols;
@@ -811,7 +872,6 @@ class MainScene extends Phaser.Scene {
             return;
         }
         
-        // ✅ Сначала блокируем ввод, чтобы не было залипания
         this.unlockInput();
         
         const baseReward = Math.floor(
@@ -834,14 +894,12 @@ class MainScene extends Phaser.Scene {
         if (radiusPenalty < 1.0) msg += ` (-${Math.floor((1 - radiusPenalty) * 100)}%)`;
         this.showMessage(msg);
         
-        // Убираем висящие звёзды
         this.children.list.forEach(child => {
             if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) {
                 child.destroy();
             }
         });
         
-        // Сброс грязи и мыла
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
         this.needRedrawDirt = true;
@@ -849,7 +907,6 @@ class MainScene extends Phaser.Scene {
         this.cleanProgress = 0;
         this.celebrationShown = false;
         
-        // Сброс автодоочистки
         this.autoCleanStarted = false;
         if (this.autoCleanTimer) {
             this.autoCleanTimer.remove();
@@ -983,7 +1040,6 @@ class MainScene extends Phaser.Scene {
     async buyNewCarpet() {
         if (!canBuyNewCarpet()) return;
         
-        // ✅ Блокируем ввод
         this.unlockInput();
         
         GameState.money = 0;
