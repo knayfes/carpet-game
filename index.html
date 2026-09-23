@@ -35,8 +35,17 @@ const CONFIG = {
     soapThreshold: 0.01,
     eraseStrength: 0.9,
     
-    // ✅ Честный порог — 100%
-    finishThreshold: 1.0
+    finishThreshold: 1.0,
+    
+    // ✅ Порог радиуса, после которого награда падает
+    bigRadiusThreshold: 70,
+    
+    // ✅ Насколько падает награда за каждый лишний пиксель радиуса
+    // 0.02 = 2% за каждый пиксель свыше 70
+    rewardPenaltyPerPixel: 0.02,
+    
+    // ✅ Минимальный множитель награды (чтобы не упало до нуля)
+    minRewardMultiplier: 0.3
 };
 
 const CARPET_IMAGE = 'carpet.png';
@@ -95,6 +104,23 @@ async function saveGame() {
             money: GameState.money, food: GameState.food, toolLevel: GameState.toolLevel
         });
     } catch (e) {}
+}
+
+// ============================================
+// ВСПОМОГАТЕЛЬНЫЕ
+// ============================================
+function getCurrentRadius() {
+    return Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
+}
+
+// ✅ Множитель награды: 1.0 при радиусе <= 70, падает дальше
+function getRewardMultiplier() {
+    const radius = getCurrentRadius();
+    if (radius <= CONFIG.bigRadiusThreshold) return 1.0;
+    
+    const excess = radius - CONFIG.bigRadiusThreshold;
+    const penalty = excess * CONFIG.rewardPenaltyPerPixel;
+    return Math.max(CONFIG.minRewardMultiplier, 1.0 - penalty);
 }
 
 // ============================================
@@ -185,7 +211,7 @@ class MainScene extends Phaser.Scene {
         this.foodText = this.add.text(30, 80, '🍞 ' + GameState.food, {
             fontSize: '28px', fill: '#FFFFFF', fontFamily: 'Arial'
         }).setDepth(10);
-        this.toolText = this.add.text(30, 120, '🧹 Радиус: ' + CONFIG.brushRadius, {
+        this.toolText = this.add.text(30, 120, '🧹 Радиус: ' + getCurrentRadius(), {
             fontSize: '20px', fill: '#AAAAAA', fontFamily: 'Arial'
         }).setDepth(10);
         
@@ -238,9 +264,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ============================================
-    // ОТРИСОВКА
-    // ============================================
     drawDirt() {
         this.dirtGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
@@ -330,7 +353,7 @@ class MainScene extends Phaser.Scene {
     }
 
     applyTool(localX, localY) {
-        const radius = CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus);
+        const radius = getCurrentRadius();
         const cs = this.gridCellSize;
         const cols = this.gridCols;
         
@@ -381,7 +404,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ Честный прогресс — до 100%
     recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
@@ -398,18 +420,36 @@ class MainScene extends Phaser.Scene {
         this.progressText.setText(p + '%');
     }
 
+    // ✅ НАГРАДА С УЧЁТОМ ШТРАФА ЗА БОЛЬШОЙ РАДИУС
     async finishCarpet() {
         if (this.cleanProgress < CONFIG.finishThreshold) {
             this.showMessage('Ковёр ещё грязный! Нужно 100%.');
             return;
         }
-        const reward = Math.floor(CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)) * GameState.toolLevel;
+        
+        // Базовая награда
+        const baseReward = Math.floor(
+            CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)
+        );
+        
+        // Множитель с учётом радиуса
+        const multiplier = getRewardMultiplier();
+        const reward = Math.floor(baseReward * GameState.toolLevel * multiplier);
+        
         GameState.money += reward;
         GameState.food -= 1;
         this.moneyText.setText('💰 ' + GameState.money);
         this.foodText.setText('🍞 ' + GameState.food);
         await saveGame();
-        this.showMessage(`+${reward} 💰!`);
+        
+        // Показываем штраф, если радиус больше 70
+        const radius = getCurrentRadius();
+        if (radius > CONFIG.bigRadiusThreshold) {
+            const percent = Math.floor(multiplier * 100);
+            this.showMessage(`+${reward} 💰 (радиус ${radius}: ${percent}% награды)`);
+        } else {
+            this.showMessage(`+${reward} 💰!`);
+        }
         
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
@@ -444,11 +484,20 @@ class MainScene extends Phaser.Scene {
         });
         els.push(fb);
         
+        // Кнопка улучшения — показываем радиус и предупреждение
         const tc = GameState.toolLevel * CONFIG.toolBasePrice;
-        const cr = Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
+        const cr = getCurrentRadius();
         const nr = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
-        const tb = this.add.text(W/2, 620, `Улучшить щётку (${tc}💰)\nРадиус: ${cr} → ${nr}`, {
-            fontSize: '28px', fill: '#FFFFFF', align: 'center',
+        
+        let warningText = '';
+        if (nr > CONFIG.bigRadiusThreshold) {
+            const newMult = Math.max(CONFIG.minRewardMultiplier, 1.0 - (nr - CONFIG.bigRadiusThreshold) * CONFIG.rewardPenaltyPerPixel);
+            warningText = `\n⚠️ Награда: ${Math.floor(newMult * 100)}%`;
+        }
+        
+        const tb = this.add.text(W/2, 620, 
+            `Улучшить щётку (${tc}💰)\nРадиус: ${cr} → ${nr}${warningText}`, {
+            fontSize: '28px', fill: warningText ? '#FFAA00' : '#FFFFFF', align: 'center',
             backgroundColor: '#444444', padding: { x: 30, y: 15 }, fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
           .on('pointerdown', async () => {
@@ -456,12 +505,20 @@ class MainScene extends Phaser.Scene {
             if (GameState.money >= cost) {
                 GameState.money -= cost; GameState.toolLevel += 1;
                 this.moneyText.setText('💰 ' + GameState.money);
-                const r = Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
+                const r = getCurrentRadius();
                 this.toolText.setText('🧹 Радиус: ' + r);
                 await saveGame(); this.showMessage('Щётка улучшена!');
                 const nc = GameState.toolLevel * CONFIG.toolBasePrice;
                 const nr2 = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
-                tb.setText(`Улучшить щётку (${nc}💰)\nРадиус: ${r} → ${nr2}`);
+                
+                let warn2 = '';
+                if (nr2 > CONFIG.bigRadiusThreshold) {
+                    const m2 = Math.max(CONFIG.minRewardMultiplier, 1.0 - (nr2 - CONFIG.bigRadiusThreshold) * CONFIG.rewardPenaltyPerPixel);
+                    warn2 = `\n⚠️ Награда: ${Math.floor(m2 * 100)}%`;
+                }
+                
+                tb.setText(`Улучшить щётку (${nc}💰)\nРадиус: ${r} → ${nr2}${warn2}`);
+                tb.setColor(warn2 ? '#FFAA00' : '#FFFFFF');
             } else this.showMessage('Не хватает денег!');
         });
         els.push(tb);
@@ -475,10 +532,11 @@ class MainScene extends Phaser.Scene {
 
     showMessage(text) {
         const msg = this.add.text(360, 1000, text, {
-            fontSize: '32px', fill: '#FFFF00', fontStyle: 'bold',
-            backgroundColor: '#000000', padding: { x: 20, y: 10 }, fontFamily: 'Arial'
+            fontSize: '28px', fill: '#FFFF00', fontStyle: 'bold',
+            backgroundColor: '#000000', padding: { x: 20, y: 10 }, fontFamily: 'Arial',
+            wordWrap: { width: 600 }
         }).setOrigin(0.5).setDepth(30);
-        this.time.delayedCall(1500, () => msg.destroy());
+        this.time.delayedCall(2000, () => msg.destroy());
     }
 }
 
