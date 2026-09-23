@@ -35,8 +35,8 @@ const CONFIG = {
     soapThreshold: 0.01,
     eraseStrength: 0.9,
     
-    // ✅ 99% — порог для засчёта в 100%
-    finishThreshold: 0.99
+    // ✅ Честный порог — 100%
+    finishThreshold: 1.0
 };
 
 const CARPET_IMAGE = 'carpet.png';
@@ -254,7 +254,6 @@ class MainScene extends Phaser.Scene {
                 if (dirt < 0.05) continue;
                 const px = cx + col * cs;
                 const py = cy + row * cs;
-                // ✅ Грязь чуть плотнее
                 this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.65);
                 this.dirtGfx.fillRect(px, py, cs, cs);
             }
@@ -262,7 +261,6 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ Мыло — чуть плотнее, но всё ещё не засвечивает
     drawSoap() {
         this.soapGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
@@ -276,7 +274,6 @@ class MainScene extends Phaser.Scene {
                 if (soap < 0.05) continue;
                 const px = cx + col * cs;
                 const py = cy + row * cs;
-                // ✅ Чуть плотнее, но всё ещё мягкое
                 this.soapGfx.fillStyle(0x88CCFF, soap * 0.2);
                 this.soapGfx.fillRect(px, py, cs, cs);
             }
@@ -384,7 +381,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ Прогресс идёт до 99%, потом пишет 100%
+    // ✅ Честный прогресс — до 100%
     recalcProgress() {
         let total = 0;
         const cells = this.dirtGrid.length;
@@ -392,12 +389,6 @@ class MainScene extends Phaser.Scene {
             total += (1 - this.dirtGrid[i]);
         }
         this.cleanProgress = total / cells;
-        
-        // Когда реально почищено на 99% — считаем за 100%
-        if (this.cleanProgress >= CONFIG.finishThreshold) {
-            this.cleanProgress = 1.0;
-        }
-        
         this.updateProgressBar();
     }
 
@@ -408,8 +399,8 @@ class MainScene extends Phaser.Scene {
     }
 
     async finishCarpet() {
-        if (this.cleanProgress < 1.0) {
-            this.showMessage('Ковёр ещё грязный! Нужно 99%.');
+        if (this.cleanProgress < CONFIG.finishThreshold) {
+            this.showMessage('Ковёр ещё грязный! Нужно 100%.');
             return;
         }
         const reward = Math.floor(CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)) * GameState.toolLevel;
