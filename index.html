@@ -40,8 +40,8 @@ const CONFIG = {
     
     autoCleanThreshold: 0.99,
     autoCleanDuration: 12000,
+    autoCleanIdleDelay: 10000,   // ✅ ждать 10 секунд
     
-    // ✅ Радиус для 1-го ковра = 70, дальше +10
     newCarpetRadiusRequired: 70,
     newCarpetRadiusIncrease: 10,
     
@@ -61,7 +61,13 @@ const CONFIG = {
     
     totalCarpets: 5,
     
-    inputLockDuration: 300
+    inputLockDuration: 300,
+    
+    // ✅ Жуки
+    bugsPerCarpet: 5,          // сколько жуков на ковре
+    bugSpeed: 60,              // пикселей в секунду
+    bugSize: 40,               // размер жука
+    bugFadeDuration: 400       // сколько длится исчезновение
 };
 
 const SAVE_KEY = 'carpetGameStats_v3';
@@ -128,7 +134,6 @@ function getPenaltyStartRadius() {
     return CONFIG.penaltyStartRadius + (GameState.carpetLevel * CONFIG.penaltyIncreasePerCarpet);
 }
 
-// ✅ Требуемый радиус для покупки следующего ковра
 function getRequiredRadius() {
     return CONFIG.newCarpetRadiusRequired + (GameState.carpetLevel * CONFIG.newCarpetRadiusIncrease);
 }
@@ -282,11 +287,16 @@ class MainScene extends Phaser.Scene {
         
         this.autoCleanStarted = false;
         this.autoCleanTimer = null;
+        this.autoCleanIdleTimer = null;
+        this.autoCleanPending = false;
         this.inputLocked = false;
         
         this.noFoodText = null;
         this.noFoodTween = null;
         this.noFoodCooldown = false;
+        
+        // ✅ Массив жуков
+        this.bugs = [];
         
         this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
@@ -328,6 +338,227 @@ class MainScene extends Phaser.Scene {
         
         this.selectTool('soap');
         this.setupCleaning();
+        
+        // ✅ Запускаем жуков, если ковёр не первый
+        this.spawnBugsIfNeeded();
+    }
+
+    // ============================================
+    // ✅ ЖУКИ
+    // ============================================
+    spawnBugsIfNeeded() {
+        // Жуки только со 2-го ковра (carpetIndex >= 2)
+        if (GameState.carpetIndex < 2) return;
+        
+        // Количество жуков растёт с ковром
+        const count = CONFIG.bugsPerCarpet + (GameState.carpetIndex - 2);
+        
+        for (let i = 0; i < count; i++) {
+            this.spawnBug();
+        }
+    }
+    
+    spawnBug() {
+        const W = 720;
+        const H = 1280;
+        
+        // Случайная позиция внутри ковра
+        const padding = 40;
+        const x = Phaser.Math.Between(
+            this.carpetX - this.carpetW/2 + padding,
+            this.carpetX + this.carpetW/2 - padding
+        );
+        const y = Phaser.Math.Between(
+            this.carpetY - this.carpetH/2 + padding,
+            this.carpetY + this.carpetH/2 - padding
+        );
+        
+        // Создаём контейнер для жука
+        const bug = this.add.container(x, y).setDepth(4);
+        
+        // Тело жука (эллипс)
+        const bodyGfx = this.add.graphics();
+        bodyGfx.fillStyle(0x1a1a1a, 1);
+        bodyGfx.fillEllipse(0, 0, 36, 24);
+        bodyGfx.lineStyle(2, 0x000000, 1);
+        bodyGfx.strokeEllipse(0, 0, 36, 24);
+        
+        // Голова
+        bodyGfx.fillStyle(0x0a0a0a, 1);
+        bodyGfx.fillCircle(15, 0, 9);
+        
+        // Глаза
+        bodyGfx.fillStyle(0xFFFFFF, 1);
+        bodyGfx.fillCircle(18, -4, 2.5);
+        bodyGfx.fillCircle(18, 4, 2.5);
+        bodyGfx.fillStyle(0x000000, 1);
+        bodyGfx.fillCircle(19, -4, 1.2);
+        bodyGfx.fillCircle(19, 4, 1.2);
+        
+        // Полоски на спине
+        bodyGfx.lineStyle(1.5, 0x4a2a0a, 1);
+        bodyGfx.beginPath();
+        bodyGfx.moveTo(-8, -8);
+        bodyGfx.lineTo(-8, 8);
+        bodyGfx.moveTo(0, -10);
+        bodyGfx.lineTo(0, 10);
+        bodyGfx.moveTo(8, -8);
+        bodyGfx.lineTo(8, 8);
+        bodyGfx.strokePath();
+        
+        // Усики
+        bodyGfx.lineStyle(1.5, 0x1a1a1a, 1);
+        bodyGfx.beginPath();
+        bodyGfx.moveTo(22, -3);
+        bodyGfx.lineTo(30, -8);
+        bodyGfx.moveTo(22, 3);
+        bodyGfx.lineTo(30, 8);
+        bodyGfx.strokePath();
+        
+        // Лапки
+        bodyGfx.lineStyle(2, 0x0a0a0a, 1);
+        bodyGfx.beginPath();
+        bodyGfx.moveTo(-10, -10);
+        bodyGfx.lineTo(-15, -15);
+        bodyGfx.moveTo(-10, 10);
+        bodyGfx.lineTo(-15, 15);
+        bodyGfx.moveTo(0, -12);
+        bodyGfx.lineTo(-2, -18);
+        bodyGfx.moveTo(0, 12);
+        bodyGfx.lineTo(-2, 18);
+        bodyGfx.moveTo(10, -10);
+        bodyGfx.lineTo(15, -15);
+        bodyGfx.moveTo(10, 10);
+        bodyGfx.lineTo(15, 15);
+        bodyGfx.strokePath();
+        
+        bug.add(bodyGfx);
+        
+        // ✅ Хит-зона для нажатия (невидимая область)
+        const hitArea = this.add.circle(0, 0, 22, 0x000000, 0);
+        hitArea.setInteractive({ useHandCursor: true });
+        hitArea.on('pointerdown', () => this.killBug(bug));
+        bug.add(hitArea);
+        
+        // ✅ Данные жука: направление, скорость
+        bug.bugAngle = Math.random() * Math.PI * 2;
+        bug.bugSpeed = CONFIG.bugSpeed * (0.7 + Math.random() * 0.6);
+        bug.isDead = false;
+        bug.isBug = true;   // маркер, чтобы отличать от других объектов
+        
+        // Начальный поворот
+        bug.setRotation(bug.bugAngle);
+        
+        this.bugs.push(bug);
+    }
+    
+    // ✅ Убить жука — исчезает через прозрачность + звёздочки
+    killBug(bug) {
+        if (bug.isDead) return;
+        bug.isDead = true;
+        
+        // Звёздочки на месте жука
+        this.spawnStarsAt(bug.x, bug.y);
+        this.spawnStarsAt(bug.x, bug.y);
+        this.spawnStarsAt(bug.x, bug.y);
+        
+        // ✅ Плавное исчезновение
+        this.tweens.add({
+            targets: bug,
+            alpha: 0,
+            scale: 1.5,
+            duration: CONFIG.bugFadeDuration,
+            ease: 'Cubic.easeOut',
+            onComplete: () => {
+                const idx = this.bugs.indexOf(bug);
+                if (idx > -1) this.bugs.splice(idx, 1);
+                bug.destroy();
+            }
+        });
+    }
+    
+    // ✅ Спавн звёздочек в точке (без шанса, всегда)
+    spawnStarsAt(x, y) {
+        const symbols = ['⭐', '✨', '🌟'];
+        const star = this.add.text(x, y, symbols[Math.floor(Math.random() * symbols.length)], {
+            fontSize: (25 + Math.random() * 20) + 'px', fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(15);
+        
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 40 + Math.random() * 60;
+        
+        this.tweens.add({
+            targets: star,
+            x: x + Math.cos(angle) * distance,
+            y: y + Math.sin(angle) * distance - 30,
+            alpha: { from: 1, to: 0 },
+            scale: { from: 1, to: 0.3 },
+            angle: { from: 0, to: (Math.random() - 0.5) * 360 },
+            duration: 800,
+            ease: 'Cubic.easeOut',
+            onComplete: () => star.destroy()
+        });
+    }
+    
+    // ✅ Обновление позиций жуков
+    updateBugs(delta) {
+        const dt = delta / 1000;
+        const padding = 30;
+        const minX = this.carpetX - this.carpetW/2 + padding;
+        const maxX = this.carpetX + this.carpetW/2 - padding;
+        const minY = this.carpetY - this.carpetH/2 + padding;
+        const maxY = this.carpetY + this.carpetH/2 - padding;
+        
+        for (let i = this.bugs.length - 1; i >= 0; i--) {
+            const bug = this.bugs[i];
+            if (bug.isDead) continue;
+            
+            // Двигаем
+            bug.x += Math.cos(bug.bugAngle) * bug.bugSpeed * dt;
+            bug.y += Math.sin(bug.bugAngle) * bug.bugSpeed * dt;
+            
+            // ✅ Поворот в направлении движения
+            bug.setRotation(bug.bugAngle);
+            
+            // Отскок от границ ковра
+            let bounced = false;
+            if (bug.x < minX) { bug.x = minX; bug.bugAngle = Math.PI - bug.bugAngle; bounced = true; }
+            if (bug.x > maxX) { bug.x = maxX; bug.bugAngle = Math.PI - bug.bugAngle; bounced = true; }
+            if (bug.y < minY) { bug.y = minY; bug.bugAngle = -bug.bugAngle; bounced = true; }
+            if (bug.y > maxY) { bug.y = maxY; bug.bugAngle = -bug.bugAngle; bounced = true; }
+            
+            // Иногда меняем направление случайно
+            if (Math.random() < 0.005) {
+                bug.bugAngle += (Math.random() - 0.5) * 1.5;
+            }
+        }
+    }
+
+    // ============================================
+    // АВТОДООЧИСТКА С ЗАДЕРЖКОЙ
+    // ============================================
+    scheduleAutoClean() {
+        if (this.autoCleanStarted || this.autoCleanPending) return;
+        this.autoCleanPending = true;
+        
+        this.autoCleanIdleTimer = this.time.delayedCall(CONFIG.autoCleanIdleDelay, () => {
+            this.autoCleanPending = false;
+            if (this.cleanProgress >= CONFIG.autoCleanThreshold 
+                && this.cleanProgress < 1.0 
+                && !this.autoCleanStarted) {
+                this.startAutoClean();
+            }
+        });
+    }
+
+    cancelAutoClean() {
+        if (this.autoCleanPending) {
+            this.autoCleanPending = false;
+            if (this.autoCleanIdleTimer) {
+                this.autoCleanIdleTimer.remove();
+                this.autoCleanIdleTimer = null;
+            }
+        }
     }
 
     showNoFoodWarning() {
@@ -611,9 +842,11 @@ class MainScene extends Phaser.Scene {
         this.needRedrawSoap = false;
     }
 
-    update() {
+    // ✅ update теперь обновляет жуков
+    update(time, delta) {
         if (this.needRedrawDirt) this.drawDirt();
         if (this.needRedrawSoap) this.drawSoap();
+        this.updateBugs(delta);
     }
 
     setupCleaning() {
@@ -701,6 +934,9 @@ class MainScene extends Phaser.Scene {
             return;
         }
         
+        // ✅ Игрок чистит → отменяем отложенную автодоочистку
+        this.cancelAutoClean();
+        
         const radius = getCurrentRadius();
         const cs = this.gridCellSize;
         const cols = this.gridCols;
@@ -781,10 +1017,11 @@ class MainScene extends Phaser.Scene {
             }
         }
         
+        // ✅ Запланировать автодоочистку (не запускать сразу)
         if (this.cleanProgress >= CONFIG.autoCleanThreshold 
             && this.cleanProgress < 1.0 
             && !this.autoCleanStarted) {
-            this.startAutoClean();
+            this.scheduleAutoClean();
         }
         
         this.updateProgressBar();
@@ -851,6 +1088,12 @@ class MainScene extends Phaser.Scene {
         this.cleanProgress = 1.0;
         this.updateProgressBar();
         
+        this.autoCleanPending = false;
+        if (this.autoCleanIdleTimer) {
+            this.autoCleanIdleTimer.remove();
+            this.autoCleanIdleTimer = null;
+        }
+        
         this.unlockInput();
         
         if (!this.celebrationShown) {
@@ -911,6 +1154,13 @@ class MainScene extends Phaser.Scene {
         if (this.autoCleanTimer) {
             this.autoCleanTimer.remove();
             this.autoCleanTimer = null;
+        }
+        
+        // ✅ Сброс таймера бездействия
+        this.autoCleanPending = false;
+        if (this.autoCleanIdleTimer) {
+            this.autoCleanIdleTimer.remove();
+            this.autoCleanIdleTimer = null;
         }
         
         this.updateProgressBar();
@@ -1068,12 +1318,26 @@ class MainScene extends Phaser.Scene {
             this.autoCleanTimer = null;
         }
         
+        // ✅ Сброс таймера бездействия
+        this.autoCleanPending = false;
+        if (this.autoCleanIdleTimer) {
+            this.autoCleanIdleTimer.remove();
+            this.autoCleanIdleTimer = null;
+        }
+        
+        // ✅ Удаляем старых жуков
+        this.bugs.forEach(bug => bug.destroy());
+        this.bugs = [];
+        
         this.updateProgressBar();
         this.drawDirt();
         this.drawSoap();
         
         await saveGame();
         this.spawnCelebration();
+        
+        // ✅ Запускаем жуков для нового ковра (если не первый)
+        this.spawnBugsIfNeeded();
     }
 
     showMessage(text) {
