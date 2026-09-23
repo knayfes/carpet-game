@@ -290,6 +290,9 @@ class MainScene extends Phaser.Scene {
         this.finishButtonActive = false;
         this.finishAnimating = false;
         
+        // ✅ Магазин открыт — блокирует ввод по ковру
+        this.shopOpen = false;
+        
         this.noFoodText = null;
         this.noFoodTween = null;
         this.noFoodCooldown = false;
@@ -405,6 +408,7 @@ class MainScene extends Phaser.Scene {
     finishCarpetFast() {
         if (this.finishAnimating) return;
         if (this.cleanProgress < CONFIG.finishButtonThreshold) return;
+        if (this.shopOpen) return;
         
         this.finishAnimating = true;
         this.hideFinishButton();
@@ -935,7 +939,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ Грязь плотнее (0.75) + свет чистого участка ярче (0.12)
     drawDirt() {
         this.dirtGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
@@ -961,7 +964,6 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ Мыло заметнее (0.3)
     drawSoap() {
         this.soapGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
@@ -994,6 +996,7 @@ class MainScene extends Phaser.Scene {
         const handlePointer = (pointer) => {
             if (this.inputLocked) return;
             if (this.finishAnimating) return;
+            if (this.shopOpen) return;   // ✅ Магазин открыт — не обрабатываем
             
             if (this.currentTool === 'swatter') {
                 this.drawSwatter(pointer.x, pointer.y);
@@ -1086,6 +1089,9 @@ class MainScene extends Phaser.Scene {
     }
 
     applyTool(localX, localY) {
+        // ✅ Если магазин открыт — не чистим
+        if (this.shopOpen) return;
+        
         if (GameState.food <= 0) {
             this.showNoFoodWarning();
             return;
@@ -1199,6 +1205,8 @@ class MainScene extends Phaser.Scene {
     }
 
     async finishCarpet() {
+        if (this.shopOpen) return;
+        
         if (this.cleanProgress < 1.0) {
             this.showMessage('Ковёр ещё грязный! Нужно 100%.');
             return;
@@ -1257,6 +1265,9 @@ class MainScene extends Phaser.Scene {
     }
 
     openShop() {
+        // ✅ Блокируем ввод по ковру
+        this.shopOpen = true;
+        
         const W = 720, H = 1280;
         const els = [];
         
@@ -1372,13 +1383,17 @@ class MainScene extends Phaser.Scene {
             fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', fontFamily: 'Arial',
             stroke: '#000000', strokeThickness: 6
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => { els.forEach(el => el.destroy()); });
+          .on('pointerdown', () => { 
+              els.forEach(el => el.destroy()); 
+              this.shopOpen = false;   // ✅ Снимаем блокировку
+          });
         els.push(cb);
     }
 
     async buyNewCarpet() {
         if (!canBuyNewCarpet()) return;
         
+        this.shopOpen = false;   // ✅ Магазин закрыт после покупки
         this.unlockInput();
         this.hideFinishButton();
         
