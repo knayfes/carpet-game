@@ -27,7 +27,10 @@
 const CONFIG = {
     startMoney: 0, startFood: 3, startToolLevel: 1,
     foodPrice: 10, toolBasePrice: 50,
-    rewardMin: 50, rewardMax: 100,
+    
+    // ✅ Заработок уменьшен в 2 раза
+    rewardMin: 25, rewardMax: 50,
+    
     brushRadius: 40,
     toolRadiusBonus: 0.05,
     
@@ -61,91 +64,34 @@ const SAVE_KEY = 'carpetGameStats_v3';
 // ✅ СТИЛИ ТЕКСТА (обводка + тень + яркие цвета)
 // ============================================
 const TEXT_STYLES = {
-    // Большой заголовок
     title: (color = '#FFD700') => ({
-        fontSize: '48px',
-        fill: color,
-        fontStyle: 'bold',
-        fontFamily: 'Arial',
-        stroke: '#000000',
-        strokeThickness: 6,
-        shadow: {
-            offsetX: 3, offsetY: 3,
-            color: '#000000',
-            blur: 5,
-            fill: true
-        }
+        fontSize: '48px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+        stroke: '#000000', strokeThickness: 6,
+        shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, fill: true }
     }),
-    
-    // Счётчики (деньги, еда, щётка)
     stat: (color = '#FFFFFF', size = 30) => ({
-        fontSize: size + 'px',
-        fill: color,
-        fontStyle: 'bold',
-        fontFamily: 'Arial',
-        stroke: '#000000',
-        strokeThickness: 5,
-        shadow: {
-            offsetX: 2, offsetY: 2,
-            color: '#000000',
-            blur: 4,
-            fill: true
-        }
+        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+        stroke: '#000000', strokeThickness: 5,
+        shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
     }),
-    
-    // Кнопки
     button: (color = '#FFFFFF', size = 28) => ({
-        fontSize: size + 'px',
-        fill: color,
-        fontStyle: 'bold',
-        fontFamily: 'Arial',
-        stroke: '#000000',
-        strokeThickness: 5,
-        shadow: {
-            offsetX: 2, offsetY: 2,
-            color: '#000000',
-            blur: 4,
-            fill: true
-        }
+        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+        stroke: '#000000', strokeThickness: 5,
+        shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
     }),
-    
-    // Магазин — крупные надписи
     shop: (color = '#FFFFFF', size = 28) => ({
-        fontSize: size + 'px',
-        fill: color,
-        fontStyle: 'bold',
-        fontFamily: 'Arial',
-        stroke: '#000000',
-        strokeThickness: 4,
-        align: 'center'
+        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+        stroke: '#000000', strokeThickness: 4, align: 'center'
     }),
-    
-    // Магазин — инфо
     shopInfo: (color = '#FFFFFF', size = 20) => ({
-        fontSize: size + 'px',
-        fill: color,
-        fontFamily: 'Arial',
-        stroke: '#000000',
-        strokeThickness: 3,
-        align: 'center'
+        fontSize: size + 'px', fill: color, fontFamily: 'Arial',
+        stroke: '#000000', strokeThickness: 3, align: 'center'
     }),
-    
-    // Сообщения
     message: (color = '#FFFF00', size = 26) => ({
-        fontSize: size + 'px',
-        fill: color,
-        fontStyle: 'bold',
-        fontFamily: 'Arial',
-        stroke: '#000000',
-        strokeThickness: 5,
-        shadow: {
-            offsetX: 2, offsetY: 2,
-            color: '#000000',
-            blur: 4,
-            fill: true
-        },
-        align: 'center',
-        wordWrap: { width: 640 }
+        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+        stroke: '#000000', strokeThickness: 5,
+        shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true },
+        align: 'center', wordWrap: { width: 640 }
     })
 };
 
@@ -258,13 +204,13 @@ async function saveGame() {
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
+        // ✅ Загрузка ковров из папки image.carpet/
         for (let i = 1; i <= CONFIG.totalCarpets; i++) {
             this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
         }
         
         const w = this.cameras.main.width, h = this.cameras.main.height;
-        this.add.text(w/2, h/2 - 50, 'Загрузка...', TEXT_STYLES.title())
-            .setOrigin(0.5);
+        this.add.text(w/2, h/2 - 50, 'Загрузка...', TEXT_STYLES.title()).setOrigin(0.5);
         this.add.rectangle(w/2, h/2 + 30, 400, 30, 0x333333);
         const bar = this.add.rectangle(w/2 - 200, h/2 + 30, 0, 26, 0x00FF00).setOrigin(0, 0.5);
         this.load.on('progress', (v) => { bar.width = 400 * v; });
@@ -327,54 +273,39 @@ class MainScene extends Phaser.Scene {
         this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
         
-        // ============================================
-        // ✅ UI — ТЁМНАЯ ПЛАШКА СЗАДИ ДЛЯ ЧИТАЕМОСТИ
-        // ============================================
-        this.uiPanel = this.add.rectangle(0, 0, 260, 180, 0x000000, 0.5)
-            .setOrigin(0, 0).setDepth(9);
+        // UI
+        this.add.rectangle(0, 0, 260, 180, 0x000000, 0.5).setOrigin(0, 0).setDepth(9);
         
-        this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, TEXT_STYLES.stat('#FFD700', 34))
-            .setDepth(10);
-        this.foodText = this.add.text(30, 80, '🍞 ' + GameState.food, TEXT_STYLES.stat('#FFFFFF', 26))
-            .setDepth(10);
-        this.toolText = this.add.text(30, 118, '🧹 Радиус: ' + getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 20))
-            .setDepth(10);
-        this.carpetText = this.add.text(30, 148, '🟫 Ковёр: ' + GameState.carpetIndex + '/' + CONFIG.totalCarpets, TEXT_STYLES.stat('#FFD700', 20))
-            .setDepth(10);
+        this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, TEXT_STYLES.stat('#FFD700', 34)).setDepth(10);
+        this.foodText = this.add.text(30, 80, '🍞 ' + GameState.food, TEXT_STYLES.stat('#FFFFFF', 26)).setDepth(10);
+        this.toolText = this.add.text(30, 118, '🧹 Радиус: ' + getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 20)).setDepth(10);
+        this.carpetText = this.add.text(30, 148, '🟫 Ковёр: ' + GameState.carpetIndex + '/' + CONFIG.totalCarpets, TEXT_STYLES.stat('#FFD700', 20)).setDepth(10);
         
-        // Прогресс-бар
         this.add.rectangle(W/2, 200, 400, 30, 0x000000, 0.6).setDepth(10);
         this.add.rectangle(W/2, 200, 400, 30, 0x333333).setDepth(10);
         this.progressBar = this.add.rectangle(W/2 - 200, 200, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
-        this.progressText = this.add.text(W/2, 200, '0%', TEXT_STYLES.stat('#FFFFFF', 22))
-            .setOrigin(0.5).setDepth(11);
+        this.progressText = this.add.text(W/2, 200, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
         
-        // Магазин
         this.add.text(640, 40, '🛒', { fontSize: '48px' })
             .setDepth(10).setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.openShop());
         
-        // Кнопки мыло/смыть
         const btnY = 1200;
         this.soapBtnBg = this.add.rectangle(180, btnY, 280, 80, 0x4A90D9).setDepth(10);
         this.soapBtnBg.setStrokeStyle(5, 0xFFFFFF);
-        this.soapBtnText = this.add.text(180, btnY, '🧼 МЫЛО', TEXT_STYLES.button('#FFFFFF', 28))
-            .setOrigin(0.5).setDepth(11);
+        this.soapBtnText = this.add.text(180, btnY, '🧼 МЫЛО', TEXT_STYLES.button('#FFFFFF', 28)).setOrigin(0.5).setDepth(11);
         this.soapBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.selectTool('soap'));
         
         this.washBtnBg = this.add.rectangle(540, btnY, 280, 80, 0x555555).setDepth(10);
         this.washBtnBg.setStrokeStyle(5, 0x888888);
-        this.washBtnText = this.add.text(540, btnY, '💧 СМЫТЬ', TEXT_STYLES.button('#AAAAAA', 28))
-            .setOrigin(0.5).setDepth(11);
+        this.washBtnText = this.add.text(540, btnY, '💧 СМЫТЬ', TEXT_STYLES.button('#AAAAAA', 28)).setOrigin(0.5).setDepth(11);
         this.washBtnBg.setInteractive({ useHandCursor: true })
             .on('pointerdown', () => this.selectTool('wash'));
         
-        // Получить деньги
         this.add.text(W/2, 1100, 'ПОЛУЧИТЬ ДЕНЬГИ', {
             ...TEXT_STYLES.button('#00FF00', 30),
-            backgroundColor: '#000000',
-            padding: { x: 25, y: 12 }
+            backgroundColor: '#000000', padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true })
           .on('pointerdown', () => this.finishCarpet());
         
@@ -395,15 +326,12 @@ class MainScene extends Phaser.Scene {
             const wallColor = wallColors[level % wallColors.length];
             g.fillStyle(wallColor, 1);
             g.fillRect(0, 0, W, 900);
-            
             for (let x = 0; x < W; x += 60) {
                 g.fillStyle(0x000000, 0.05);
                 g.fillRect(x, 0, 30, 900);
             }
-            
             g.fillStyle(0x8B5A2B, 1);
             g.fillRect(0, 900, W, H - 900);
-            
             for (let y = 900; y < H; y += 40) {
                 g.fillStyle(0x000000, 0.15);
                 g.fillRect(0, y, W, 3);
@@ -412,10 +340,8 @@ class MainScene extends Phaser.Scene {
                 g.fillStyle(0x000000, 0.1);
                 g.fillRect(x, 900, 2, H - 900);
             }
-            
             g.fillStyle(0x5C3A1E, 1);
             g.fillRect(0, 880, W, 20);
-            
             g.fillStyle(0x87CEEB, 1);
             g.fillRect(80, 150, 200, 250);
             g.fillStyle(0xFFFFFF, 1);
@@ -427,38 +353,31 @@ class MainScene extends Phaser.Scene {
             g.fillRect(80, 270, 200, 10);
             g.fillStyle(0xFFEB3B, 0.8);
             g.fillCircle(240, 200, 35);
-            
             g.fillStyle(0x8B4513, 1);
             g.fillRect(480, 200, 150, 120);
             g.fillStyle(0x87CEEB, 1);
             g.fillRect(490, 210, 130, 100);
             g.fillStyle(0x228B22, 1);
             g.fillTriangle(490, 310, 555, 240, 620, 310);
-            
         } else {
             const colors = [0x2C3E50, 0x34495E, 0x1A252F, 0x3D5A80, 0x293241];
             const wallColor = colors[level % colors.length];
             g.fillStyle(wallColor, 1);
             g.fillRect(0, 0, W, 900);
-            
             g.fillStyle(0x00E5FF, 0.5);
             g.fillRect(0, 400, W, 4);
             g.fillStyle(0xFF00E5, 0.5);
             g.fillRect(0, 500, W, 4);
-            
             g.fillStyle(0x1a1a1a, 1);
             g.fillRect(0, 900, W, H - 900);
-            
             for (let i = 0; i < 5; i++) {
                 g.fillStyle(0x00E5FF, 0.05);
                 g.fillRect(0, 900 + i * 40, W, 10);
             }
-            
             g.lineStyle(3, 0x00E5FF, 0.6);
             g.strokeCircle(600, 250, 80);
             g.lineStyle(3, 0xFF00E5, 0.6);
             g.strokeRect(100, 180, 120, 120);
-            
             g.fillStyle(0x000000, 1);
             g.fillRect(0, 880, W, 20);
         }
@@ -466,7 +385,6 @@ class MainScene extends Phaser.Scene {
 
     drawCarpet() {
         this.carpetContainer.removeAll(true);
-        
         const carpetKey = 'carpet' + GameState.carpetIndex;
         
         if (this.textures.exists(carpetKey)) {
@@ -489,24 +407,19 @@ class MainScene extends Phaser.Scene {
             
             g.fillStyle(p.main, 1);
             g.fillRect(cx, cy, this.carpetW, this.carpetH);
-            
             g.lineStyle(20, p.border, 1);
             g.strokeRect(cx + 10, cy + 10, this.carpetW - 20, this.carpetH - 20);
-            
             g.lineStyle(4, p.accent, 0.7);
             for (let i = 0; i < 3; i++) {
                 const size = 100 - i * 30;
-                const x = this.carpetX;
-                const y = this.carpetY;
                 g.beginPath();
-                g.moveTo(x, y - size);
-                g.lineTo(x + size, y);
-                g.lineTo(x, y + size);
-                g.lineTo(x - size, y);
+                g.moveTo(this.carpetX, this.carpetY - size);
+                g.lineTo(this.carpetX + size, this.carpetY);
+                g.lineTo(this.carpetX, this.carpetY + size);
+                g.lineTo(this.carpetX - size, this.carpetY);
                 g.closePath();
                 g.strokePath();
             }
-            
             g.fillStyle(p.accent, 1);
             g.fillCircle(cx + 50, cy + 50, 12);
             g.fillCircle(cx + this.carpetW - 50, cy + 50, 12);
@@ -573,22 +486,33 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    // ✅ ГРЯЗЬ — ТЕМНЕЕ И ПЛОТНЕЕ
     drawDirt() {
         this.dirtGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
         const cy = this.carpetY - this.carpetH / 2;
         const cs = this.gridCellSize;
         const cols = this.gridCols;
+        
         for (let row = 0; row < this.gridRows; row++) {
             for (let col = 0; col < cols; col++) {
                 const dirt = this.dirtGrid[row * cols + col];
                 const px = cx + col * cs;
                 const py = cy + row * cs;
+                
                 if (dirt > 0.05) {
-                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.65);
+                    // ✅ Основной слой грязи — темнее и плотнее
+                    this.dirtGfx.fillStyle(0x1a0f05, dirt * 0.9);
                     this.dirtGfx.fillRect(px, py, cs, cs);
+                    
+                    // ✅ Дополнительные тёмные пятна на самых грязных местах
+                    if (dirt > 0.7) {
+                        this.dirtGfx.fillStyle(0x0a0500, 0.4);
+                        this.dirtGfx.fillCircle(px + cs/2, py + cs/2, cs * 0.4);
+                    }
                 } else {
-                    this.dirtGfx.fillStyle(0xFFFFFF, 0.08);
+                    // Чистый участок — светлая подсветка
+                    this.dirtGfx.fillStyle(0xFFFFFF, 0.12);
                     this.dirtGfx.fillRect(px, py, cs, cs);
                 }
             }
@@ -774,12 +698,8 @@ class MainScene extends Phaser.Scene {
         await saveGame();
         
         let msg = `+${reward} 💰`;
-        if (carpetMultiplier > 1.0) {
-            msg += ` (×${carpetMultiplier.toFixed(2)})`;
-        }
-        if (radiusPenalty < 1.0) {
-            msg += ` (-${Math.floor((1 - radiusPenalty) * 100)}%)`;
-        }
+        if (carpetMultiplier > 1.0) msg += ` (×${carpetMultiplier.toFixed(2)})`;
+        if (radiusPenalty < 1.0) msg += ` (-${Math.floor((1 - radiusPenalty) * 100)}%)`;
         this.showMessage(msg);
         
         this.children.list.forEach(child => {
@@ -810,11 +730,9 @@ class MainScene extends Phaser.Scene {
         bg.setStrokeStyle(5, 0xFFD700); els.push(bg);
         els.push(this.add.text(W/2, 190, 'МАГАЗИН', TEXT_STYLES.title()).setOrigin(0.5).setDepth(22));
         
-        // ЕДА
         const fb = this.add.text(W/2, 310, `Купить еду (${CONFIG.foodPrice}💰)\n🍞 +1`, {
             ...TEXT_STYLES.shop('#FFFFFF', 28),
-            backgroundColor: '#444444',
-            padding: { x: 30, y: 15 }
+            backgroundColor: '#444444', padding: { x: 30, y: 15 }
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
           .on('pointerdown', async () => {
             if (GameState.money >= CONFIG.foodPrice) {
@@ -826,7 +744,6 @@ class MainScene extends Phaser.Scene {
         });
         els.push(fb);
         
-        // УЛУЧШЕНИЕ ЩЁТКИ
         const tc = GameState.toolLevel * CONFIG.toolBasePrice;
         const cr = getCurrentRadius();
         const nr = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
@@ -841,8 +758,7 @@ class MainScene extends Phaser.Scene {
         const tb = this.add.text(W/2, 480,
             `Улучшить щётку (${tc}💰)\nРадиус: ${cr} → ${nr}${warningText}`, {
             ...TEXT_STYLES.shop(warningText ? '#FFAA00' : '#FFFFFF', 26),
-            backgroundColor: '#444444',
-            padding: { x: 30, y: 15 }
+            backgroundColor: '#444444', padding: { x: 30, y: 15 }
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
           .on('pointerdown', async () => {
             const cost = GameState.toolLevel * CONFIG.toolBasePrice;
@@ -871,7 +787,6 @@ class MainScene extends Phaser.Scene {
         });
         els.push(tb);
         
-        // НОВЫЙ КОВЁР
         const newCarpetPrice = getNewCarpetPrice();
         const canBuy = canBuyNewCarpet();
         const radiusEnough = getCurrentRadius() >= CONFIG.newCarpetRadiusRequired;
@@ -896,8 +811,7 @@ class MainScene extends Phaser.Scene {
         
         const nb = this.add.text(W/2, 700, newCarpetLabel, {
             ...TEXT_STYLES.shop(newCarpetColor, 22),
-            backgroundColor: '#1a1a1a',
-            padding: { x: 25, y: 15 }
+            backgroundColor: '#1a1a1a', padding: { x: 25, y: 15 }
         }).setOrigin(0.5).setDepth(22);
         
         if (canBuy) {
@@ -910,16 +824,13 @@ class MainScene extends Phaser.Scene {
         }
         els.push(nb);
         
-        // ИНФО
         const infoText = `Уровень ковра: ${GameState.carpetLevel}\nМножитель: ×${getRewardMultiplier().toFixed(2)}\nШтраф радиуса с: ${getPenaltyStartRadius()}`;
         const ib = this.add.text(W/2, 900, infoText, {
             ...TEXT_STYLES.shopInfo('#CCCCCC', 20),
-            backgroundColor: '#1a1a1a',
-            padding: { x: 20, y: 12 }
+            backgroundColor: '#1a1a1a', padding: { x: 20, y: 12 }
         }).setOrigin(0.5).setDepth(22);
         els.push(ib);
         
-        // ЗАКРЫТЬ
         const cb = this.add.text(620, 190, '✖', {
             fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', fontFamily: 'Arial',
             stroke: '#000000', strokeThickness: 6
@@ -928,6 +839,7 @@ class MainScene extends Phaser.Scene {
         els.push(cb);
     }
 
+    // ✅ ИСПРАВЛЕНО: сброс тача и перерисовка
     async buyNewCarpet() {
         if (!canBuyNewCarpet()) return;
         
@@ -943,32 +855,34 @@ class MainScene extends Phaser.Scene {
         this.drawRoom();
         this.drawCarpet();
         
-       this.dirtGrid.fill(1.0);
-this.soapGrid.fill(0.0);
-this.needRedrawDirt = true;
-this.needRedrawSoap = true;
-this.cleanProgress = 0;
-this.celebrationShown = false;
-// ✅ Сброс тача — чтобы можно было чистить новый ковёр
-this.isPointerDown = false;
-this.lastLocalX = -9999;
-this.lastLocalY = -9999;
-this.brush.setVisible(false);
-this.updateProgressBar();
-
-// ✅ Принудительно перерисовываем грязь и мыло сразу
-this.drawDirt();
-this.drawSoap();
-
-await saveGame();
-this.spawnCelebration();
+        // Сброс грязи и мыла
+        this.dirtGrid.fill(1.0);
+        this.soapGrid.fill(0.0);
+        this.needRedrawDirt = true;
+        this.needRedrawSoap = true;
+        this.cleanProgress = 0;
+        this.celebrationShown = false;
+        
+        // ✅ Сброс состояния тача — чтобы можно было чистить новый ковёр
+        this.isPointerDown = false;
+        this.lastLocalX = -9999;
+        this.lastLocalY = -9999;
+        this.brush.setVisible(false);
+        
+        this.updateProgressBar();
+        
+        // ✅ Принудительная перерисовка сразу
+        this.drawDirt();
+        this.drawSoap();
+        
+        await saveGame();
+        this.spawnCelebration();
     }
 
     showMessage(text) {
         const msg = this.add.text(360, 1000, text, {
             ...TEXT_STYLES.message('#FFFF00', 26),
-            backgroundColor: '#000000',
-            padding: { x: 25, y: 12 }
+            backgroundColor: '#000000', padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(30);
         this.time.delayedCall(2200, () => msg.destroy());
     }
