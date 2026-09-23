@@ -943,16 +943,25 @@ class MainScene extends Phaser.Scene {
         this.drawRoom();
         this.drawCarpet();
         
-        this.dirtGrid.fill(1.0);
-        this.soapGrid.fill(0.0);
-        this.needRedrawDirt = true;
-        this.needRedrawSoap = true;
-        this.cleanProgress = 0;
-        this.celebrationShown = false;
-        this.updateProgressBar();
-        
-        await saveGame();
-        this.spawnCelebration();
+       this.dirtGrid.fill(1.0);
+this.soapGrid.fill(0.0);
+this.needRedrawDirt = true;
+this.needRedrawSoap = true;
+this.cleanProgress = 0;
+this.celebrationShown = false;
+// ✅ Сброс тача — чтобы можно было чистить новый ковёр
+this.isPointerDown = false;
+this.lastLocalX = -9999;
+this.lastLocalY = -9999;
+this.brush.setVisible(false);
+this.updateProgressBar();
+
+// ✅ Принудительно перерисовываем грязь и мыло сразу
+this.drawDirt();
+this.drawSoap();
+
+await saveGame();
+this.spawnCelebration();
     }
 
     showMessage(text) {
