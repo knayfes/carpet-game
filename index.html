@@ -38,6 +38,9 @@ const CONFIG = {
     
     progressThreshold: 1.0,
     
+    // ✅ Порог для красной подсветки
+    highlightThreshold: 0.97,
+    
     newCarpetRadiusRequired: 70,
     newCarpetBasePrice: 5000,
     rewardMultiplierPerCarpet: 1.25,
@@ -266,6 +269,7 @@ class MainScene extends Phaser.Scene {
         this.lastLocalX = -9999;
         this.lastLocalY = -9999;
         this.celebrationShown = false;
+        this.highlightPulse = 0;  // ✅ фаза пульсации
         
         this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
         this.brush.setVisible(false);
@@ -483,13 +487,18 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ ГРЯЗЬ ВОЗВРАЩЕНА КАК БЫЛА
+    // ✅ ГРЯЗЬ + КРАСНАЯ ПОДСВЕТКА ПРИ 97%+
     drawDirt() {
         this.dirtGfx.clear();
         const cx = this.carpetX - this.carpetW / 2;
         const cy = this.carpetY - this.carpetH / 2;
         const cs = this.gridCellSize;
         const cols = this.gridCols;
+        
+        // Показывать ли подсветку
+        const showHighlight = this.cleanProgress >= CONFIG.highlightThreshold && this.cleanProgress < 1.0;
+        // Пульсация 0..1
+        const pulse = 0.5 + 0.5 * Math.sin(this.highlightPulse);
         
         for (let row = 0; row < this.gridRows; row++) {
             for (let col = 0; col < cols; col++) {
@@ -498,8 +507,19 @@ class MainScene extends Phaser.Scene {
                 const py = cy + row * cs;
                 
                 if (dirt > 0.05) {
-                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.65);
-                    this.dirtGfx.fillRect(px, py, cs, cs);
+                    if (showHighlight) {
+                        // ✅ КРАСНАЯ ПУЛЬСИРУЮЩАЯ ПОДСВЕТКА
+                        this.dirtGfx.fillStyle(0xFF0000, 0.4 + 0.4 * pulse);
+                        this.dirtGfx.fillRect(px, py, cs, cs);
+                        
+                        // Яркая точка в центре ячейки
+                        this.dirtGfx.fillStyle(0xFF6666, 0.6 + 0.4 * pulse);
+                        this.dirtGfx.fillCircle(px + cs/2, py + cs/2, cs * 0.3);
+                    } else {
+                        // Обычная грязь
+                        this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.65);
+                        this.dirtGfx.fillRect(px, py, cs, cs);
+                    }
                 } else {
                     this.dirtGfx.fillStyle(0xFFFFFF, 0.08);
                     this.dirtGfx.fillRect(px, py, cs, cs);
@@ -528,12 +548,18 @@ class MainScene extends Phaser.Scene {
         this.needRedrawSoap = false;
     }
 
+    // ✅ Пульсация подсветки
     update() {
         if (this.needRedrawDirt) this.drawDirt();
         if (this.needRedrawSoap) this.drawSoap();
+        
+        // Если прогресс в зоне подсветки — перерисовываем каждый кадр
+        if (this.cleanProgress >= CONFIG.highlightThreshold && this.cleanProgress < 1.0) {
+            this.highlightPulse += 0.1;
+            this.needRedrawDirt = true;
+        }
     }
 
-    // ✅ ПОЛНОСТЬЮ ПЕРЕПИСАНО — чтобы не залипал тач
     setupCleaning() {
         this.game.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
         this.game.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
@@ -556,7 +582,6 @@ class MainScene extends Phaser.Scene {
             this.applyTool(localX, localY);
         };
         
-        // ✅ Используем pointerdown + pointermove без глобального флага
         this.input.on('pointerdown', (pointer) => {
             this.isPointerDown = true;
             this.lastLocalX = -9999;
@@ -565,7 +590,6 @@ class MainScene extends Phaser.Scene {
         });
         
         this.input.on('pointermove', (pointer) => {
-            // Если палец/мышь зажаты — стираем
             if (!pointer.isDown) {
                 this.isPointerDown = false;
                 return;
@@ -587,7 +611,6 @@ class MainScene extends Phaser.Scene {
             this.lastLocalY = -9999;
         });
         
-        // ✅ Дополнительный сброс при потере фокуса окна
         window.addEventListener('blur', () => {
             this.isPointerDown = false;
             this.brush.setVisible(false);
@@ -684,7 +707,6 @@ class MainScene extends Phaser.Scene {
         this.progressText.setText(p + '%');
     }
 
-    // ✅ ПОЛНЫЙ СБРОС ПОСЛЕ ПОЛУЧЕНИЯ ДЕНЕГ
     async finishCarpet() {
         if (this.cleanProgress < 1.0) {
             this.showMessage('Ковёр ещё грязный! Нужно 100%.');
@@ -711,30 +733,26 @@ class MainScene extends Phaser.Scene {
         if (radiusPenalty < 1.0) msg += ` (-${Math.floor((1 - radiusPenalty) * 100)}%)`;
         this.showMessage(msg);
         
-        // Убираем висящие звёзды
         this.children.list.forEach(child => {
             if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) {
                 child.destroy();
             }
         });
         
-        // Сброс грязи и мыла
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
         this.needRedrawDirt = true;
         this.needRedrawSoap = true;
         this.cleanProgress = 0;
         this.celebrationShown = false;
+        this.highlightPulse = 0;   // ✅ сброс пульсации
         
-        // ✅ ПОЛНЫЙ СБРОС ТАЧА — чтобы можно было мылить заново
         this.isPointerDown = false;
         this.lastLocalX = -9999;
         this.lastLocalY = -9999;
         this.brush.setVisible(false);
         
         this.updateProgressBar();
-        
-        // ✅ Принудительная перерисовка
         this.drawDirt();
         this.drawSoap();
     }
@@ -879,8 +897,8 @@ class MainScene extends Phaser.Scene {
         this.needRedrawSoap = true;
         this.cleanProgress = 0;
         this.celebrationShown = false;
+        this.highlightPulse = 0;
         
-        // Полный сброс тача
         this.isPointerDown = false;
         this.lastLocalX = -9999;
         this.lastLocalY = -9999;
