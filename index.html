@@ -32,10 +32,13 @@ const CONFIG = {
     brushRadius: 40,
     toolRadiusBonus: 0.05,
     
-    soapPower: 1.0,
+    // ✅ Мыло за 1 проход
+    soapPower: 2.0,
     soapThreshold: 0.01,
-    soapWashSpeed: 2.0,   // ✅ мыло стирается за 1 проход
-    eraseStrength: 0.9,
+    soapWashSpeed: 2.0,
+    
+    // ✅ Смыть — 60% за 1 проход
+    eraseStrength: 0.6,
     
     progressThreshold: 1.0,
     
@@ -924,10 +927,8 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ Мыло ярко-белое, без пузырьков
     drawSoap() {
         this.soapGfx.clear();
-        
         const cs = this.gridCellSize;
         const cols = this.gridCols;
         const cx = this.gridOffsetX;
@@ -941,7 +942,6 @@ class MainScene extends Phaser.Scene {
                 const px = cx + col * cs;
                 const py = cy + row * cs;
                 
-                // ✅ Ярко-белое мыло
                 this.soapGfx.fillStyle(0xFFFFFF, soap * 0.85);
                 this.soapGfx.fillRect(px, py, cs, cs);
             }
@@ -1112,7 +1112,8 @@ class MainScene extends Phaser.Scene {
                 const distSq = dx*dx + dy*dy;
                 if (distSq > radiusSq) continue;
                 
-                const falloff = Math.max(0.5, 1 - Math.sqrt(distSq) / radius);
+                // ✅ Минимум 0.9 — почти без ослабления к краю
+                const falloff = Math.max(0.9, 1 - Math.sqrt(distSq) / radius);
                 const index = row * cols + col;
                 
                 if (this.currentTool === 'soap') {
@@ -1127,7 +1128,6 @@ class MainScene extends Phaser.Scene {
                         dirtChanged = true;
                         erasedSomething = true;
                     }
-                    // ✅ Мыло стирается за 1 проход (2.0 * falloff минимум 1.0)
                     this.soapGrid[index] = Math.max(0, this.soapGrid[index] - CONFIG.soapWashSpeed * falloff);
                     soapChanged = true;
                 }
@@ -1428,7 +1428,7 @@ const phaserConfig = {
     type: Phaser.CANVAS,
     width: 720, height: 1280,
     backgroundColor: '#1a1a1a',
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_CENTER },
     input: { activePointers: 3, touch: { capture: true } },
     scene: [PreloadScene, MainScene]
 };
