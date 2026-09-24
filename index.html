@@ -67,7 +67,6 @@ const CONFIG = {
     swatterRadius: 50,
     swatterCooldown: 200,
     
-    // ✅ Больше брызг и пузырьков
     splashChance: 0.8,
     bubbleChance: 0.5
 };
@@ -375,11 +374,10 @@ class MainScene extends Phaser.Scene {
         });
     }
     
-    // ✅ Больше брызг
     spawnSplash(x, y) {
         if (Math.random() > CONFIG.splashChance) return;
         
-        const count = 3 + Math.floor(Math.random() * 3);   // 3-5 капель
+        const count = 3 + Math.floor(Math.random() * 3);
         
         for (let i = 0; i < count; i++) {
             const symbols = ['💧', '💦', '·', '°'];
@@ -896,7 +894,7 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ Белая пена, но ковёр видно (прозрачность 0.45)
+    // ✅ Мыло — только контуры границ, ковёр не светлеет
     drawSoap() {
         this.soapGfx.clear();
         const cs = this.gridCellSize;
@@ -904,16 +902,25 @@ class MainScene extends Phaser.Scene {
         const cx = this.gridOffsetX;
         const cy = this.gridOffsetY;
         
+        this.soapGfx.lineStyle(4, 0xFFFFFF, 0.85);
+        
         for (let row = 0; row < this.gridRows; row++) {
             for (let col = 0; col < cols; col++) {
                 const soap = this.soapGrid[row * cols + col];
-                if (soap < 0.05) continue;
+                if (soap < 0.3) continue;
+                
                 const px = cx + col * cs;
                 const py = cy + row * cs;
                 
-                // Ярко-белая пена с прозрачностью — ковёр просвечивает
-                this.soapGfx.fillStyle(0xFFFFFF, soap * 0.45);
-                this.soapGfx.fillRect(px, py, cs, cs);
+                const top = (row === 0) || (this.soapGrid[(row - 1) * cols + col] < 0.3);
+                const bottom = (row === this.gridRows - 1) || (this.soapGrid[(row + 1) * cols + col] < 0.3);
+                const left = (col === 0) || (this.soapGrid[row * cols + (col - 1)] < 0.3);
+                const right = (col === cols - 1) || (this.soapGrid[row * cols + (col + 1)] < 0.3);
+                
+                if (top)    this.soapGfx.lineBetween(px, py, px + cs, py);
+                if (bottom) this.soapGfx.lineBetween(px, py + cs, px + cs, py + cs);
+                if (left)   this.soapGfx.lineBetween(px, py, px, py + cs);
+                if (right)  this.soapGfx.lineBetween(px + cs, py, px + cs, py + cs);
             }
         }
         this.needRedrawSoap = false;
