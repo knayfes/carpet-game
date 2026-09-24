@@ -27,7 +27,7 @@
 const CONFIG = {
     startMoney: 0, startFood: 3, startToolLevel: 1,
     foodPrice: 10, toolBasePrice: 50,
-    rewardMin: 30, rewardMax: 60,
+    rewardMin: 25, rewardMax: 50,
     
     brushRadius: 40,
     toolRadiusBonus: 0.05,
@@ -58,7 +58,7 @@ const CONFIG = {
     
     bugCountBase: 4,
     bugCountIncrease: 1,
-    bugSpeed: 180,
+    bugSpeed: 135,
     bugFadeDuration: 400,
     swatterRadius: 50,
     swatterCooldown: 200,
@@ -243,8 +243,6 @@ class MainScene extends Phaser.Scene {
         
         this.needRedrawDirt = true;
         this.needRedrawSoap = true;
-        
-        // ✅ Оптимизация: последний показанный процент, чтобы не дёргать текст
         this.lastShownPercent = -1;
         
         this.carpetBounds = new Phaser.Geom.Rectangle(
@@ -505,7 +503,6 @@ class MainScene extends Phaser.Scene {
         });
     }
     
-    // ✅ ОПТИМИЗАЦИЯ: границы вынесены за цикл
     updateBugs(delta) {
         if (this.bugs.length === 0) return;
         const dt = delta / 1000;
@@ -801,26 +798,53 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ ОПТИМИЗАЦИЯ + мыло ярче, но ковёр виден
+    // ✅ ВАРИАНТ 4: контур границ + лёгкая заливка 0.15
     drawSoap() {
         this.soapGfx.clear();
         const cs = this.gridCellSize;
         const cols = this.gridCols;
+        const rows = this.gridRows;
         const cx = this.gridOffsetX;
         const cy = this.gridOffsetY;
+        const threshold = 0.3;
         
-        for (let row = 0; row < this.gridRows; row++) {
+        // ПЕРВЫЙ ПРОХОД: заливка лёгкая alpha 0.15 — почти не меняет цвет ковра
+        for (let row = 0; row < rows; row++) {
             const rowOffset = row * cols;
             const py = cy + row * cs;
             for (let col = 0; col < cols; col++) {
                 const soap = this.soapGrid[rowOffset + col];
                 if (soap < 0.05) continue;
                 const px = cx + col * cs;
-                // ✅ Светло-голубое мыло, плотнее — но ковёр виден
-                this.soapGfx.fillStyle(0xAAE0FF, soap * 0.75);
+                this.soapGfx.fillStyle(0xFFFFFF, soap * 0.15);
                 this.soapGfx.fillRect(px, py, cs, cs);
             }
         }
+        
+        // ВТОРОЙ ПРОХОД: жирный контур только по границам мыльной зоны
+        this.soapGfx.lineStyle(3, 0xFFFFFF, 0.95);
+        
+        for (let row = 0; row < rows; row++) {
+            const rowOffset = row * cols;
+            const py = cy + row * cs;
+            for (let col = 0; col < cols; col++) {
+                const soap = this.soapGrid[rowOffset + col];
+                if (soap < threshold) continue;
+                const px = cx + col * cs;
+                
+                // Проверяем соседей: если сосед БЕЗ мыла — рисуем границу
+                const topEmpty    = (row === 0)            || (this.soapGrid[(row-1) * cols + col] < threshold);
+                const bottomEmpty = (row === rows - 1)     || (this.soapGrid[(row+1) * cols + col] < threshold);
+                const leftEmpty   = (col === 0)            || (this.soapGrid[rowOffset + (col-1)] < threshold);
+                const rightEmpty  = (col === cols - 1)     || (this.soapGrid[rowOffset + (col+1)] < threshold);
+                
+                if (topEmpty)    this.soapGfx.lineBetween(px, py, px + cs, py);
+                if (bottomEmpty) this.soapGfx.lineBetween(px, py + cs, px + cs, py + cs);
+                if (leftEmpty)   this.soapGfx.lineBetween(px, py, px, py + cs);
+                if (rightEmpty)  this.soapGfx.lineBetween(px + cs, py, px + cs, py + cs);
+            }
+        }
+        
         this.needRedrawSoap = false;
     }
 
@@ -941,7 +965,6 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    // ✅ ОПТИМИЗАЦИЯ: одна проверка radius, локальные переменные
     applyTool(localX, localY) {
         if (this.shopOpen) return;
         if (GameState.food <= 0) { this.showNoFoodWarning(); return; }
@@ -1033,7 +1056,6 @@ class MainScene extends Phaser.Scene {
         this.updateProgressBar();
     }
 
-    // ✅ ОПТИМИЗАЦИЯ: обновляем UI только при изменении процента
     updateProgressBar() {
         const p = Math.min(100, Math.floor(this.cleanProgress * 100));
         if (p === this.lastShownPercent) return;
