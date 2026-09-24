@@ -792,15 +792,18 @@ class MainScene extends Phaser.Scene {
         const cx = this.gridOffsetX;
         const cy = this.gridOffsetY;
         for (let row = 0; row < this.gridRows; row++) {
-            const rowOffset = row * cols;
-            const py = cy + row * cs;
-            for (let col = 0; col < cols; col++) {
-                const dirt = this.dirtGrid[rowOffset + col];
-                const px = cx + col * cs;
-                if (dirt > 0.05) {
-                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.75);
-                    this.dirtGfx.fillRect(px, py, cs, cs);
-                } else {
+    const rowOffset = row * cols;
+    const py = cy + row * cs;
+    for (let col = 0; col < cols; col++) {
+        const soap = this.soapGrid[rowOffset + col];
+        if (soap < 0.05) continue;
+        // ✅ Не рисуем мыло на уже чистых ячейках
+        if (this.dirtGrid[rowOffset + col] < 0.1) continue;
+        const px = cx + col * cs;
+        this.soapGfx.fillStyle(0xAAE0FF, soap * 0.75);
+        this.soapGfx.fillRect(px, py, cs, cs);
+    }
+} else {
                     this.dirtGfx.fillStyle(0xFFFFFF, 0.12);
                     this.dirtGfx.fillRect(px, py, cs, cs);
                 }
