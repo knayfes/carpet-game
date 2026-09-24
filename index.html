@@ -27,14 +27,14 @@
 const CONFIG = {
     startMoney: 0, startFood: 3, startToolLevel: 1,
     foodPrice: 10, toolBasePrice: 50,
-    rewardMin: 25, rewardMax: 50,
+    rewardMin: 30, rewardMax: 60,
     
     brushRadius: 40,
     toolRadiusBonus: 0.05,
     
     soapPower: 1.0,
     soapThreshold: 0.01,
-    eraseStrength: 0.9,
+    eraseStrength: 0.6,
     
     progressThreshold: 1.0,
     
@@ -61,22 +61,18 @@ const CONFIG = {
     
     bugCountBase: 4,
     bugCountIncrease: 1,
-    bugSpeed: 135,
+    bugSpeed: 180,
     bugFadeDuration: 400,
     
     swatterRadius: 50,
     swatterCooldown: 200,
     
-    // ✅ Частицы
     splashChance: 0.5,
     bubbleChance: 0.4
 };
 
 const SAVE_KEY = 'carpetGameStats_v3';
 
-// ============================================
-// СТИЛИ ТЕКСТА
-// ============================================
 const TEXT_STYLES = {
     title: (color = '#FFD700') => ({
         fontSize: '48px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
@@ -109,9 +105,6 @@ const TEXT_STYLES = {
     })
 };
 
-// ============================================
-// СОСТОЯНИЕ
-// ============================================
 const GameState = {
     money: CONFIG.startMoney,
     food: CONFIG.startFood,
@@ -121,9 +114,6 @@ const GameState = {
 };
 let ysdk = null;
 
-// ============================================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// ============================================
 function getCurrentRadius() {
     return Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
 }
@@ -159,9 +149,6 @@ function canBuyNewCarpet() {
         && GameState.carpetIndex < CONFIG.totalCarpets;
 }
 
-// ============================================
-// YANDEX SDK
-// ============================================
 async function initYandexSDK() {
     try {
         if (typeof YaGames === 'undefined') throw new Error('no SDK');
@@ -216,15 +203,14 @@ async function saveGame() {
     } catch (e) {}
 }
 
-// ============================================
-// СЦЕНА ЗАГРУЗКИ
-// ============================================
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
         for (let i = 1; i <= CONFIG.totalCarpets; i++) {
             this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
         }
+        // ✅ Загрузка картинки грязи
+        this.load.image('dirt', 'dirt.png');
         
         const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w/2, h/2 - 50, 'Загрузка...', TEXT_STYLES.title()).setOrigin(0.5);
@@ -238,9 +224,6 @@ class PreloadScene extends Phaser.Scene {
     }
 }
 
-// ============================================
-// ОСНОВНАЯ СЦЕНА
-// ============================================
 class MainScene extends Phaser.Scene {
     constructor() { super('MainScene'); }
 
@@ -261,6 +244,24 @@ class MainScene extends Phaser.Scene {
         this.carpetContainer = this.add.container(0, 0).setDepth(0);
         this.drawCarpet();
         
+        // ============================================
+        // ✅ ГРЯЗЬ ЧЕРЕЗ КАРТИНКУ dirt.png
+        // ============================================
+        this.dirtCanvas = document.createElement('canvas');
+        this.dirtCanvas.width = this.carpetW;
+        this.dirtCanvas.height = this.carpetH;
+        this.dirtCtx = this.dirtCanvas.getContext('2d');
+        
+        // Текстура-ключ уникальный, чтобы при перезапуске не было конфликта
+        this.dirtTextureKey = 'dirtCanvas_' + Date.now();
+        this.dirtTexture = this.textures.addCanvas(this.dirtTextureKey, this.dirtCanvas);
+        
+        this.dirtSprite = this.add.image(this.carpetX, this.carpetY, this.dirtTextureKey);
+        this.dirtSprite.setDepth(1);
+        
+        // Рисуем грязь (картинка или заглушка)
+        this.resetDirt();
+        
         this.gridCellSize = 20;
         this.gridCols = Math.ceil(this.carpetW / this.gridCellSize);
         this.gridRows = Math.ceil(this.carpetH / this.gridCellSize);
@@ -268,14 +269,12 @@ class MainScene extends Phaser.Scene {
         this.gridOffsetX = this.carpetX - this.carpetW / 2;
         this.gridOffsetY = this.carpetY - this.carpetH / 2;
         
+        // ✅ Grid по-прежнему используется для расчёта прогресса
         this.dirtGrid = new Float32Array(this.gridCols * this.gridRows);
         this.soapGrid = new Float32Array(this.gridCols * this.gridRows);
         this.dirtGrid.fill(1.0);
         
-        this.dirtGfx = this.add.graphics().setDepth(1);
         this.soapGfx = this.add.graphics().setDepth(2);
-        
-        this.needRedrawDirt = true;
         this.needRedrawSoap = true;
         
         this.carpetBounds = new Phaser.Geom.Rectangle(
@@ -304,7 +303,6 @@ class MainScene extends Phaser.Scene {
         this.bugs = [];
         this.swatterCooldownTime = 0;
         
-        // ✅ Эмодзи-инструмент вместо круга
         this.brush = this.add.text(0, 0, '🧼', {
             fontSize: '70px', fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(3);
@@ -370,9 +368,49 @@ class MainScene extends Phaser.Scene {
     }
 
     // ============================================
-    // ✅ ЧАСТИЦЫ
+    // ✅ РАБОТА С ГРЯЗЬЮ ЧЕРЕЗ CANVAS
     // ============================================
-    // Пузырьки мыла 🫧
+    resetDirt() {
+        this.dirtCtx.clearRect(0, 0, this.carpetW, this.carpetH);
+        
+        if (this.textures.exists('dirt')) {
+            const dirtImg = this.textures.get('dirt').getSourceImage();
+            this.dirtCtx.drawImage(dirtImg, 0, 0, this.carpetW, this.carpetH);
+        } else {
+            // Программная заглушка, если dirt.png нет
+            this.dirtCtx.fillStyle = 'rgba(42, 26, 10, 0.85)';
+            this.dirtCtx.fillRect(0, 0, this.carpetW, this.carpetH);
+            this.dirtCtx.fillStyle = 'rgba(20, 10, 5, 0.7)';
+            this.dirtCtx.beginPath(); this.dirtCtx.arc(100, 150, 60, 0, Math.PI*2); this.dirtCtx.fill();
+            this.dirtCtx.beginPath(); this.dirtCtx.arc(350, 300, 80, 0, Math.PI*2); this.dirtCtx.fill();
+            this.dirtCtx.beginPath(); this.dirtCtx.arc(200, 500, 70, 0, Math.PI*2); this.dirtCtx.fill();
+            this.dirtCtx.beginPath(); this.dirtCtx.arc(400, 550, 50, 0, Math.PI*2); this.dirtCtx.fill();
+            this.dirtCtx.beginPath(); this.dirtCtx.arc(150, 350, 45, 0, Math.PI*2); this.dirtCtx.fill();
+        }
+        
+        this.dirtTexture.refresh();
+    }
+    
+    eraseDirt(localX, localY, radius) {
+        const gradient = this.dirtCtx.createRadialGradient(
+            localX, localY, 0,
+            localX, localY, radius
+        );
+        const strength = CONFIG.eraseStrength;
+        gradient.addColorStop(0, 'rgba(0,0,0,' + strength + ')');
+        gradient.addColorStop(0.6, 'rgba(0,0,0,' + (strength * 0.8) + ')');
+        gradient.addColorStop(1, 'rgba(0,0,0,0)');
+        
+        this.dirtCtx.globalCompositeOperation = 'destination-out';
+        this.dirtCtx.fillStyle = gradient;
+        this.dirtCtx.beginPath();
+        this.dirtCtx.arc(localX, localY, radius, 0, Math.PI * 2);
+        this.dirtCtx.fill();
+        this.dirtCtx.globalCompositeOperation = 'source-over';
+        
+        this.dirtTexture.refresh();
+    }
+
     spawnBubbles(x, y) {
         if (Math.random() > CONFIG.bubbleChance) return;
         
@@ -398,7 +436,6 @@ class MainScene extends Phaser.Scene {
         });
     }
     
-    // Брызги воды 💧
     spawnSplash(x, y) {
         if (Math.random() > CONFIG.splashChance) return;
         
@@ -823,7 +860,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    // ✅ selectTool с эмодзи инструмента
     selectTool(tool) {
         this.currentTool = tool;
         
@@ -895,31 +931,6 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    drawDirt() {
-        this.dirtGfx.clear();
-        const cs = this.gridCellSize;
-        const cols = this.gridCols;
-        const cx = this.gridOffsetX;
-        const cy = this.gridOffsetY;
-        
-        for (let row = 0; row < this.gridRows; row++) {
-            for (let col = 0; col < cols; col++) {
-                const dirt = this.dirtGrid[row * cols + col];
-                const px = cx + col * cs;
-                const py = cy + row * cs;
-                
-                if (dirt > 0.05) {
-                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.75);
-                    this.dirtGfx.fillRect(px, py, cs, cs);
-                } else {
-                    this.dirtGfx.fillStyle(0xFFFFFF, 0.12);
-                    this.dirtGfx.fillRect(px, py, cs, cs);
-                }
-            }
-        }
-        this.needRedrawDirt = false;
-    }
-
     drawSoap() {
         this.soapGfx.clear();
         const cs = this.gridCellSize;
@@ -941,7 +952,6 @@ class MainScene extends Phaser.Scene {
     }
 
     update(time, delta) {
-        if (this.needRedrawDirt) this.drawDirt();
         if (this.needRedrawSoap) this.drawSoap();
         this.updateBugs(delta);
     }
@@ -998,7 +1008,6 @@ class MainScene extends Phaser.Scene {
             handlePointer(pointer);
         });
         
-        // ✅ При движении показываем эмодзи-инструмент даже без нажатия
         this.input.on('pointermove', (pointer) => {
             if (this.inputLocked) return;
             if (this.shopOpen) return;
@@ -1063,7 +1072,6 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    // ✅ applyTool со брызгами
     applyTool(localX, localY) {
         if (this.shopOpen) return;
         
@@ -1093,7 +1101,6 @@ class MainScene extends Phaser.Scene {
         const radiusSq = radius * radius;
         let dirtChanged = false, soapChanged = false, erasedSomething = false;
         
-        // Экранные координаты для частиц
         const screenX = localX + (this.carpetX - this.carpetW/2);
         const screenY = localY + (this.carpetY - this.carpetH/2);
         
@@ -1127,7 +1134,11 @@ class MainScene extends Phaser.Scene {
             }
         }
         
-        // ✅ ЧАСТИЦЫ
+        // ✅ Визуальное стирание картинки на canvas
+        if (this.currentTool === 'wash' && erasedSomething) {
+            this.eraseDirt(localX, localY, radius);
+        }
+        
         if (this.currentTool === 'soap' && soapChanged) {
             this.spawnBubbles(screenX, screenY);
         }
@@ -1137,7 +1148,6 @@ class MainScene extends Phaser.Scene {
         }
         
         if (dirtChanged) {
-            this.needRedrawDirt = true;
             this.recalcProgress();
         }
         if (soapChanged) {
@@ -1222,15 +1232,15 @@ class MainScene extends Phaser.Scene {
         this.bugs.forEach(bug => bug.destroy());
         this.bugs = [];
         
+        // ✅ Сброс грязи через canvas
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
-        this.needRedrawDirt = true;
+        this.resetDirt();
         this.needRedrawSoap = true;
         this.cleanProgress = 0;
         this.celebrationShown = false;
         
         this.updateProgressBar();
-        this.drawDirt();
         this.drawSoap();
         
         this.spawnBugsIfNeeded();
@@ -1379,9 +1389,10 @@ class MainScene extends Phaser.Scene {
         this.drawRoom();
         this.drawCarpet();
         
+        // ✅ Сброс грязи
         this.dirtGrid.fill(1.0);
         this.soapGrid.fill(0.0);
-        this.needRedrawDirt = true;
+        this.resetDirt();
         this.needRedrawSoap = true;
         this.cleanProgress = 0;
         this.celebrationShown = false;
@@ -1400,7 +1411,6 @@ class MainScene extends Phaser.Scene {
         }
         
         this.updateProgressBar();
-        this.drawDirt();
         this.drawSoap();
         
         await saveGame();
@@ -1418,9 +1428,6 @@ class MainScene extends Phaser.Scene {
     }
 }
 
-// ============================================
-// ЗАПУСК
-// ============================================
 const phaserConfig = {
     type: Phaser.CANVAS,
     width: 720, height: 1280,
