@@ -27,16 +27,14 @@
 const CONFIG = {
     startMoney: 0, startFood: 3, startToolLevel: 1,
     foodPrice: 10, toolBasePrice: 50,
-    rewardMin: 30, rewardMax: 60,
+    rewardMin: 25, rewardMax: 50,
     
     brushRadius: 40,
     toolRadiusBonus: 0.05,
     
     soapPower: 1.0,
     soapThreshold: 0.01,
-    eraseStrength: 0.6,
-    
-    progressThreshold: 1.0,
+    eraseStrength: 0.9,
     
     newCarpetRadiusRequired: 70,
     newCarpetRadiusIncrease: 10,
@@ -56,14 +54,12 @@ const CONFIG = {
     finishStarDuration: 1800,
     
     totalCarpets: 5,
-    
     inputLockDuration: 300,
     
     bugCountBase: 4,
     bugCountIncrease: 1,
-    bugSpeed: 180,
+    bugSpeed: 135,
     bugFadeDuration: 400,
-    
     swatterRadius: 50,
     swatterCooldown: 200,
     
@@ -117,32 +113,25 @@ let ysdk = null;
 function getCurrentRadius() {
     return Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
 }
-
 function getRewardMultiplier() {
     return Math.pow(CONFIG.rewardMultiplierPerCarpet, GameState.carpetLevel);
 }
-
 function getPenaltyStartRadius() {
     return CONFIG.penaltyStartRadius + (GameState.carpetLevel * CONFIG.penaltyIncreasePerCarpet);
 }
-
 function getRequiredRadius() {
     return CONFIG.newCarpetRadiusRequired + (GameState.carpetLevel * CONFIG.newCarpetRadiusIncrease);
 }
-
 function getRadiusPenaltyMultiplier() {
     const radius = getCurrentRadius();
     const threshold = getPenaltyStartRadius();
     if (radius <= threshold) return 1.0;
-    const excess = radius - threshold;
-    const penalty = excess * CONFIG.penaltyPerPixel;
+    const penalty = (radius - threshold) * CONFIG.penaltyPerPixel;
     return Math.max(CONFIG.minRewardMultiplier, 1.0 - penalty);
 }
-
 function getNewCarpetPrice() {
     return CONFIG.newCarpetBasePrice * GameState.carpetIndex;
 }
-
 function canBuyNewCarpet() {
     return getCurrentRadius() >= getRequiredRadius()
         && GameState.money >= getNewCarpetPrice()
@@ -194,11 +183,8 @@ async function saveGame() {
     if (!ysdk) return;
     try {
         await ysdk.player.setStats({
-            money: GameState.money,
-            food: GameState.food,
-            toolLevel: GameState.toolLevel,
-            carpetIndex: GameState.carpetIndex,
-            carpetLevel: GameState.carpetLevel
+            money: GameState.money, food: GameState.food, toolLevel: GameState.toolLevel,
+            carpetIndex: GameState.carpetIndex, carpetLevel: GameState.carpetLevel
         });
     } catch (e) {}
 }
@@ -209,7 +195,6 @@ class PreloadScene extends Phaser.Scene {
         for (let i = 1; i <= CONFIG.totalCarpets; i++) {
             this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
         }
-        
         const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w/2, h/2 - 50, 'Загрузка...', TEXT_STYLES.title()).setOrigin(0.5);
         this.add.rectangle(w/2, h/2 + 30, 400, 30, 0x333333);
@@ -258,6 +243,9 @@ class MainScene extends Phaser.Scene {
         
         this.needRedrawDirt = true;
         this.needRedrawSoap = true;
+        
+        // ✅ Оптимизация: последний показанный процент, чтобы не дёргать текст
+        this.lastShownPercent = -1;
         
         this.carpetBounds = new Phaser.Geom.Rectangle(
             this.carpetX - this.carpetW/2, this.carpetY - this.carpetH/2,
@@ -311,7 +299,6 @@ class MainScene extends Phaser.Scene {
         
         const btnY = 1200;
         const hasSwatter = GameState.carpetIndex >= 2;
-        
         const soapX = hasSwatter ? 120 : 240;
         const washX = hasSwatter ? 360 : 480;
         const swatterX = 600;
@@ -345,23 +332,17 @@ class MainScene extends Phaser.Scene {
         
         this.selectTool('soap');
         this.setupCleaning();
-        
         this.spawnBugsIfNeeded();
     }
 
     spawnBubbles(x, y) {
         if (Math.random() > CONFIG.bubbleChance) return;
-        
         const symbols = ['🫧', '💭', '⭕'];
-        const symbol = symbols[Math.floor(Math.random() * symbols.length)];
-        
-        const bubble = this.add.text(x, y, symbol, {
+        const bubble = this.add.text(x, y, symbols[Math.floor(Math.random() * symbols.length)], {
             fontSize: (25 + Math.random() * 20) + 'px', fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(8).setAlpha(0.85);
-        
         const angle = Math.random() * Math.PI * 2;
         const distance = 30 + Math.random() * 50;
-        
         this.tweens.add({
             targets: bubble,
             x: x + Math.cos(angle) * distance,
@@ -376,20 +357,14 @@ class MainScene extends Phaser.Scene {
     
     spawnSplash(x, y) {
         if (Math.random() > CONFIG.splashChance) return;
-        
         const count = 1 + Math.floor(Math.random() * 2);
-        
         for (let i = 0; i < count; i++) {
             const symbols = ['💧', '💦', '·', '°'];
-            const symbol = symbols[Math.floor(Math.random() * symbols.length)];
-            
-            const splash = this.add.text(x, y, symbol, {
+            const splash = this.add.text(x, y, symbols[Math.floor(Math.random() * symbols.length)], {
                 fontSize: (20 + Math.random() * 25) + 'px', fontFamily: 'Arial'
             }).setOrigin(0.5).setDepth(8).setAlpha(0.9);
-            
             const angle = Math.random() * Math.PI * 2;
             const distance = 40 + Math.random() * 70;
-            
             this.tweens.add({
                 targets: splash,
                 x: x + Math.cos(angle) * distance,
@@ -406,57 +381,40 @@ class MainScene extends Phaser.Scene {
 
     spawnBugsIfNeeded() {
         if (GameState.carpetIndex < 2) return;
-        
         const maxBugs = CONFIG.bugCountBase + GameState.carpetIndex;
         const count = Phaser.Math.Between(1, maxBugs);
-        
-        for (let i = 0; i < count; i++) {
-            this.spawnBug();
-        }
+        for (let i = 0; i < count; i++) this.spawnBug();
     }
     
     spawnBug() {
         const padding = 40;
-        const x = Phaser.Math.Between(
-            this.carpetX - this.carpetW/2 + padding,
-            this.carpetX + this.carpetW/2 - padding
-        );
-        const y = Phaser.Math.Between(
-            this.carpetY - this.carpetH/2 + padding,
-            this.carpetY + this.carpetH/2 - padding
-        );
-        
+        const x = Phaser.Math.Between(this.carpetX - this.carpetW/2 + padding, this.carpetX + this.carpetW/2 - padding);
+        const y = Phaser.Math.Between(this.carpetY - this.carpetH/2 + padding, this.carpetY + this.carpetH/2 - padding);
         const bug = this.add.container(x, y).setDepth(4);
-        
         const bodyGfx = this.add.graphics();
         bodyGfx.fillStyle(0x1a1a1a, 1);
         bodyGfx.fillEllipse(0, 0, 36, 24);
         bodyGfx.lineStyle(2, 0x000000, 1);
         bodyGfx.strokeEllipse(0, 0, 36, 24);
-        
         bodyGfx.fillStyle(0x0a0a0a, 1);
         bodyGfx.fillCircle(15, 0, 9);
-        
         bodyGfx.fillStyle(0xFFFFFF, 1);
         bodyGfx.fillCircle(18, -4, 2.5);
         bodyGfx.fillCircle(18, 4, 2.5);
         bodyGfx.fillStyle(0x000000, 1);
         bodyGfx.fillCircle(19, -4, 1.2);
         bodyGfx.fillCircle(19, 4, 1.2);
-        
         bodyGfx.lineStyle(1.5, 0x4a2a0a, 1);
         bodyGfx.beginPath();
         bodyGfx.moveTo(-8, -8); bodyGfx.lineTo(-8, 8);
         bodyGfx.moveTo(0, -10); bodyGfx.lineTo(0, 10);
         bodyGfx.moveTo(8, -8); bodyGfx.lineTo(8, 8);
         bodyGfx.strokePath();
-        
         bodyGfx.lineStyle(1.5, 0x1a1a1a, 1);
         bodyGfx.beginPath();
         bodyGfx.moveTo(22, -3); bodyGfx.lineTo(30, -8);
         bodyGfx.moveTo(22, 3); bodyGfx.lineTo(30, 8);
         bodyGfx.strokePath();
-        
         bodyGfx.lineStyle(2, 0x0a0a0a, 1);
         bodyGfx.beginPath();
         bodyGfx.moveTo(-10, -10); bodyGfx.lineTo(-15, -15);
@@ -466,27 +424,20 @@ class MainScene extends Phaser.Scene {
         bodyGfx.moveTo(10, -10); bodyGfx.lineTo(15, -15);
         bodyGfx.moveTo(10, 10); bodyGfx.lineTo(15, 15);
         bodyGfx.strokePath();
-        
         bug.add(bodyGfx);
-        
         bug.bugAngle = Math.random() * Math.PI * 2;
         bug.bugSpeed = CONFIG.bugSpeed * (0.7 + Math.random() * 0.6);
         bug.isDead = false;
-        bug.isBug = true;
-        
         bug.setRotation(bug.bugAngle);
-        
         this.bugs.push(bug);
     }
     
     killBug(bug) {
         if (bug.isDead) return;
         bug.isDead = true;
-        
         this.spawnStarsAt(bug.x, bug.y);
         this.spawnStarsAt(bug.x, bug.y);
         this.spawnStarsAt(bug.x, bug.y);
-        
         this.tweens.add({
             targets: bug,
             alpha: 0,
@@ -505,51 +456,33 @@ class MainScene extends Phaser.Scene {
         const now = this.time.now;
         if (now - this.swatterCooldownTime < CONFIG.swatterCooldown) return;
         this.swatterCooldownTime = now;
-        
         this.showSwatEffect(x, y);
-        
-        const radius = CONFIG.swatterRadius;
-        const radiusSq = radius * radius;
-        
+        const radiusSq = CONFIG.swatterRadius * CONFIG.swatterRadius;
         for (let i = this.bugs.length - 1; i >= 0; i--) {
             const bug = this.bugs[i];
             if (bug.isDead) continue;
-            
-            const dx = bug.x - x;
-            const dy = bug.y - y;
-            if (dx*dx + dy*dy <= radiusSq) {
-                this.killBug(bug);
-            }
+            const dx = bug.x - x, dy = bug.y - y;
+            if (dx*dx + dy*dy <= radiusSq) this.killBug(bug);
         }
     }
     
     showSwatEffect(x, y) {
-        const effect = this.add.text(x, y, '💥', {
-            fontSize: '60px', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(20);
-        
+        const effect = this.add.text(x, y, '💥', { fontSize: '60px', fontFamily: 'Arial' })
+            .setOrigin(0.5).setDepth(20);
         this.tweens.add({
-            targets: effect,
-            alpha: 0,
-            scale: 1.8,
-            duration: 400,
-            ease: 'Cubic.easeOut',
+            targets: effect, alpha: 0, scale: 1.8, duration: 400, ease: 'Cubic.easeOut',
             onComplete: () => effect.destroy()
         });
     }
     
     drawSwatter(x, y) {
         this.swatterGfx.clear();
-        
         this.swatterGfx.lineStyle(6, 0xFF4444, 0.8);
         this.swatterGfx.strokeCircle(x, y, CONFIG.swatterRadius);
-        
         this.swatterGfx.lineStyle(4, 0xFF8888, 0.6);
         this.swatterGfx.beginPath();
-        this.swatterGfx.moveTo(x - 15, y);
-        this.swatterGfx.lineTo(x + 15, y);
-        this.swatterGfx.moveTo(x, y - 15);
-        this.swatterGfx.lineTo(x, y + 15);
+        this.swatterGfx.moveTo(x - 15, y); this.swatterGfx.lineTo(x + 15, y);
+        this.swatterGfx.moveTo(x, y - 15); this.swatterGfx.lineTo(x, y + 15);
         this.swatterGfx.strokePath();
     }
     
@@ -558,10 +491,8 @@ class MainScene extends Phaser.Scene {
         const star = this.add.text(x, y, symbols[Math.floor(Math.random() * symbols.length)], {
             fontSize: (25 + Math.random() * 20) + 'px', fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(15);
-        
         const angle = Math.random() * Math.PI * 2;
         const distance = 40 + Math.random() * 60;
-        
         this.tweens.add({
             targets: star,
             x: x + Math.cos(angle) * distance,
@@ -569,13 +500,14 @@ class MainScene extends Phaser.Scene {
             alpha: { from: 1, to: 0 },
             scale: { from: 1, to: 0.3 },
             angle: { from: 0, to: (Math.random() - 0.5) * 360 },
-            duration: 800,
-            ease: 'Cubic.easeOut',
+            duration: 800, ease: 'Cubic.easeOut',
             onComplete: () => star.destroy()
         });
     }
     
+    // ✅ ОПТИМИЗАЦИЯ: границы вынесены за цикл
     updateBugs(delta) {
+        if (this.bugs.length === 0) return;
         const dt = delta / 1000;
         const padding = 30;
         const minX = this.carpetX - this.carpetW/2 + padding;
@@ -586,82 +518,64 @@ class MainScene extends Phaser.Scene {
         for (let i = this.bugs.length - 1; i >= 0; i--) {
             const bug = this.bugs[i];
             if (bug.isDead) continue;
-            
             bug.x += Math.cos(bug.bugAngle) * bug.bugSpeed * dt;
             bug.y += Math.sin(bug.bugAngle) * bug.bugSpeed * dt;
-            
             bug.setRotation(bug.bugAngle);
-            
             if (bug.x < minX) { bug.x = minX; bug.bugAngle = Math.PI - bug.bugAngle; }
             if (bug.x > maxX) { bug.x = maxX; bug.bugAngle = Math.PI - bug.bugAngle; }
             if (bug.y < minY) { bug.y = minY; bug.bugAngle = -bug.bugAngle; }
             if (bug.y > maxY) { bug.y = maxY; bug.bugAngle = -bug.bugAngle; }
-            
-            if (Math.random() < 0.005) {
-                bug.bugAngle += (Math.random() - 0.5) * 1.5;
-            }
+            if (Math.random() < 0.005) bug.bugAngle += (Math.random() - 0.5) * 1.5;
         }
     }
 
     showNoFoodWarning() {
         if (this.noFoodCooldown) return;
         this.noFoodCooldown = true;
-        
         if (this.noFoodText) {
             if (this.noFoodTween) this.noFoodTween.remove();
             this.noFoodText.destroy();
             this.noFoodText = null;
         }
-        
         const W = 720, H = 640;
-        
         this.noFoodText = this.add.text(W/2, H, '🍞 НЕТ ЕДЫ!\nКУПИ В МАГАЗИНЕ', {
             fontSize: '56px', fill: '#FF0000', fontStyle: 'bold', fontFamily: 'Arial',
             align: 'center', stroke: '#000000', strokeThickness: 8,
             shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, fill: true }
         }).setOrigin(0.5).setDepth(50);
-        
         this.noFoodTween = this.tweens.add({
-            targets: this.noFoodText,
-            alpha: { from: 1, to: 0.2 },
+            targets: this.noFoodText, alpha: { from: 1, to: 0.2 },
             duration: 400, yoyo: true, repeat: 4,
             onComplete: () => {
                 if (this.noFoodText) { this.noFoodText.destroy(); this.noFoodText = null; }
                 this.noFoodTween = null;
             }
         });
-        
         this.time.delayedCall(1500, () => { this.noFoodCooldown = false; });
     }
     
     showBugWarning() {
         if (this.bugWarningCooldown) return;
         this.bugWarningCooldown = true;
-        
         if (this.bugWarningText) {
             if (this.bugWarningTween) this.bugWarningTween.remove();
             this.bugWarningText.destroy();
             this.bugWarningText = null;
         }
-        
         const W = 720, H = 640;
-        
         this.bugWarningText = this.add.text(W/2, H, '🐛 СНАЧАЛА УБЕРИ ЖУКОВ!\n(мухобойка 🪰)', {
             fontSize: '44px', fill: '#FF4444', fontStyle: 'bold', fontFamily: 'Arial',
             align: 'center', stroke: '#000000', strokeThickness: 8,
             shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, fill: true }
         }).setOrigin(0.5).setDepth(50);
-        
         this.bugWarningTween = this.tweens.add({
-            targets: this.bugWarningText,
-            alpha: { from: 1, to: 0.2 },
+            targets: this.bugWarningText, alpha: { from: 1, to: 0.2 },
             duration: 400, yoyo: true, repeat: 4,
             onComplete: () => {
                 if (this.bugWarningText) { this.bugWarningText.destroy(); this.bugWarningText = null; }
                 this.bugWarningTween = null;
             }
         });
-        
         this.time.delayedCall(1500, () => { this.bugWarningCooldown = false; });
     }
 
@@ -672,7 +586,6 @@ class MainScene extends Phaser.Scene {
         this.lastLocalY = -9999;
         this.brush.setVisible(false);
         this.swatterGfx.setVisible(false);
-        
         this.time.delayedCall(CONFIG.inputLockDuration, () => {
             this.inputLocked = false;
             this.isPointerDown = false;
@@ -686,7 +599,6 @@ class MainScene extends Phaser.Scene {
         const level = GameState.carpetLevel;
         const g = this.roomGfx;
         g.clear();
-        
         const isCozy = (level % 2 === 0);
         
         if (isCozy) {
@@ -754,7 +666,6 @@ class MainScene extends Phaser.Scene {
     drawCarpet() {
         this.carpetContainer.removeAll(true);
         const carpetKey = 'carpet' + GameState.carpetIndex;
-        
         if (this.textures.exists(carpetKey)) {
             const img = this.add.image(this.carpetX, this.carpetY, carpetKey);
             img.setDisplaySize(this.carpetW, this.carpetH);
@@ -763,7 +674,6 @@ class MainScene extends Phaser.Scene {
             const g = this.add.graphics();
             const cx = this.carpetX - this.carpetW / 2;
             const cy = this.carpetY - this.carpetH / 2;
-            
             const palettes = [
                 { main: 0x8B4513, accent: 0xFFD700, border: 0x654321 },
                 { main: 0x8B0000, accent: 0xFFE4B5, border: 0x5C0000 },
@@ -772,7 +682,6 @@ class MainScene extends Phaser.Scene {
                 { main: 0x4B0082, accent: 0xFFD700, border: 0x2F0050 }
             ];
             const p = palettes[(GameState.carpetIndex - 1) % palettes.length];
-            
             g.fillStyle(p.main, 1);
             g.fillRect(cx, cy, this.carpetW, this.carpetH);
             g.lineStyle(20, p.border, 1);
@@ -793,7 +702,6 @@ class MainScene extends Phaser.Scene {
             g.fillCircle(cx + this.carpetW - 50, cy + 50, 12);
             g.fillCircle(cx + 50, cy + this.carpetH - 50, 12);
             g.fillCircle(cx + this.carpetW - 50, cy + this.carpetH - 50, 12);
-            
             this.carpetContainer.add(g);
         }
     }
@@ -847,8 +755,7 @@ class MainScene extends Phaser.Scene {
         for (let i = 0; i < CONFIG.finishStarCount; i++) {
             const startX = Math.random() * W;
             const startY = Math.random() * H;
-            const symbol = symbols[Math.floor(Math.random() * symbols.length)];
-            const star = this.add.text(startX, startY, symbol, {
+            const star = this.add.text(startX, startY, symbols[Math.floor(Math.random() * symbols.length)], {
                 fontSize: (25 + Math.random() * 30) + 'px', fontFamily: 'Arial'
             }).setOrigin(0.5).setDepth(15);
             const delay = Math.random() * 600;
@@ -877,11 +784,11 @@ class MainScene extends Phaser.Scene {
         const cy = this.gridOffsetY;
         
         for (let row = 0; row < this.gridRows; row++) {
+            const rowOffset = row * cols;
+            const py = cy + row * cs;
             for (let col = 0; col < cols; col++) {
-                const dirt = this.dirtGrid[row * cols + col];
+                const dirt = this.dirtGrid[rowOffset + col];
                 const px = cx + col * cs;
-                const py = cy + row * cs;
-                
                 if (dirt > 0.05) {
                     this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.75);
                     this.dirtGfx.fillRect(px, py, cs, cs);
@@ -894,6 +801,7 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
+    // ✅ ОПТИМИЗАЦИЯ + мыло ярче, но ковёр виден
     drawSoap() {
         this.soapGfx.clear();
         const cs = this.gridCellSize;
@@ -902,12 +810,14 @@ class MainScene extends Phaser.Scene {
         const cy = this.gridOffsetY;
         
         for (let row = 0; row < this.gridRows; row++) {
+            const rowOffset = row * cols;
+            const py = cy + row * cs;
             for (let col = 0; col < cols; col++) {
-                const soap = this.soapGrid[row * cols + col];
+                const soap = this.soapGrid[rowOffset + col];
                 if (soap < 0.05) continue;
                 const px = cx + col * cs;
-                const py = cy + row * cs;
-                this.soapGfx.fillStyle(0x88CCFF, soap * 0.6);
+                // ✅ Светло-голубое мыло, плотнее — но ковёр виден
+                this.soapGfx.fillStyle(0xAAE0FF, soap * 0.75);
                 this.soapGfx.fillRect(px, py, cs, cs);
             }
         }
@@ -925,8 +835,7 @@ class MainScene extends Phaser.Scene {
         this.game.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
         
         const handlePointer = (pointer) => {
-            if (this.inputLocked) return;
-            if (this.shopOpen) return;
+            if (this.inputLocked || this.shopOpen) return;
             
             if (this.currentTool === 'swatter') {
                 this.drawSwatter(pointer.x, pointer.y);
@@ -939,12 +848,10 @@ class MainScene extends Phaser.Scene {
             this.brush.setPosition(pointer.x, pointer.y);
             const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
             this.brush.setVisible(inBounds);
-            
             if (!inBounds) return;
             
             const localX = pointer.x - (this.carpetX - this.carpetW/2);
             const localY = pointer.y - (this.carpetY - this.carpetH/2);
-            
             const dx = localX - this.lastLocalX;
             const dy = localY - this.lastLocalY;
             if (dx*dx + dy*dy < 64) return;
@@ -955,8 +862,7 @@ class MainScene extends Phaser.Scene {
         };
         
         this.input.on('pointerdown', (pointer) => {
-            if (this.inputLocked) return;
-            if (this.shopOpen) return;
+            if (this.inputLocked || this.shopOpen) return;
             
             if (this.currentTool === 'swatter') {
                 this.drawSwatter(pointer.x, pointer.y);
@@ -973,8 +879,7 @@ class MainScene extends Phaser.Scene {
         });
         
         this.input.on('pointermove', (pointer) => {
-            if (this.inputLocked) return;
-            if (this.shopOpen) return;
+            if (this.inputLocked || this.shopOpen) return;
             
             if (this.currentTool !== 'swatter') {
                 this.brush.setPosition(pointer.x, pointer.y);
@@ -1036,61 +941,56 @@ class MainScene extends Phaser.Scene {
         });
     }
 
+    // ✅ ОПТИМИЗАЦИЯ: одна проверка radius, локальные переменные
     applyTool(localX, localY) {
         if (this.shopOpen) return;
-        
-        if (GameState.food <= 0) {
-            this.showNoFoodWarning();
-            return;
-        }
-        
-        const aliveBugs = this.bugs.filter(bug => !bug.isDead);
-        if (aliveBugs.length > 0) {
-            this.showBugWarning();
-            return;
-        }
+        if (GameState.food <= 0) { this.showNoFoodWarning(); return; }
+        if (this.bugs.length > 0) { this.showBugWarning(); return; }
         
         const radius = getCurrentRadius();
         const cs = this.gridCellSize;
         const cols = this.gridCols;
-        
-        const adjLocalX = localX;
-        const adjLocalY = localY;
-        
-        const minCol = Math.max(0, Math.floor((adjLocalX - radius) / cs));
-        const maxCol = Math.min(cols - 1, Math.floor((adjLocalX + radius) / cs));
-        const minRow = Math.max(0, Math.floor((adjLocalY - radius) / cs));
-        const maxRow = Math.min(this.gridRows - 1, Math.floor((adjLocalY + radius) / cs));
-        
+        const rows = this.gridRows;
         const radiusSq = radius * radius;
-        let dirtChanged = false, soapChanged = false, erasedSomething = false;
+        
+        const minCol = Math.max(0, Math.floor((localX - radius) / cs));
+        const maxCol = Math.min(cols - 1, Math.floor((localX + radius) / cs));
+        const minRow = Math.max(0, Math.floor((localY - radius) / cs));
+        const maxRow = Math.min(rows - 1, Math.floor((localY + radius) / cs));
+        
+        const isSoap = this.currentTool === 'soap';
+        let dirtChanged = false, soapChanged = false, erased = false;
         
         const screenX = localX + (this.carpetX - this.carpetW/2);
         const screenY = localY + (this.carpetY - this.carpetH/2);
         
         for (let row = minRow; row <= maxRow; row++) {
+            const rowOffset = row * cols;
+            const ccy = row * cs + cs / 2;
+            const dy = ccy - localY;
+            const dySq = dy * dy;
+            if (dySq > radiusSq) continue;
+            
             for (let col = minCol; col <= maxCol; col++) {
                 const ccx = col * cs + cs / 2;
-                const ccy = row * cs + cs / 2;
-                const dx = ccx - adjLocalX;
-                const dy = ccy - adjLocalY;
-                const distSq = dx*dx + dy*dy;
+                const dx = ccx - localX;
+                const distSq = dx*dx + dySq;
                 if (distSq > radiusSq) continue;
                 
                 const falloff = Math.max(0.5, 1 - Math.sqrt(distSq) / radius);
-                const index = row * cols + col;
+                const index = rowOffset + col;
                 
-                if (this.currentTool === 'soap') {
+                if (isSoap) {
                     if (this.soapGrid[index] < 1.0) {
                         this.soapGrid[index] = Math.min(1.0, this.soapGrid[index] + CONFIG.soapPower * falloff);
                         soapChanged = true;
                     }
-                } else if (this.currentTool === 'wash') {
+                } else {
                     if (this.soapGrid[index] < CONFIG.soapThreshold) continue;
                     if (this.dirtGrid[index] > 0.01) {
                         this.dirtGrid[index] = Math.max(0, this.dirtGrid[index] - CONFIG.eraseStrength * falloff);
                         dirtChanged = true;
-                        erasedSomething = true;
+                        erased = true;
                         this.soapGrid[index] = Math.max(0, this.soapGrid[index] - 0.05);
                         soapChanged = true;
                     }
@@ -1098,21 +998,14 @@ class MainScene extends Phaser.Scene {
             }
         }
         
-        if (this.currentTool === 'soap' && soapChanged) {
-            this.spawnBubbles(screenX, screenY);
-        }
-        if (this.currentTool === 'wash' && erasedSomething) {
+        if (isSoap && soapChanged) this.spawnBubbles(screenX, screenY);
+        if (!isSoap && erased) {
             this.spawnSplash(screenX, screenY);
             this.spawnStars(screenX, screenY);
         }
         
-        if (dirtChanged) {
-            this.needRedrawDirt = true;
-            this.recalcProgress();
-        }
-        if (soapChanged) {
-            this.needRedrawSoap = true;
-        }
+        if (dirtChanged) { this.needRedrawDirt = true; this.recalcProgress(); }
+        if (soapChanged) this.needRedrawSoap = true;
     }
 
     recalcProgress() {
@@ -1137,40 +1030,29 @@ class MainScene extends Phaser.Scene {
                 this.cleanProgress = 0.99;
             }
         }
-        
         this.updateProgressBar();
     }
 
+    // ✅ ОПТИМИЗАЦИЯ: обновляем UI только при изменении процента
     updateProgressBar() {
         const p = Math.min(100, Math.floor(this.cleanProgress * 100));
+        if (p === this.lastShownPercent) return;
+        this.lastShownPercent = p;
         this.progressBar.width = 400 * this.cleanProgress;
         this.progressText.setText(p + '%');
     }
 
     async finishCarpet() {
         if (this.shopOpen) return;
-        
-        if (this.cleanProgress < 1.0) {
-            this.showMessage('Ковёр ещё грязный! Нужно 100%.');
-            return;
-        }
-        
-        const aliveBugs = this.bugs.filter(bug => !bug.isDead);
-        if (aliveBugs.length > 0) {
-            this.showBugWarning();
-            return;
-        }
+        if (this.cleanProgress < 1.0) { this.showMessage('Ковёр ещё грязный! Нужно 100%.'); return; }
+        if (this.bugs.length > 0) { this.showBugWarning(); return; }
         
         this.unlockInput();
         
-        const baseReward = Math.floor(
-            CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin)
-        );
+        const baseReward = Math.floor(CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin));
         const carpetMultiplier = getRewardMultiplier();
         const radiusPenalty = getRadiusPenaltyMultiplier();
-        const reward = Math.floor(
-            baseReward * GameState.toolLevel * carpetMultiplier * radiusPenalty
-        );
+        const reward = Math.floor(baseReward * GameState.toolLevel * carpetMultiplier * radiusPenalty);
         
         GameState.money += reward;
         GameState.food -= 1;
@@ -1184,9 +1066,7 @@ class MainScene extends Phaser.Scene {
         this.showMessage(msg);
         
         this.children.list.forEach(child => {
-            if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) {
-                child.destroy();
-            }
+            if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) child.destroy();
         });
         
         this.bugs.forEach(bug => bug.destroy());
@@ -1197,12 +1077,12 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = true;
         this.needRedrawSoap = true;
         this.cleanProgress = 0;
+        this.lastShownPercent = -1;
         this.celebrationShown = false;
         
         this.updateProgressBar();
         this.drawDirt();
         this.drawSoap();
-        
         this.spawnBugsIfNeeded();
     }
 
@@ -1324,10 +1204,7 @@ class MainScene extends Phaser.Scene {
             fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', fontFamily: 'Arial',
             stroke: '#000000', strokeThickness: 6
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => { 
-              els.forEach(el => el.destroy()); 
-              this.shopOpen = false;
-          });
+          .on('pointerdown', () => { els.forEach(el => el.destroy()); this.shopOpen = false; });
         els.push(cb);
     }
 
@@ -1354,6 +1231,7 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = true;
         this.needRedrawSoap = true;
         this.cleanProgress = 0;
+        this.lastShownPercent = -1;
         this.celebrationShown = false;
         
         this.bugs.forEach(bug => bug.destroy());
@@ -1362,7 +1240,6 @@ class MainScene extends Phaser.Scene {
         if (GameState.carpetIndex >= 2) {
             this.swatterBtnBg.setVisible(true);
             this.swatterBtnText.setVisible(true);
-            
             this.soapBtnBg.setX(120);
             this.soapBtnText.setX(120);
             this.washBtnBg.setX(360);
@@ -1375,7 +1252,6 @@ class MainScene extends Phaser.Scene {
         
         await saveGame();
         this.spawnCelebration();
-        
         this.spawnBugsIfNeeded();
     }
 
