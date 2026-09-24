@@ -32,13 +32,9 @@ const CONFIG = {
     brushRadius: 40,
     toolRadiusBonus: 0.05,
     
-    // ✅ Мыло за 1 проход
-    soapPower: 2.0,
+    soapPower: 1.0,
     soapThreshold: 0.01,
-    soapWashSpeed: 2.0,
-    
-    // ✅ Смыть — 60% за 1 проход
-    eraseStrength: 0.6,
+    eraseStrength: 0.9,
     
     progressThreshold: 1.0,
     
@@ -71,8 +67,9 @@ const CONFIG = {
     swatterRadius: 50,
     swatterCooldown: 200,
     
-    splashChance: 0.5,
-    bubbleChance: 0.4
+    // ✅ Больше брызг и пузырьков
+    splashChance: 0.8,
+    bubbleChance: 0.5
 };
 
 const SAVE_KEY = 'carpetGameStats_v3';
@@ -356,85 +353,57 @@ class MainScene extends Phaser.Scene {
     spawnBubbles(x, y) {
         if (Math.random() > CONFIG.bubbleChance) return;
         
-        const count = 2 + Math.floor(Math.random() * 3);
+        const symbols = ['🫧', '💭', '⭕'];
+        const symbol = symbols[Math.floor(Math.random() * symbols.length)];
         
-        for (let i = 0; i < count; i++) {
-            const size = 6 + Math.random() * 12;
-            
-            const bubble = this.add.circle(x, y, size, 0xFFFFFF, 0.5).setDepth(8);
-            bubble.setStrokeStyle(2, 0xCC99FF, 0.8);
-            
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 30 + Math.random() * 60;
-            
-            this.tweens.add({
-                targets: bubble,
-                x: x + Math.cos(angle) * distance,
-                y: y + Math.sin(angle) * distance - 40,
-                alpha: { from: 0.7, to: 0 },
-                scale: { from: 1, to: 1.8 },
-                duration: 700 + Math.random() * 400,
-                ease: 'Sine.easeOut',
-                onComplete: () => bubble.destroy()
-            });
-        }
+        const bubble = this.add.text(x, y, symbol, {
+            fontSize: (25 + Math.random() * 20) + 'px', fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(8).setAlpha(0.85);
+        
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 30 + Math.random() * 50;
+        
+        this.tweens.add({
+            targets: bubble,
+            x: x + Math.cos(angle) * distance,
+            y: y + Math.sin(angle) * distance - 50,
+            alpha: { from: 0.85, to: 0 },
+            scale: { from: 1, to: 1.6 },
+            duration: 700 + Math.random() * 300,
+            ease: 'Cubic.easeOut',
+            onComplete: () => bubble.destroy()
+        });
     }
     
+    // ✅ Больше брызг
     spawnSplash(x, y) {
         if (Math.random() > CONFIG.splashChance) return;
         
-        const count = 4 + Math.floor(Math.random() * 4);
+        const count = 3 + Math.floor(Math.random() * 3);   // 3-5 капель
         
         for (let i = 0; i < count; i++) {
-            const size = 3 + Math.random() * 5;
-            const drop = this.add.circle(x, y, size, 0x66CCFF, 0.9).setDepth(8);
+            const symbols = ['💧', '💦', '·', '°'];
+            const symbol = symbols[Math.floor(Math.random() * symbols.length)];
             
-            const angle = -Math.PI/2 + (Math.random() - 0.5) * Math.PI * 1.5;
-            const speed = 80 + Math.random() * 120;
-            const vx = Math.cos(angle) * speed;
-            const vy = Math.sin(angle) * speed;
+            const splash = this.add.text(x, y, symbol, {
+                fontSize: (20 + Math.random() * 25) + 'px', fontFamily: 'Arial'
+            }).setOrigin(0.5).setDepth(8).setAlpha(0.9);
             
-            const life = 400 + Math.random() * 300;
-            let posX = x, posY = y, velX = vx, velY = vy, elapsed = 0;
-            const gravity = 400;
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 40 + Math.random() * 70;
             
-            const timer = this.time.addEvent({
-                delay: 16,
-                repeat: Math.floor(life / 16),
-                callback: () => {
-                    elapsed += 16;
-                    const dt = 16 / 1000;
-                    velY += gravity * dt;
-                    posX += velX * dt;
-                    posY += velY * dt;
-                    
-                    if (drop.active) {
-                        drop.setPosition(posX, posY);
-                        const progress = elapsed / life;
-                        drop.setAlpha(0.9 * (1 - progress));
-                        
-                        if (progress > 0.7) {
-                            drop.setScale(1.5, 0.4);
-                        }
-                    }
-                }
-            });
-            
-            this.time.delayedCall(life, () => {
-                if (drop.active) drop.destroy();
-                timer.remove();
+            this.tweens.add({
+                targets: splash,
+                x: x + Math.cos(angle) * distance,
+                y: y + Math.sin(angle) * distance,
+                alpha: { from: 0.9, to: 0 },
+                scale: { from: 1, to: 0.3 },
+                angle: { from: 0, to: (Math.random() - 0.5) * 360 },
+                duration: 500 + Math.random() * 300,
+                ease: 'Cubic.easeOut',
+                onComplete: () => splash.destroy()
             });
         }
-        
-        const ring = this.add.circle(x, y, 5, 0xFFFFFF, 0.4).setDepth(7);
-        this.tweens.add({
-            targets: ring,
-            scale: 3,
-            alpha: 0,
-            duration: 300,
-            ease: 'Cubic.easeOut',
-            onComplete: () => ring.destroy()
-        });
     }
 
     spawnBugsIfNeeded() {
@@ -927,6 +896,7 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
+    // ✅ Белая пена, но ковёр видно (прозрачность 0.45)
     drawSoap() {
         this.soapGfx.clear();
         const cs = this.gridCellSize;
@@ -938,11 +908,11 @@ class MainScene extends Phaser.Scene {
             for (let col = 0; col < cols; col++) {
                 const soap = this.soapGrid[row * cols + col];
                 if (soap < 0.05) continue;
-                
                 const px = cx + col * cs;
                 const py = cy + row * cs;
                 
-                this.soapGfx.fillStyle(0xFFFFFF, soap * 0.85);
+                // Ярко-белая пена с прозрачностью — ковёр просвечивает
+                this.soapGfx.fillStyle(0xFFFFFF, soap * 0.45);
                 this.soapGfx.fillRect(px, py, cs, cs);
             }
         }
@@ -1112,8 +1082,7 @@ class MainScene extends Phaser.Scene {
                 const distSq = dx*dx + dy*dy;
                 if (distSq > radiusSq) continue;
                 
-                // ✅ Минимум 0.9 — почти без ослабления к краю
-                const falloff = Math.max(0.9, 1 - Math.sqrt(distSq) / radius);
+                const falloff = Math.max(0.5, 1 - Math.sqrt(distSq) / radius);
                 const index = row * cols + col;
                 
                 if (this.currentTool === 'soap') {
@@ -1127,9 +1096,9 @@ class MainScene extends Phaser.Scene {
                         this.dirtGrid[index] = Math.max(0, this.dirtGrid[index] - CONFIG.eraseStrength * falloff);
                         dirtChanged = true;
                         erasedSomething = true;
+                        this.soapGrid[index] = Math.max(0, this.soapGrid[index] - 0.05);
+                        soapChanged = true;
                     }
-                    this.soapGrid[index] = Math.max(0, this.soapGrid[index] - CONFIG.soapWashSpeed * falloff);
-                    soapChanged = true;
                 }
             }
         }
@@ -1428,7 +1397,7 @@ const phaserConfig = {
     type: Phaser.CANVAS,
     width: 720, height: 1280,
     backgroundColor: '#1a1a1a',
-    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_CENTER },
+    scale: { mode: Phaser.Scale.FIT, autoCenter: Phaser.Scale.CENTER_BOTH },
     input: { activePointers: 3, touch: { capture: true } },
     scene: [PreloadScene, MainScene]
 };
