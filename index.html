@@ -21,50 +21,41 @@
 <body>
 
 <script>
-// ============================================
-// ⚙️ НАСТРОЙКИ
-// ============================================
 const CONFIG = {
     startMoney: 0, startFood: 3, startToolLevel: 1,
     foodPrice: 10, toolBasePrice: 50,
     rewardMin: 25, rewardMax: 50,
-    
     brushRadius: 40,
     toolRadiusBonus: 0.05,
-    
     soapPower: 1.0,
     soapThreshold: 0.01,
     eraseStrength: 0.9,
-    
     newCarpetRadiusRequired: 70,
     newCarpetRadiusIncrease: 10,
-    
     newCarpetBasePrice: 5000,
     rewardMultiplierPerCarpet: 1.25,
-    
     penaltyStartRadius: 60,
     penaltyIncreasePerCarpet: 5,
     penaltyPerPixel: 0.01,
     minRewardMultiplier: 0.3,
-    
     starChance: 0.2,
     starLifetime: 700,
     starCount: 1,
     finishStarCount: 25,
     finishStarDuration: 1800,
-    
     totalCarpets: 5,
     inputLockDuration: 300,
-    
     bugCountBase: 4,
     bugCountIncrease: 1,
     bugSpeed: 135,
     bugFadeDuration: 400,
     swatterRadius: 50,
     swatterCooldown: 200,
-    
     splashChance: 0.5,
-    bubbleChance: 0.4
+    bubbleChance: 0.4,
+    autoCleanThreshold: 0.99,
+    autoCleanIdleDelay: 5000,
+    autoCleanDuration: 2000
 };
 
 const SAVE_KEY = 'carpetGameStats_v3';
@@ -102,11 +93,8 @@ const TEXT_STYLES = {
 };
 
 const GameState = {
-    money: CONFIG.startMoney,
-    food: CONFIG.startFood,
-    toolLevel: CONFIG.startToolLevel,
-    carpetIndex: 1,
-    carpetLevel: 0
+    money: CONFIG.startMoney, food: CONFIG.startFood, toolLevel: CONFIG.startToolLevel,
+    carpetIndex: 1, carpetLevel: 0
 };
 let ysdk = null;
 
@@ -155,9 +143,7 @@ async function initYandexSDK() {
                     const s = localStorage.getItem(SAVE_KEY);
                     return s ? JSON.parse(s) : {};
                 },
-                setStats: async (stats) => {
-                    localStorage.setItem(SAVE_KEY, JSON.stringify(stats));
-                }
+                setStats: async (stats) => localStorage.setItem(SAVE_KEY, JSON.stringify(stats))
             },
             adv: {
                 showRewardedVideo: (o) => { if (o?.callbacks?.onRewarded) o.callbacks.onRewarded(); if (o?.callbacks?.onClose) o.callbacks.onClose(); },
@@ -201,10 +187,7 @@ class PreloadScene extends Phaser.Scene {
         const bar = this.add.rectangle(w/2 - 200, h/2 + 30, 0, 26, 0x00FF00).setOrigin(0, 0.5);
         this.load.on('progress', (v) => { bar.width = 400 * v; });
     }
-    create() {
-        initYandexSDK();
-        this.scene.start('MainScene');
-    }
+    create() { initYandexSDK(); this.scene.start('MainScene'); }
 }
 
 class MainScene extends Phaser.Scene {
@@ -215,7 +198,6 @@ class MainScene extends Phaser.Scene {
         if (ysdk?.features?.LoadingAPI) ysdk.features.LoadingAPI.ready();
         
         const W = 720, H = 1280;
-        
         this.carpetW = 500;
         this.carpetH = 700;
         this.carpetX = W/2;
@@ -223,14 +205,12 @@ class MainScene extends Phaser.Scene {
         
         this.roomGfx = this.add.graphics().setDepth(-10);
         this.drawRoom();
-        
         this.carpetContainer = this.add.container(0, 0).setDepth(0);
         this.drawCarpet();
         
         this.gridCellSize = 20;
         this.gridCols = Math.ceil(this.carpetW / this.gridCellSize);
         this.gridRows = Math.ceil(this.carpetH / this.gridCellSize);
-        
         this.gridOffsetX = this.carpetX - this.carpetW / 2;
         this.gridOffsetY = this.carpetY - this.carpetH / 2;
         
@@ -240,10 +220,14 @@ class MainScene extends Phaser.Scene {
         
         this.dirtGfx = this.add.graphics().setDepth(1);
         this.soapGfx = this.add.graphics().setDepth(2);
-        
         this.needRedrawDirt = true;
         this.needRedrawSoap = true;
         this.lastShownPercent = -1;
+        
+        this.autoCleanStarted = false;
+        this.autoCleanPending = false;
+        this.autoCleanIdleTimer = null;
+        this.autoCleanTweenTimer = null;
         
         this.carpetBounds = new Phaser.Geom.Rectangle(
             this.carpetX - this.carpetW/2, this.carpetY - this.carpetH/2,
@@ -256,29 +240,22 @@ class MainScene extends Phaser.Scene {
         this.lastLocalX = -9999;
         this.lastLocalY = -9999;
         this.celebrationShown = false;
-        
         this.inputLocked = false;
         this.shopOpen = false;
-        
         this.noFoodText = null;
         this.noFoodTween = null;
         this.noFoodCooldown = false;
-        
         this.bugWarningText = null;
         this.bugWarningTween = null;
         this.bugWarningCooldown = false;
-        
         this.bugs = [];
         this.swatterCooldownTime = 0;
         
-        this.brush = this.add.text(0, 0, '🧼', {
-            fontSize: '70px', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(3);
+        this.brush = this.add.text(0, 0, '🧼', { fontSize: '70px', fontFamily: 'Arial' })
+            .setOrigin(0.5).setDepth(3);
         this.brush.setVisible(false);
-        
         this.swatterGfx = this.add.graphics().setDepth(6);
         this.swatterGfx.setVisible(false);
-        
         this.add.rectangle(0, 0, 260, 180, 0x000000, 0.5).setOrigin(0, 0).setDepth(9);
         
         this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, TEXT_STYLES.stat('#FFD700', 34)).setDepth(10);
@@ -304,20 +281,17 @@ class MainScene extends Phaser.Scene {
         this.soapBtnBg = this.add.rectangle(soapX, btnY, 200, 80, 0x4A90D9).setDepth(10);
         this.soapBtnBg.setStrokeStyle(5, 0xFFFFFF);
         this.soapBtnText = this.add.text(soapX, btnY, '🧼 МЫЛО', TEXT_STYLES.button('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
-        this.soapBtnBg.setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.selectTool('soap'));
+        this.soapBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('soap'));
         
         this.washBtnBg = this.add.rectangle(washX, btnY, 200, 80, 0x555555).setDepth(10);
         this.washBtnBg.setStrokeStyle(5, 0x888888);
         this.washBtnText = this.add.text(washX, btnY, '💧 СМЫТЬ', TEXT_STYLES.button('#AAAAAA', 22)).setOrigin(0.5).setDepth(11);
-        this.washBtnBg.setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.selectTool('wash'));
+        this.washBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('wash'));
         
         this.swatterBtnBg = this.add.rectangle(swatterX, btnY, 200, 80, 0x555555).setDepth(10);
         this.swatterBtnBg.setStrokeStyle(5, 0x888888);
         this.swatterBtnText = this.add.text(swatterX, btnY, '🪰 МУХОБОЙКА', TEXT_STYLES.button('#AAAAAA', 18)).setOrigin(0.5).setDepth(11);
-        this.swatterBtnBg.setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.selectTool('swatter'));
+        this.swatterBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('swatter'));
         
         this.swatterBtnBg.setVisible(hasSwatter);
         this.swatterBtnText.setVisible(hasSwatter);
@@ -331,6 +305,84 @@ class MainScene extends Phaser.Scene {
         this.selectTool('soap');
         this.setupCleaning();
         this.spawnBugsIfNeeded();
+    }
+
+    scheduleAutoClean() {
+        if (this.autoCleanStarted || this.autoCleanPending) return;
+        if (this.cleanProgress < CONFIG.autoCleanThreshold) return;
+        this.autoCleanPending = true;
+        this.autoCleanIdleTimer = this.time.delayedCall(CONFIG.autoCleanIdleDelay, () => {
+            this.autoCleanPending = false;
+            this.autoCleanIdleTimer = null;
+            if (this.cleanProgress >= CONFIG.autoCleanThreshold && this.cleanProgress < 1.0) {
+                this.startAutoClean();
+            }
+        });
+    }
+    
+    cancelAutoClean() {
+        if (this.autoCleanPending) {
+            this.autoCleanPending = false;
+            if (this.autoCleanIdleTimer) {
+                this.autoCleanIdleTimer.remove();
+                this.autoCleanIdleTimer = null;
+            }
+        }
+    }
+    
+    startAutoClean() {
+        if (this.autoCleanStarted) return;
+        this.autoCleanStarted = true;
+        this.showMessage('✨ Ковёр сам очищается...');
+        
+        const dirtyIndices = [];
+        const total = this.dirtGrid.length;
+        for (let i = 0; i < total; i++) {
+            if (this.dirtGrid[i] > 0.01) dirtyIndices.push(i);
+        }
+        
+        if (dirtyIndices.length === 0) { this.finishAutoClean(); return; }
+        
+        const tickDelay = 50;
+        const totalTicks = CONFIG.autoCleanDuration / tickDelay;
+        const cellsPerTick = Math.max(1, Math.ceil(dirtyIndices.length / totalTicks));
+        let index = 0;
+        
+        this.autoCleanTweenTimer = this.time.addEvent({
+            delay: tickDelay,
+            repeat: totalTicks,
+            callback: () => {
+                for (let i = 0; i < cellsPerTick && index < dirtyIndices.length; i++) {
+                    this.dirtGrid[dirtyIndices[index]] = 0;
+                    index++;
+                }
+                this.needRedrawDirt = true;
+                this.recalcProgress(true);
+                if (index >= dirtyIndices.length) {
+                    if (this.autoCleanTweenTimer) {
+                        this.autoCleanTweenTimer.remove();
+                        this.autoCleanTweenTimer = null;
+                    }
+                    this.finishAutoClean();
+                }
+            }
+        });
+    }
+    
+    finishAutoClean() {
+        this.cleanProgress = 1.0;
+        this.updateProgressBar();
+        if (!this.celebrationShown) {
+            this.celebrationShown = true;
+            this.spawnCelebration();
+            this.showMessage('Ковёр чистый! ✨');
+        }
+    }
+    
+    resetAutoCleanTimer() {
+        this.cancelAutoClean();
+        if (this.autoCleanStarted) return;
+        this.scheduleAutoClean();
     }
 
     spawnBubbles(x, y) {
@@ -390,18 +442,11 @@ class MainScene extends Phaser.Scene {
         const y = Phaser.Math.Between(this.carpetY - this.carpetH/2 + padding, this.carpetY + this.carpetH/2 - padding);
         const bug = this.add.container(x, y).setDepth(4);
         const bodyGfx = this.add.graphics();
-        bodyGfx.fillStyle(0x1a1a1a, 1);
-        bodyGfx.fillEllipse(0, 0, 36, 24);
-        bodyGfx.lineStyle(2, 0x000000, 1);
-        bodyGfx.strokeEllipse(0, 0, 36, 24);
-        bodyGfx.fillStyle(0x0a0a0a, 1);
-        bodyGfx.fillCircle(15, 0, 9);
-        bodyGfx.fillStyle(0xFFFFFF, 1);
-        bodyGfx.fillCircle(18, -4, 2.5);
-        bodyGfx.fillCircle(18, 4, 2.5);
-        bodyGfx.fillStyle(0x000000, 1);
-        bodyGfx.fillCircle(19, -4, 1.2);
-        bodyGfx.fillCircle(19, 4, 1.2);
+        bodyGfx.fillStyle(0x1a1a1a, 1); bodyGfx.fillEllipse(0, 0, 36, 24);
+        bodyGfx.lineStyle(2, 0x000000, 1); bodyGfx.strokeEllipse(0, 0, 36, 24);
+        bodyGfx.fillStyle(0x0a0a0a, 1); bodyGfx.fillCircle(15, 0, 9);
+        bodyGfx.fillStyle(0xFFFFFF, 1); bodyGfx.fillCircle(18, -4, 2.5); bodyGfx.fillCircle(18, 4, 2.5);
+        bodyGfx.fillStyle(0x000000, 1); bodyGfx.fillCircle(19, -4, 1.2); bodyGfx.fillCircle(19, 4, 1.2);
         bodyGfx.lineStyle(1.5, 0x4a2a0a, 1);
         bodyGfx.beginPath();
         bodyGfx.moveTo(-8, -8); bodyGfx.lineTo(-8, 8);
@@ -437,11 +482,8 @@ class MainScene extends Phaser.Scene {
         this.spawnStarsAt(bug.x, bug.y);
         this.spawnStarsAt(bug.x, bug.y);
         this.tweens.add({
-            targets: bug,
-            alpha: 0,
-            scale: 1.5,
-            duration: CONFIG.bugFadeDuration,
-            ease: 'Cubic.easeOut',
+            targets: bug, alpha: 0, scale: 1.5,
+            duration: CONFIG.bugFadeDuration, ease: 'Cubic.easeOut',
             onComplete: () => {
                 const idx = this.bugs.indexOf(bug);
                 if (idx > -1) this.bugs.splice(idx, 1);
@@ -495,8 +537,7 @@ class MainScene extends Phaser.Scene {
             targets: star,
             x: x + Math.cos(angle) * distance,
             y: y + Math.sin(angle) * distance - 30,
-            alpha: { from: 1, to: 0 },
-            scale: { from: 1, to: 0.3 },
+            alpha: { from: 1, to: 0 }, scale: { from: 1, to: 0.3 },
             angle: { from: 0, to: (Math.random() - 0.5) * 360 },
             duration: 800, ease: 'Cubic.easeOut',
             onComplete: () => star.destroy()
@@ -511,7 +552,6 @@ class MainScene extends Phaser.Scene {
         const maxX = this.carpetX + this.carpetW/2 - padding;
         const minY = this.carpetY - this.carpetH/2 + padding;
         const maxY = this.carpetY + this.carpetH/2 - padding;
-        
         for (let i = this.bugs.length - 1; i >= 0; i--) {
             const bug = this.bugs[i];
             if (bug.isDead) continue;
@@ -601,62 +641,39 @@ class MainScene extends Phaser.Scene {
         if (isCozy) {
             const wallColors = [0xE8D5B7, 0xD4B896, 0xC9A87C, 0xB89A6A, 0xA8895A];
             const wallColor = wallColors[level % wallColors.length];
-            g.fillStyle(wallColor, 1);
-            g.fillRect(0, 0, W, 900);
+            g.fillStyle(wallColor, 1); g.fillRect(0, 0, W, 900);
             for (let x = 0; x < W; x += 60) {
-                g.fillStyle(0x000000, 0.05);
-                g.fillRect(x, 0, 30, 900);
+                g.fillStyle(0x000000, 0.05); g.fillRect(x, 0, 30, 900);
             }
-            g.fillStyle(0x8B5A2B, 1);
-            g.fillRect(0, 900, W, H - 900);
+            g.fillStyle(0x8B5A2B, 1); g.fillRect(0, 900, W, H - 900);
             for (let y = 900; y < H; y += 40) {
-                g.fillStyle(0x000000, 0.15);
-                g.fillRect(0, y, W, 3);
+                g.fillStyle(0x000000, 0.15); g.fillRect(0, y, W, 3);
             }
             for (let x = 0; x < W; x += 100) {
-                g.fillStyle(0x000000, 0.1);
-                g.fillRect(x, 900, 2, H - 900);
+                g.fillStyle(0x000000, 0.1); g.fillRect(x, 900, 2, H - 900);
             }
-            g.fillStyle(0x5C3A1E, 1);
-            g.fillRect(0, 880, W, 20);
-            g.fillStyle(0x87CEEB, 1);
-            g.fillRect(80, 150, 200, 250);
-            g.fillStyle(0xFFFFFF, 1);
-            g.fillRect(80, 150, 200, 250);
-            g.lineStyle(8, 0x5C3A1E, 1);
-            g.strokeRect(80, 150, 200, 250);
-            g.fillStyle(0x5C3A1E, 1);
-            g.fillRect(175, 150, 10, 250);
-            g.fillRect(80, 270, 200, 10);
-            g.fillStyle(0xFFEB3B, 0.8);
-            g.fillCircle(240, 200, 35);
-            g.fillStyle(0x8B4513, 1);
-            g.fillRect(480, 200, 150, 120);
-            g.fillStyle(0x87CEEB, 1);
-            g.fillRect(490, 210, 130, 100);
-            g.fillStyle(0x228B22, 1);
-            g.fillTriangle(490, 310, 555, 240, 620, 310);
+            g.fillStyle(0x5C3A1E, 1); g.fillRect(0, 880, W, 20);
+            g.fillStyle(0x87CEEB, 1); g.fillRect(80, 150, 200, 250);
+            g.fillStyle(0xFFFFFF, 1); g.fillRect(80, 150, 200, 250);
+            g.lineStyle(8, 0x5C3A1E, 1); g.strokeRect(80, 150, 200, 250);
+            g.fillStyle(0x5C3A1E, 1); g.fillRect(175, 150, 10, 250); g.fillRect(80, 270, 200, 10);
+            g.fillStyle(0xFFEB3B, 0.8); g.fillCircle(240, 200, 35);
+            g.fillStyle(0x8B4513, 1); g.fillRect(480, 200, 150, 120);
+            g.fillStyle(0x87CEEB, 1); g.fillRect(490, 210, 130, 100);
+            g.fillStyle(0x228B22, 1); g.fillTriangle(490, 310, 555, 240, 620, 310);
         } else {
             const colors = [0x2C3E50, 0x34495E, 0x1A252F, 0x3D5A80, 0x293241];
             const wallColor = colors[level % colors.length];
-            g.fillStyle(wallColor, 1);
-            g.fillRect(0, 0, W, 900);
-            g.fillStyle(0x00E5FF, 0.5);
-            g.fillRect(0, 400, W, 4);
-            g.fillStyle(0xFF00E5, 0.5);
-            g.fillRect(0, 500, W, 4);
-            g.fillStyle(0x1a1a1a, 1);
-            g.fillRect(0, 900, W, H - 900);
+            g.fillStyle(wallColor, 1); g.fillRect(0, 0, W, 900);
+            g.fillStyle(0x00E5FF, 0.5); g.fillRect(0, 400, W, 4);
+            g.fillStyle(0xFF00E5, 0.5); g.fillRect(0, 500, W, 4);
+            g.fillStyle(0x1a1a1a, 1); g.fillRect(0, 900, W, H - 900);
             for (let i = 0; i < 5; i++) {
-                g.fillStyle(0x00E5FF, 0.05);
-                g.fillRect(0, 900 + i * 40, W, 10);
+                g.fillStyle(0x00E5FF, 0.05); g.fillRect(0, 900 + i * 40, W, 10);
             }
-            g.lineStyle(3, 0x00E5FF, 0.6);
-            g.strokeCircle(600, 250, 80);
-            g.lineStyle(3, 0xFF00E5, 0.6);
-            g.strokeRect(100, 180, 120, 120);
-            g.fillStyle(0x000000, 1);
-            g.fillRect(0, 880, W, 20);
+            g.lineStyle(3, 0x00E5FF, 0.6); g.strokeCircle(600, 250, 80);
+            g.lineStyle(3, 0xFF00E5, 0.6); g.strokeRect(100, 180, 120, 120);
+            g.fillStyle(0x000000, 1); g.fillRect(0, 880, W, 20);
         }
     }
 
@@ -679,10 +696,8 @@ class MainScene extends Phaser.Scene {
                 { main: 0x4B0082, accent: 0xFFD700, border: 0x2F0050 }
             ];
             const p = palettes[(GameState.carpetIndex - 1) % palettes.length];
-            g.fillStyle(p.main, 1);
-            g.fillRect(cx, cy, this.carpetW, this.carpetH);
-            g.lineStyle(20, p.border, 1);
-            g.strokeRect(cx + 10, cy + 10, this.carpetW - 20, this.carpetH - 20);
+            g.fillStyle(p.main, 1); g.fillRect(cx, cy, this.carpetW, this.carpetH);
+            g.lineStyle(20, p.border, 1); g.strokeRect(cx + 10, cy + 10, this.carpetW - 20, this.carpetH - 20);
             g.lineStyle(4, p.accent, 0.7);
             for (let i = 0; i < 3; i++) {
                 const size = 100 - i * 30;
@@ -705,21 +720,18 @@ class MainScene extends Phaser.Scene {
 
     selectTool(tool) {
         this.currentTool = tool;
-        
         if (tool === 'soap') {
             this.soapBtnBg.setFillStyle(0x4A90D9); this.soapBtnBg.setStrokeStyle(5, 0xFFFFFF); this.soapBtnText.setColor('#FFFFFF');
             this.brush.setText('🧼');
         } else {
             this.soapBtnBg.setFillStyle(0x555555); this.soapBtnBg.setStrokeStyle(5, 0x888888); this.soapBtnText.setColor('#AAAAAA');
         }
-        
         if (tool === 'wash') {
             this.washBtnBg.setFillStyle(0x4A90D9); this.washBtnBg.setStrokeStyle(5, 0xFFFFFF); this.washBtnText.setColor('#FFFFFF');
             this.brush.setText('🧹');
         } else {
             this.washBtnBg.setFillStyle(0x555555); this.washBtnBg.setStrokeStyle(5, 0x888888); this.washBtnText.setColor('#AAAAAA');
         }
-        
         if (tool === 'swatter') {
             this.swatterBtnBg.setFillStyle(0xFF4444); this.swatterBtnBg.setStrokeStyle(5, 0xFFFFFF); this.swatterBtnText.setColor('#FFFFFF');
             this.brush.setVisible(false);
@@ -779,7 +791,6 @@ class MainScene extends Phaser.Scene {
         const cols = this.gridCols;
         const cx = this.gridOffsetX;
         const cy = this.gridOffsetY;
-        
         for (let row = 0; row < this.gridRows; row++) {
             const rowOffset = row * cols;
             const py = cy + row * cs;
@@ -798,53 +809,23 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ ВАРИАНТ 4: контур границ + лёгкая заливка 0.15
     drawSoap() {
         this.soapGfx.clear();
         const cs = this.gridCellSize;
         const cols = this.gridCols;
-        const rows = this.gridRows;
         const cx = this.gridOffsetX;
         const cy = this.gridOffsetY;
-        const threshold = 0.3;
-        
-        // ПЕРВЫЙ ПРОХОД: заливка лёгкая alpha 0.15 — почти не меняет цвет ковра
-        for (let row = 0; row < rows; row++) {
+        for (let row = 0; row < this.gridRows; row++) {
             const rowOffset = row * cols;
             const py = cy + row * cs;
             for (let col = 0; col < cols; col++) {
                 const soap = this.soapGrid[rowOffset + col];
                 if (soap < 0.05) continue;
                 const px = cx + col * cs;
-                this.soapGfx.fillStyle(0xFFFFFF, soap * 0.15);
+                this.soapGfx.fillStyle(0xAAE0FF, soap * 0.75);
                 this.soapGfx.fillRect(px, py, cs, cs);
             }
         }
-        
-        // ВТОРОЙ ПРОХОД: жирный контур только по границам мыльной зоны
-        this.soapGfx.lineStyle(3, 0xFFFFFF, 0.95);
-        
-        for (let row = 0; row < rows; row++) {
-            const rowOffset = row * cols;
-            const py = cy + row * cs;
-            for (let col = 0; col < cols; col++) {
-                const soap = this.soapGrid[rowOffset + col];
-                if (soap < threshold) continue;
-                const px = cx + col * cs;
-                
-                // Проверяем соседей: если сосед БЕЗ мыла — рисуем границу
-                const topEmpty    = (row === 0)            || (this.soapGrid[(row-1) * cols + col] < threshold);
-                const bottomEmpty = (row === rows - 1)     || (this.soapGrid[(row+1) * cols + col] < threshold);
-                const leftEmpty   = (col === 0)            || (this.soapGrid[rowOffset + (col-1)] < threshold);
-                const rightEmpty  = (col === cols - 1)     || (this.soapGrid[rowOffset + (col+1)] < threshold);
-                
-                if (topEmpty)    this.soapGfx.lineBetween(px, py, px + cs, py);
-                if (bottomEmpty) this.soapGfx.lineBetween(px, py + cs, px + cs, py + cs);
-                if (leftEmpty)   this.soapGfx.lineBetween(px, py, px, py + cs);
-                if (rightEmpty)  this.soapGfx.lineBetween(px + cs, py, px + cs, py + cs);
-            }
-        }
-        
         this.needRedrawSoap = false;
     }
 
@@ -860,26 +841,22 @@ class MainScene extends Phaser.Scene {
         
         const handlePointer = (pointer) => {
             if (this.inputLocked || this.shopOpen) return;
-            
             if (this.currentTool === 'swatter') {
                 this.drawSwatter(pointer.x, pointer.y);
                 this.swatterGfx.setVisible(true);
                 this.brush.setVisible(false);
                 return;
             }
-            
             this.swatterGfx.setVisible(false);
             this.brush.setPosition(pointer.x, pointer.y);
             const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
             this.brush.setVisible(inBounds);
             if (!inBounds) return;
-            
             const localX = pointer.x - (this.carpetX - this.carpetW/2);
             const localY = pointer.y - (this.carpetY - this.carpetH/2);
             const dx = localX - this.lastLocalX;
             const dy = localY - this.lastLocalY;
             if (dx*dx + dy*dy < 64) return;
-            
             this.lastLocalX = localX;
             this.lastLocalY = localY;
             this.applyTool(localX, localY);
@@ -887,7 +864,6 @@ class MainScene extends Phaser.Scene {
         
         this.input.on('pointerdown', (pointer) => {
             if (this.inputLocked || this.shopOpen) return;
-            
             if (this.currentTool === 'swatter') {
                 this.drawSwatter(pointer.x, pointer.y);
                 this.swatterGfx.setVisible(true);
@@ -895,7 +871,6 @@ class MainScene extends Phaser.Scene {
                 this.isPointerDown = false;
                 return;
             }
-            
             this.isPointerDown = true;
             this.lastLocalX = -9999;
             this.lastLocalY = -9999;
@@ -904,24 +879,17 @@ class MainScene extends Phaser.Scene {
         
         this.input.on('pointermove', (pointer) => {
             if (this.inputLocked || this.shopOpen) return;
-            
             if (this.currentTool !== 'swatter') {
                 this.brush.setPosition(pointer.x, pointer.y);
                 const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
                 this.brush.setVisible(inBounds);
             }
-            
-            if (!pointer.isDown) {
-                this.isPointerDown = false;
-                return;
-            }
-            
+            if (!pointer.isDown) { this.isPointerDown = false; return; }
             if (this.currentTool === 'swatter') {
                 this.drawSwatter(pointer.x, pointer.y);
                 this.swatterGfx.setVisible(true);
                 return;
             }
-            
             handlePointer(pointer);
         });
         
@@ -970,6 +938,8 @@ class MainScene extends Phaser.Scene {
         if (GameState.food <= 0) { this.showNoFoodWarning(); return; }
         if (this.bugs.length > 0) { this.showBugWarning(); return; }
         
+        this.resetAutoCleanTimer();
+        
         const radius = getCurrentRadius();
         const cs = this.gridCellSize;
         const cols = this.gridCols;
@@ -983,7 +953,6 @@ class MainScene extends Phaser.Scene {
         
         const isSoap = this.currentTool === 'soap';
         let dirtChanged = false, soapChanged = false, erased = false;
-        
         const screenX = localX + (this.carpetX - this.carpetW/2);
         const screenY = localY + (this.carpetY - this.carpetH/2);
         
@@ -993,16 +962,13 @@ class MainScene extends Phaser.Scene {
             const dy = ccy - localY;
             const dySq = dy * dy;
             if (dySq > radiusSq) continue;
-            
             for (let col = minCol; col <= maxCol; col++) {
                 const ccx = col * cs + cs / 2;
                 const dx = ccx - localX;
                 const distSq = dx*dx + dySq;
                 if (distSq > radiusSq) continue;
-                
                 const falloff = Math.max(0.5, 1 - Math.sqrt(distSq) / radius);
                 const index = rowOffset + col;
-                
                 if (isSoap) {
                     if (this.soapGrid[index] < 1.0) {
                         this.soapGrid[index] = Math.min(1.0, this.soapGrid[index] + CONFIG.soapPower * falloff);
@@ -1026,17 +992,15 @@ class MainScene extends Phaser.Scene {
             this.spawnSplash(screenX, screenY);
             this.spawnStars(screenX, screenY);
         }
-        
         if (dirtChanged) { this.needRedrawDirt = true; this.recalcProgress(); }
         if (soapChanged) this.needRedrawSoap = true;
     }
 
-    recalcProgress() {
+    recalcProgress(silent = false) {
         let total = 0;
         const cells = this.dirtGrid.length;
         for (let i = 0; i < cells; i++) total += (1 - this.dirtGrid[i]);
         this.cleanProgress = total / cells;
-        
         if (this.cleanProgress >= 0.9999) {
             let allClean = true;
             for (let i = 0; i < cells; i++) {
@@ -1054,6 +1018,9 @@ class MainScene extends Phaser.Scene {
             }
         }
         this.updateProgressBar();
+        if (!silent && !this.autoCleanStarted && this.cleanProgress >= CONFIG.autoCleanThreshold && this.cleanProgress < 1.0) {
+            this.scheduleAutoClean();
+        }
     }
 
     updateProgressBar() {
@@ -1070,6 +1037,10 @@ class MainScene extends Phaser.Scene {
         if (this.bugs.length > 0) { this.showBugWarning(); return; }
         
         this.unlockInput();
+        this.autoCleanStarted = false;
+        this.autoCleanPending = false;
+        if (this.autoCleanIdleTimer) { this.autoCleanIdleTimer.remove(); this.autoCleanIdleTimer = null; }
+        if (this.autoCleanTweenTimer) { this.autoCleanTweenTimer.remove(); this.autoCleanTweenTimer = null; }
         
         const baseReward = Math.floor(CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin));
         const carpetMultiplier = getRewardMultiplier();
@@ -1090,7 +1061,6 @@ class MainScene extends Phaser.Scene {
         this.children.list.forEach(child => {
             if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) child.destroy();
         });
-        
         this.bugs.forEach(bug => bug.destroy());
         this.bugs = [];
         
@@ -1110,10 +1080,8 @@ class MainScene extends Phaser.Scene {
 
     openShop() {
         this.shopOpen = true;
-        
         const W = 720, H = 1280;
         const els = [];
-        
         const ov = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.9).setDepth(20);
         ov.setInteractive(); els.push(ov);
         const bg = this.add.rectangle(W/2, H/2, 660, 1040, 0x2a2a2a).setDepth(21);
@@ -1138,7 +1106,6 @@ class MainScene extends Phaser.Scene {
         const cr = getCurrentRadius();
         const nr = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
         const penaltyStart = getPenaltyStartRadius();
-        
         let warningText = '';
         if (nr > penaltyStart) {
             const newMult = Math.max(CONFIG.minRewardMultiplier, 1.0 - (nr - penaltyStart) * CONFIG.penaltyPerPixel);
@@ -1158,11 +1125,9 @@ class MainScene extends Phaser.Scene {
                 const r = getCurrentRadius();
                 this.toolText.setText('🧹 Радиус: ' + r);
                 await saveGame(); this.showMessage('Щётка улучшена!');
-                
                 if (r >= getRequiredRadius() && GameState.carpetIndex < CONFIG.totalCarpets) {
                     this.showMessage('Новый ковёр доступен в магазине!');
                 }
-                
                 const nc = GameState.toolLevel * CONFIG.toolBasePrice;
                 const nr2 = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
                 const ps2 = getPenaltyStartRadius();
@@ -1182,19 +1147,14 @@ class MainScene extends Phaser.Scene {
         const requiredRadius = getRequiredRadius();
         const radiusEnough = getCurrentRadius() >= requiredRadius;
         const hasNextCarpet = GameState.carpetIndex < CONFIG.totalCarpets;
-        
         let newCarpetLabel = '';
         let newCarpetColor = '#888888';
-        
         if (!hasNextCarpet) {
-            newCarpetLabel = '🏆 ВСЕ КОВРЫ ОТКРЫТЫ';
-            newCarpetColor = '#FFD700';
+            newCarpetLabel = '🏆 ВСЕ КОВРЫ ОТКРЫТЫ'; newCarpetColor = '#FFD700';
         } else if (!radiusEnough) {
-            newCarpetLabel = `🔒 Нужен радиус ${requiredRadius}\n(сейчас ${getCurrentRadius()})`;
-            newCarpetColor = '#AAAAAA';
+            newCarpetLabel = `🔒 Нужен радиус ${requiredRadius}\n(сейчас ${getCurrentRadius()})`; newCarpetColor = '#AAAAAA';
         } else if (GameState.money < newCarpetPrice) {
-            newCarpetLabel = `🆕 НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nНе хватает денег`;
-            newCarpetColor = '#AAAAAA';
+            newCarpetLabel = `🆕 НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nНе хватает денег`; newCarpetColor = '#AAAAAA';
         } else {
             newCarpetLabel = `🆕 КУПИТЬ НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nКовёр ${GameState.carpetIndex} → ${GameState.carpetIndex + 1}\n⚠️ Сброс щётки и денег\n✅ Заработок ×1.25 навсегда`;
             newCarpetColor = '#00FF00';
@@ -1204,7 +1164,6 @@ class MainScene extends Phaser.Scene {
             ...TEXT_STYLES.shop(newCarpetColor, 22),
             backgroundColor: '#1a1a1a', padding: { x: 25, y: 15 }
         }).setOrigin(0.5).setDepth(22);
-        
         if (canBuy) {
             nb.setInteractive({ useHandCursor: true })
               .on('pointerdown', async () => {
@@ -1232,9 +1191,13 @@ class MainScene extends Phaser.Scene {
 
     async buyNewCarpet() {
         if (!canBuyNewCarpet()) return;
-        
         this.shopOpen = false;
         this.unlockInput();
+        
+        this.autoCleanStarted = false;
+        this.autoCleanPending = false;
+        if (this.autoCleanIdleTimer) { this.autoCleanIdleTimer.remove(); this.autoCleanIdleTimer = null; }
+        if (this.autoCleanTweenTimer) { this.autoCleanTweenTimer.remove(); this.autoCleanTweenTimer = null; }
         
         GameState.money = 0;
         GameState.toolLevel = CONFIG.startToolLevel;
@@ -1271,7 +1234,6 @@ class MainScene extends Phaser.Scene {
         this.updateProgressBar();
         this.drawDirt();
         this.drawSoap();
-        
         await saveGame();
         this.spawnCelebration();
         this.spawnBugsIfNeeded();
