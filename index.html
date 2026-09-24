@@ -34,7 +34,7 @@ const CONFIG = {
     
     soapPower: 1.0,
     soapThreshold: 0.01,
-    soapWashSpeed: 0.35,   // ✅ мыло быстро смывается
+    soapWashSpeed: 0.35,
     eraseStrength: 0.9,
     
     progressThreshold: 1.0,
@@ -68,16 +68,13 @@ const CONFIG = {
     swatterRadius: 50,
     swatterCooldown: 200,
     
-    // ✅ Частицы — реже
-    splashChance: 0.2,
-    bubbleChance: 0.15
+    // ✅ Эффекты как было
+    splashChance: 0.5,
+    bubbleChance: 0.4
 };
 
 const SAVE_KEY = 'carpetGameStats_v3';
 
-// ============================================
-// СТИЛИ ТЕКСТА
-// ============================================
 const TEXT_STYLES = {
     title: (color = '#FFD700') => ({
         fontSize: '48px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
@@ -110,9 +107,6 @@ const TEXT_STYLES = {
     })
 };
 
-// ============================================
-// СОСТОЯНИЕ
-// ============================================
 const GameState = {
     money: CONFIG.startMoney,
     food: CONFIG.startFood,
@@ -122,9 +116,6 @@ const GameState = {
 };
 let ysdk = null;
 
-// ============================================
-// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
-// ============================================
 function getCurrentRadius() {
     return Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
 }
@@ -160,9 +151,6 @@ function canBuyNewCarpet() {
         && GameState.carpetIndex < CONFIG.totalCarpets;
 }
 
-// ============================================
-// YANDEX SDK
-// ============================================
 async function initYandexSDK() {
     try {
         if (typeof YaGames === 'undefined') throw new Error('no SDK');
@@ -217,9 +205,6 @@ async function saveGame() {
     } catch (e) {}
 }
 
-// ============================================
-// СЦЕНА ЗАГРУЗКИ
-// ============================================
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
@@ -239,9 +224,6 @@ class PreloadScene extends Phaser.Scene {
     }
 }
 
-// ============================================
-// ОСНОВНАЯ СЦЕНА
-// ============================================
 class MainScene extends Phaser.Scene {
     constructor() { super('MainScene'); }
 
@@ -374,48 +356,54 @@ class MainScene extends Phaser.Scene {
     spawnBubbles(x, y) {
         if (Math.random() > CONFIG.bubbleChance) return;
         
-        const bubble = this.add.circle(x, y, 5 + Math.random() * 5, 0xFFFFFF, 0.5).setDepth(8);
-        bubble.setStrokeStyle(1.5, 0xCC99FF, 0.7);
+        const count = 2 + Math.floor(Math.random() * 3);
         
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 25 + Math.random() * 40;
-        
-        this.tweens.add({
-            targets: bubble,
-            x: x + Math.cos(angle) * distance,
-            y: y + Math.sin(angle) * distance - 30,
-            alpha: { from: 0.7, to: 0 },
-            scale: { from: 1, to: 1.6 },
-            duration: 600,
-            ease: 'Sine.easeOut',
-            onComplete: () => bubble.destroy()
-        });
+        for (let i = 0; i < count; i++) {
+            const size = 6 + Math.random() * 12;
+            
+            const bubble = this.add.circle(x, y, size, 0xFFFFFF, 0.5).setDepth(8);
+            bubble.setStrokeStyle(2, 0xCC99FF, 0.8);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 30 + Math.random() * 60;
+            
+            this.tweens.add({
+                targets: bubble,
+                x: x + Math.cos(angle) * distance,
+                y: y + Math.sin(angle) * distance - 40,
+                alpha: { from: 0.7, to: 0 },
+                scale: { from: 1, to: 1.8 },
+                duration: 700 + Math.random() * 400,
+                ease: 'Sine.easeOut',
+                onComplete: () => bubble.destroy()
+            });
+        }
     }
     
     spawnSplash(x, y) {
         if (Math.random() > CONFIG.splashChance) return;
         
-        const count = 2 + Math.floor(Math.random() * 2);
+        const count = 4 + Math.floor(Math.random() * 4);
         
         for (let i = 0; i < count; i++) {
-            const size = 2 + Math.random() * 3;
+            const size = 3 + Math.random() * 5;
             const drop = this.add.circle(x, y, size, 0x66CCFF, 0.9).setDepth(8);
             
-            const angle = -Math.PI/2 + (Math.random() - 0.5) * Math.PI * 1.2;
-            const speed = 60 + Math.random() * 80;
+            const angle = -Math.PI/2 + (Math.random() - 0.5) * Math.PI * 1.5;
+            const speed = 80 + Math.random() * 120;
             const vx = Math.cos(angle) * speed;
             const vy = Math.sin(angle) * speed;
             
-            const life = 300 + Math.random() * 200;
+            const life = 400 + Math.random() * 300;
             let posX = x, posY = y, velX = vx, velY = vy, elapsed = 0;
-            const gravity = 350;
+            const gravity = 400;
             
             const timer = this.time.addEvent({
-                delay: 20,
-                repeat: Math.floor(life / 20),
+                delay: 16,
+                repeat: Math.floor(life / 16),
                 callback: () => {
-                    elapsed += 20;
-                    const dt = 20 / 1000;
+                    elapsed += 16;
+                    const dt = 16 / 1000;
                     velY += gravity * dt;
                     posX += velX * dt;
                     posY += velY * dt;
@@ -424,6 +412,10 @@ class MainScene extends Phaser.Scene {
                         drop.setPosition(posX, posY);
                         const progress = elapsed / life;
                         drop.setAlpha(0.9 * (1 - progress));
+                        
+                        if (progress > 0.7) {
+                            drop.setScale(1.5, 0.4);
+                        }
                     }
                 }
             });
@@ -433,6 +425,16 @@ class MainScene extends Phaser.Scene {
                 timer.remove();
             });
         }
+        
+        const ring = this.add.circle(x, y, 5, 0xFFFFFF, 0.4).setDepth(7);
+        this.tweens.add({
+            targets: ring,
+            scale: 3,
+            alpha: 0,
+            duration: 300,
+            ease: 'Cubic.easeOut',
+            onComplete: () => ring.destroy()
+        });
     }
 
     spawnBugsIfNeeded() {
@@ -925,7 +927,7 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ Мыло рисуется КРУЖКАМИ (не пикселями), пена исчезает при смывании
+    // ✅ Пиксельное мыло + розовый цвет + пена
     drawSoap() {
         this.soapGfx.clear();
         this.foamGfx.clear();
@@ -941,39 +943,35 @@ class MainScene extends Phaser.Scene {
                 const soap = this.soapGrid[row * cols + col];
                 if (soap < 0.05) continue;
                 
-                // Центр ячейки
-                const px = cx + col * cs + cs / 2;
-                const py = cy + row * cs + cs / 2;
+                const px = cx + col * cs;
+                const py = cy + row * cs;
                 
-                // ✅ Розовый КРУЖОК мыла (радиус растёт с плотностью)
-                const soapRadius = cs * 0.4 * soap + cs * 0.15;
-                this.soapGfx.fillStyle(0xFF66AA, soap * 0.65);
-                this.soapGfx.fillCircle(px, py, soapRadius);
+                // ✅ Розовая плёнка (пиксельная)
+                this.soapGfx.fillStyle(0xFF66AA, soap * 0.55);
+                this.soapGfx.fillRect(px, py, cs, cs);
                 
-                // ✅ ПЕНА — пузырьки только если мыла много
+                // ✅ ПЕНА — пузырьки на плотно намыленных
                 if (soap > 0.3) {
                     const seed = row * 31 + col * 17;
-                    const bubbleCount = 1 + (seed % 2);   // 1-2 пузырька
+                    const bubbleCount = 2 + (seed % 3);
                     
                     for (let b = 0; b < bubbleCount; b++) {
-                        const angle = (seed + b * 3) * 1.3;
-                        const dist = cs * 0.25 * (0.3 + soap * 0.7);
+                        const baseX = (seed * (b + 1) * 7) % cs;
+                        const baseY = (seed * (b + 1) * 11) % cs;
                         
                         const wobbleX = Math.sin(now / 600 + row + col + b) * 1.5;
                         const wobbleY = Math.cos(now / 500 + row * 1.3 + col * 0.7 + b) * 1.5;
                         
-                        const bx = px + Math.cos(angle) * dist + wobbleX;
-                        const by = py + Math.sin(angle) * dist + wobbleY;
-                        const r = 2 + ((seed + b * 5) % 4) * 0.5 + soap * 2;
+                        const bx = px + baseX + wobbleX;
+                        const by = py + baseY + wobbleY;
+                        const r = 2 + ((seed + b * 5) % 5);
                         
-                        // Белый пузырёк с ободком
-                        this.foamGfx.fillStyle(0xFFFFFF, soap * 0.9);
+                        this.foamGfx.fillStyle(0xFFFFFF, soap * 0.85);
                         this.foamGfx.fillCircle(bx, by, r);
                         
-                        this.foamGfx.lineStyle(1, 0xCC99FF, soap * 0.6);
+                        this.foamGfx.lineStyle(1, 0xCC99FF, soap * 0.7);
                         this.foamGfx.strokeCircle(bx, by, r);
                         
-                        // Блик
                         this.foamGfx.fillStyle(0xFFFFFF, 1);
                         this.foamGfx.fillCircle(bx - r * 0.3, by - r * 0.3, r * 0.3);
                     }
@@ -1112,7 +1110,6 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    // ✅ Мыло быстро смывается — пена и розовое исчезают
     applyTool(localX, localY) {
         if (this.shopOpen) return;
         
@@ -1169,7 +1166,6 @@ class MainScene extends Phaser.Scene {
                         dirtChanged = true;
                         erasedSomething = true;
                     }
-                    // ✅ Мыло быстро смывается (было 0.05)
                     this.soapGrid[index] = Math.max(0, this.soapGrid[index] - CONFIG.soapWashSpeed * falloff);
                     soapChanged = true;
                 }
@@ -1466,9 +1462,6 @@ class MainScene extends Phaser.Scene {
     }
 }
 
-// ============================================
-// ЗАПУСК
-// ============================================
 const phaserConfig = {
     type: Phaser.CANVAS,
     width: 720, height: 1280,
