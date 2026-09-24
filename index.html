@@ -67,12 +67,16 @@ const CONFIG = {
     swatterRadius: 50,
     swatterCooldown: 200,
     
-    splashChance: 0.8,
-    bubbleChance: 0.5
+    // ✅ Частицы
+    splashChance: 0.5,
+    bubbleChance: 0.4
 };
 
 const SAVE_KEY = 'carpetGameStats_v3';
 
+// ============================================
+// СТИЛИ ТЕКСТА
+// ============================================
 const TEXT_STYLES = {
     title: (color = '#FFD700') => ({
         fontSize: '48px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
@@ -105,6 +109,9 @@ const TEXT_STYLES = {
     })
 };
 
+// ============================================
+// СОСТОЯНИЕ
+// ============================================
 const GameState = {
     money: CONFIG.startMoney,
     food: CONFIG.startFood,
@@ -114,6 +121,9 @@ const GameState = {
 };
 let ysdk = null;
 
+// ============================================
+// ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+// ============================================
 function getCurrentRadius() {
     return Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
 }
@@ -149,6 +159,9 @@ function canBuyNewCarpet() {
         && GameState.carpetIndex < CONFIG.totalCarpets;
 }
 
+// ============================================
+// YANDEX SDK
+// ============================================
 async function initYandexSDK() {
     try {
         if (typeof YaGames === 'undefined') throw new Error('no SDK');
@@ -203,6 +216,9 @@ async function saveGame() {
     } catch (e) {}
 }
 
+// ============================================
+// СЦЕНА ЗАГРУЗКИ
+// ============================================
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
@@ -222,6 +238,9 @@ class PreloadScene extends Phaser.Scene {
     }
 }
 
+// ============================================
+// ОСНОВНАЯ СЦЕНА
+// ============================================
 class MainScene extends Phaser.Scene {
     constructor() { super('MainScene'); }
 
@@ -285,6 +304,7 @@ class MainScene extends Phaser.Scene {
         this.bugs = [];
         this.swatterCooldownTime = 0;
         
+        // ✅ Эмодзи-инструмент вместо круга
         this.brush = this.add.text(0, 0, '🧼', {
             fontSize: '70px', fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(3);
@@ -349,6 +369,10 @@ class MainScene extends Phaser.Scene {
         this.spawnBugsIfNeeded();
     }
 
+    // ============================================
+    // ✅ ЧАСТИЦЫ
+    // ============================================
+    // Пузырьки мыла 🫧
     spawnBubbles(x, y) {
         if (Math.random() > CONFIG.bubbleChance) return;
         
@@ -374,10 +398,11 @@ class MainScene extends Phaser.Scene {
         });
     }
     
+    // Брызги воды 💧
     spawnSplash(x, y) {
         if (Math.random() > CONFIG.splashChance) return;
         
-        const count = 3 + Math.floor(Math.random() * 3);
+        const count = 1 + Math.floor(Math.random() * 2);
         
         for (let i = 0; i < count; i++) {
             const symbols = ['💧', '💦', '·', '°'];
@@ -798,6 +823,7 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    // ✅ selectTool с эмодзи инструмента
     selectTool(tool) {
         this.currentTool = tool;
         
@@ -894,7 +920,6 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ Мыло — только контуры границ, ковёр не светлеет
     drawSoap() {
         this.soapGfx.clear();
         const cs = this.gridCellSize;
@@ -902,25 +927,14 @@ class MainScene extends Phaser.Scene {
         const cx = this.gridOffsetX;
         const cy = this.gridOffsetY;
         
-        this.soapGfx.lineStyle(4, 0xFFFFFF, 0.85);
-        
         for (let row = 0; row < this.gridRows; row++) {
             for (let col = 0; col < cols; col++) {
                 const soap = this.soapGrid[row * cols + col];
-                if (soap < 0.3) continue;
-                
+                if (soap < 0.05) continue;
                 const px = cx + col * cs;
                 const py = cy + row * cs;
-                
-                const top = (row === 0) || (this.soapGrid[(row - 1) * cols + col] < 0.3);
-                const bottom = (row === this.gridRows - 1) || (this.soapGrid[(row + 1) * cols + col] < 0.3);
-                const left = (col === 0) || (this.soapGrid[row * cols + (col - 1)] < 0.3);
-                const right = (col === cols - 1) || (this.soapGrid[row * cols + (col + 1)] < 0.3);
-                
-                if (top)    this.soapGfx.lineBetween(px, py, px + cs, py);
-                if (bottom) this.soapGfx.lineBetween(px, py + cs, px + cs, py + cs);
-                if (left)   this.soapGfx.lineBetween(px, py, px, py + cs);
-                if (right)  this.soapGfx.lineBetween(px + cs, py, px + cs, py + cs);
+                this.soapGfx.fillStyle(0x88CCFF, soap * 0.6);
+                this.soapGfx.fillRect(px, py, cs, cs);
             }
         }
         this.needRedrawSoap = false;
@@ -984,6 +998,7 @@ class MainScene extends Phaser.Scene {
             handlePointer(pointer);
         });
         
+        // ✅ При движении показываем эмодзи-инструмент даже без нажатия
         this.input.on('pointermove', (pointer) => {
             if (this.inputLocked) return;
             if (this.shopOpen) return;
@@ -1048,6 +1063,7 @@ class MainScene extends Phaser.Scene {
         });
     }
 
+    // ✅ applyTool со брызгами
     applyTool(localX, localY) {
         if (this.shopOpen) return;
         
@@ -1077,6 +1093,7 @@ class MainScene extends Phaser.Scene {
         const radiusSq = radius * radius;
         let dirtChanged = false, soapChanged = false, erasedSomething = false;
         
+        // Экранные координаты для частиц
         const screenX = localX + (this.carpetX - this.carpetW/2);
         const screenY = localY + (this.carpetY - this.carpetH/2);
         
@@ -1110,6 +1127,7 @@ class MainScene extends Phaser.Scene {
             }
         }
         
+        // ✅ ЧАСТИЦЫ
         if (this.currentTool === 'soap' && soapChanged) {
             this.spawnBubbles(screenX, screenY);
         }
@@ -1400,6 +1418,9 @@ class MainScene extends Phaser.Scene {
     }
 }
 
+// ============================================
+// ЗАПУСК
+// ============================================
 const phaserConfig = {
     type: Phaser.CANVAS,
     width: 720, height: 1280,
