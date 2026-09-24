@@ -61,12 +61,15 @@ const CONFIG = {
     
     bugCountBase: 4,
     bugCountIncrease: 1,
-    // ✅ Жуки ещё быстрее (было 75)
-    bugSpeed: 180,
+    bugSpeed: 135,
     bugFadeDuration: 400,
     
     swatterRadius: 50,
-    swatterCooldown: 200
+    swatterCooldown: 200,
+    
+    // ✅ Частицы
+    splashChance: 0.5,
+    bubbleChance: 0.4
 };
 
 const SAVE_KEY = 'carpetGameStats_v3';
@@ -258,7 +261,6 @@ class MainScene extends Phaser.Scene {
         this.carpetContainer = this.add.container(0, 0).setDepth(0);
         this.drawCarpet();
         
-        // ✅ Сетка на всю ширину/высоту (края вернулись)
         this.gridCellSize = 20;
         this.gridCols = Math.ceil(this.carpetW / this.gridCellSize);
         this.gridRows = Math.ceil(this.carpetH / this.gridCellSize);
@@ -302,7 +304,10 @@ class MainScene extends Phaser.Scene {
         this.bugs = [];
         this.swatterCooldownTime = 0;
         
-        this.brush = this.add.circle(0, 0, CONFIG.brushRadius, 0xFFFFFF, 0.15).setDepth(3);
+        // ✅ Эмодзи-инструмент вместо круга
+        this.brush = this.add.text(0, 0, '🧼', {
+            fontSize: '70px', fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(3);
         this.brush.setVisible(false);
         
         this.swatterGfx = this.add.graphics().setDepth(6);
@@ -362,6 +367,66 @@ class MainScene extends Phaser.Scene {
         this.setupCleaning();
         
         this.spawnBugsIfNeeded();
+    }
+
+    // ============================================
+    // ✅ ЧАСТИЦЫ
+    // ============================================
+    // Пузырьки мыла 🫧
+    spawnBubbles(x, y) {
+        if (Math.random() > CONFIG.bubbleChance) return;
+        
+        const symbols = ['🫧', '💭', '⭕'];
+        const symbol = symbols[Math.floor(Math.random() * symbols.length)];
+        
+        const bubble = this.add.text(x, y, symbol, {
+            fontSize: (25 + Math.random() * 20) + 'px', fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(8).setAlpha(0.85);
+        
+        const angle = Math.random() * Math.PI * 2;
+        const distance = 30 + Math.random() * 50;
+        
+        this.tweens.add({
+            targets: bubble,
+            x: x + Math.cos(angle) * distance,
+            y: y + Math.sin(angle) * distance - 50,
+            alpha: { from: 0.85, to: 0 },
+            scale: { from: 1, to: 1.6 },
+            duration: 700 + Math.random() * 300,
+            ease: 'Cubic.easeOut',
+            onComplete: () => bubble.destroy()
+        });
+    }
+    
+    // Брызги воды 💧
+    spawnSplash(x, y) {
+        if (Math.random() > CONFIG.splashChance) return;
+        
+        const count = 1 + Math.floor(Math.random() * 2);
+        
+        for (let i = 0; i < count; i++) {
+            const symbols = ['💧', '💦', '·', '°'];
+            const symbol = symbols[Math.floor(Math.random() * symbols.length)];
+            
+            const splash = this.add.text(x, y, symbol, {
+                fontSize: (20 + Math.random() * 25) + 'px', fontFamily: 'Arial'
+            }).setOrigin(0.5).setDepth(8).setAlpha(0.9);
+            
+            const angle = Math.random() * Math.PI * 2;
+            const distance = 40 + Math.random() * 70;
+            
+            this.tweens.add({
+                targets: splash,
+                x: x + Math.cos(angle) * distance,
+                y: y + Math.sin(angle) * distance,
+                alpha: { from: 0.9, to: 0 },
+                scale: { from: 1, to: 0.3 },
+                angle: { from: 0, to: (Math.random() - 0.5) * 360 },
+                duration: 500 + Math.random() * 300,
+                ease: 'Cubic.easeOut',
+                onComplete: () => splash.destroy()
+            });
+        }
     }
 
     spawnBugsIfNeeded() {
@@ -758,17 +823,20 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    // ✅ selectTool с эмодзи инструмента
     selectTool(tool) {
         this.currentTool = tool;
         
         if (tool === 'soap') {
             this.soapBtnBg.setFillStyle(0x4A90D9); this.soapBtnBg.setStrokeStyle(5, 0xFFFFFF); this.soapBtnText.setColor('#FFFFFF');
+            this.brush.setText('🧼');
         } else {
             this.soapBtnBg.setFillStyle(0x555555); this.soapBtnBg.setStrokeStyle(5, 0x888888); this.soapBtnText.setColor('#AAAAAA');
         }
         
         if (tool === 'wash') {
             this.washBtnBg.setFillStyle(0x4A90D9); this.washBtnBg.setStrokeStyle(5, 0xFFFFFF); this.washBtnText.setColor('#FFFFFF');
+            this.brush.setText('🧹');
         } else {
             this.washBtnBg.setFillStyle(0x555555); this.washBtnBg.setStrokeStyle(5, 0x888888); this.washBtnText.setColor('#AAAAAA');
         }
@@ -852,7 +920,6 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ Мыло ещё плотнее (0.6)
     drawSoap() {
         this.soapGfx.clear();
         const cs = this.gridCellSize;
@@ -931,8 +998,17 @@ class MainScene extends Phaser.Scene {
             handlePointer(pointer);
         });
         
+        // ✅ При движении показываем эмодзи-инструмент даже без нажатия
         this.input.on('pointermove', (pointer) => {
             if (this.inputLocked) return;
+            if (this.shopOpen) return;
+            
+            if (this.currentTool !== 'swatter') {
+                this.brush.setPosition(pointer.x, pointer.y);
+                const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+                this.brush.setVisible(inBounds);
+            }
+            
             if (!pointer.isDown) {
                 this.isPointerDown = false;
                 return;
@@ -949,7 +1025,6 @@ class MainScene extends Phaser.Scene {
         
         this.input.on('pointerup', () => {
             this.isPointerDown = false;
-            this.brush.setVisible(false);
             this.swatterGfx.setVisible(false);
             this.lastLocalX = -9999;
             this.lastLocalY = -9999;
@@ -979,17 +1054,16 @@ class MainScene extends Phaser.Scene {
         
         document.addEventListener('touchend', () => {
             this.isPointerDown = false;
-            this.brush.setVisible(false);
             this.swatterGfx.setVisible(false);
         }, { passive: true });
         
         document.addEventListener('mouseup', () => {
             this.isPointerDown = false;
-            this.brush.setVisible(false);
             this.swatterGfx.setVisible(false);
         });
     }
 
+    // ✅ applyTool со брызгами
     applyTool(localX, localY) {
         if (this.shopOpen) return;
         
@@ -1018,6 +1092,10 @@ class MainScene extends Phaser.Scene {
         
         const radiusSq = radius * radius;
         let dirtChanged = false, soapChanged = false, erasedSomething = false;
+        
+        // Экранные координаты для частиц
+        const screenX = localX + (this.carpetX - this.carpetW/2);
+        const screenY = localY + (this.carpetY - this.carpetH/2);
         
         for (let row = minRow; row <= maxRow; row++) {
             for (let col = minCol; col <= maxCol; col++) {
@@ -1049,9 +1127,12 @@ class MainScene extends Phaser.Scene {
             }
         }
         
-        if (erasedSomething) {
-            const screenX = localX + (this.carpetX - this.carpetW/2);
-            const screenY = localY + (this.carpetY - this.carpetH/2);
+        // ✅ ЧАСТИЦЫ
+        if (this.currentTool === 'soap' && soapChanged) {
+            this.spawnBubbles(screenX, screenY);
+        }
+        if (this.currentTool === 'wash' && erasedSomething) {
+            this.spawnSplash(screenX, screenY);
             this.spawnStars(screenX, screenY);
         }
         
