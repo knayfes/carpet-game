@@ -34,7 +34,7 @@ const CONFIG = {
     
     soapPower: 1.0,
     soapThreshold: 0.01,
-    soapWashSpeed: 0.35,
+    soapWashSpeed: 2.0,   // ✅ мыло стирается за 1 проход
     eraseStrength: 0.9,
     
     progressThreshold: 1.0,
@@ -68,7 +68,6 @@ const CONFIG = {
     swatterRadius: 50,
     swatterCooldown: 200,
     
-    // ✅ Эффекты как было
     splashChance: 0.5,
     bubbleChance: 0.4
 };
@@ -257,11 +256,9 @@ class MainScene extends Phaser.Scene {
         
         this.dirtGfx = this.add.graphics().setDepth(1);
         this.soapGfx = this.add.graphics().setDepth(2);
-        this.foamGfx = this.add.graphics().setDepth(2.5);
         
         this.needRedrawDirt = true;
         this.needRedrawSoap = true;
-        this.foamAnimTimer = 0;
         
         this.carpetBounds = new Phaser.Geom.Rectangle(
             this.carpetX - this.carpetW/2, this.carpetY - this.carpetH/2,
@@ -927,16 +924,14 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ Пиксельное мыло + розовый цвет + пена
+    // ✅ Мыло ярко-белое, без пузырьков
     drawSoap() {
         this.soapGfx.clear();
-        this.foamGfx.clear();
         
         const cs = this.gridCellSize;
         const cols = this.gridCols;
         const cx = this.gridOffsetX;
         const cy = this.gridOffsetY;
-        const now = this.time.now;
         
         for (let row = 0; row < this.gridRows; row++) {
             for (let col = 0; col < cols; col++) {
@@ -946,36 +941,9 @@ class MainScene extends Phaser.Scene {
                 const px = cx + col * cs;
                 const py = cy + row * cs;
                 
-                // ✅ Розовая плёнка (пиксельная)
-                this.soapGfx.fillStyle(0xFF66AA, soap * 0.55);
+                // ✅ Ярко-белое мыло
+                this.soapGfx.fillStyle(0xFFFFFF, soap * 0.85);
                 this.soapGfx.fillRect(px, py, cs, cs);
-                
-                // ✅ ПЕНА — пузырьки на плотно намыленных
-                if (soap > 0.3) {
-                    const seed = row * 31 + col * 17;
-                    const bubbleCount = 2 + (seed % 3);
-                    
-                    for (let b = 0; b < bubbleCount; b++) {
-                        const baseX = (seed * (b + 1) * 7) % cs;
-                        const baseY = (seed * (b + 1) * 11) % cs;
-                        
-                        const wobbleX = Math.sin(now / 600 + row + col + b) * 1.5;
-                        const wobbleY = Math.cos(now / 500 + row * 1.3 + col * 0.7 + b) * 1.5;
-                        
-                        const bx = px + baseX + wobbleX;
-                        const by = py + baseY + wobbleY;
-                        const r = 2 + ((seed + b * 5) % 5);
-                        
-                        this.foamGfx.fillStyle(0xFFFFFF, soap * 0.85);
-                        this.foamGfx.fillCircle(bx, by, r);
-                        
-                        this.foamGfx.lineStyle(1, 0xCC99FF, soap * 0.7);
-                        this.foamGfx.strokeCircle(bx, by, r);
-                        
-                        this.foamGfx.fillStyle(0xFFFFFF, 1);
-                        this.foamGfx.fillCircle(bx - r * 0.3, by - r * 0.3, r * 0.3);
-                    }
-                }
             }
         }
         this.needRedrawSoap = false;
@@ -983,13 +951,6 @@ class MainScene extends Phaser.Scene {
 
     update(time, delta) {
         if (this.needRedrawDirt) this.drawDirt();
-        
-        this.foamAnimTimer += delta;
-        if (this.foamAnimTimer > 200) {
-            this.foamAnimTimer = 0;
-            this.needRedrawSoap = true;
-        }
-        
         if (this.needRedrawSoap) this.drawSoap();
         this.updateBugs(delta);
     }
@@ -1166,6 +1127,7 @@ class MainScene extends Phaser.Scene {
                         dirtChanged = true;
                         erasedSomething = true;
                     }
+                    // ✅ Мыло стирается за 1 проход (2.0 * falloff минимум 1.0)
                     this.soapGrid[index] = Math.max(0, this.soapGrid[index] - CONFIG.soapWashSpeed * falloff);
                     soapChanged = true;
                 }
