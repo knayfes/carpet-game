@@ -2166,6 +2166,12 @@ class Tutorial {
         this.scene.state.tutorialDone = true;
         try { await this.scene.saveSystem.save(); } catch {}
         this.scene.showMessage('🧼 Удачи!');
+
+        // После обучалки показать дейли-бонус, если он был отложен
+        if (this.scene.pendingDailyBonus) {
+            this.scene.pendingDailyBonus = false;
+            this.scene.time.delayedCall(900, () => this.scene.dailyUI.open());
+        }
     }
 }
 
@@ -2301,14 +2307,13 @@ class MainScene extends Phaser.Scene {
             this.time.delayedCall(800, () => this.showMessage('📅 Новые задания!'));
         }
 
-        const dailyStatus = this.state.getDailyStatus();
-        if (dailyStatus.canClaim) {
-            this.time.delayedCall(600, () => this.dailyUI.open());
-        }
-
+                // Порядок: сначала обучалка (если не пройдена), потом дейли-бонус
         if (!this.state.tutorialDone) {
             this.tutorial = new Tutorial(this);
-            this.time.delayedCall(dailyStatus.canClaim ? 1500 : 400, () => this.tutorial.start());
+            this.pendingDailyBonus = this.state.getDailyStatus().canClaim;
+            this.time.delayedCall(400, () => this.tutorial.start());
+        } else if (this.state.getDailyStatus().canClaim) {
+            this.time.delayedCall(600, () => this.dailyUI.open());
         }
 
         this.leaderboard.submitScores();
@@ -2329,97 +2334,104 @@ class MainScene extends Phaser.Scene {
     /* ============================================================
        HUD — увеличенные значки с фоном
        ============================================================ */
-    buildHUD(W, H) {
-        // Левая панель со статами
-        this.add.rectangle(0, 0, 330, 200, 0x000000, 0.65).setOrigin(0, 0).setDepth(9);
-        this.moneyText = this.add.text(20, 22, '💰 ' + this.state.money, TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
-        this.foodText = this.add.text(20, 66, '🍞 ' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
-        this.toolText = this.add.text(20, 100, '🧹 Радиус: ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 16)).setDepth(10);
-        this.carpetText = this.add.text(20, 126, '🧽 Почищено: ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 16)).setDepth(10);
-        this.soapLvlText = this.add.text(20, 152, `🧼${this.state.soapLevel} 💤${this.state.washLevel} 🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 14)).setDepth(10);
-        if (this.state.prestigeLevel > 0) {
-            this.prestigeText = this.add.text(280, 22, '👑' + this.state.prestigeLevel, TEXT_STYLES.stat('#FFD700', 22)).setDepth(10);
-        }
+        buildHUD(W, H) {
+        // ========== ЛЕВАЯ ПАНЕЛЬ — СТАТЫ ==========
+        this.add.rectangle(0, 0, 340, 195, 0x000000, 0.78).setOrigin(0, 0).setDepth(9);
+        this.add.rectangle(0, 195, 340, 3, 0x4A90D9, 0.7).setOrigin(0, 0).setDepth(9);
 
-        this.dayNightText = this.add.text(20, 176, '', {
-            fontSize: '13px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: 'Arial',
+        this.moneyText = this.add.text(20, 16, '💰 ' + this.state.money, TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
+        this.foodText = this.add.text(20, 58, '🍞 ' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
+        this.toolText = this.add.text(20, 92, '🧹 ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 18)).setDepth(10);
+        this.carpetText = this.add.text(145, 92, '🧽 ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
+        this.soapLvlText = this.add.text(20, 120, `🧼${this.state.soapLevel}  💤${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
+
+        // День/ночь (слева)
+        this.dayNightText = this.add.text(20, 150, '', {
+            fontSize: '14px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial',
             stroke: '#000000', strokeThickness: 3
         }).setDepth(10);
         this.updateDayNightText();
 
-        // Правая панель с кнопками (увеличенные)
-        this.add.rectangle(535, 90, 370, 190, 0x000000, 0.7).setDepth(9);
-        this.add.rectangle(535, 90, 366, 186, 0x000000, 0).setDepth(9)
-            .setStrokeStyle(2, 0x4A90D9, 0.4);
+        // Таймер (справа в панели)
+        this.timerText = this.add.text(325, 150, '⏱ 0:00', {
+            fontSize: '14px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: 'Arial',
+            stroke: '#000000', strokeThickness: 3
+        }).setOrigin(1, 0).setDepth(10);
 
-        const btnSize = '40px';
-        const labelSize = '13px';
-        const radius = 32; // радиус круга под иконкой
+        // Престиж (в углу)
+        if (this.state.prestigeLevel > 0) {
+            this.prestigeText = this.add.text(325, 16, '👑' + this.state.prestigeLevel,
+                TEXT_STYLES.stat('#FFD700', 20)).setOrigin(1, 0).setDepth(10);
+        }
+
+        // ========== ПРАВАЯ ПАНЕЛЬ — 6 КНОПОК 2×3 ==========
+        this.add.rectangle(380, 0, 340, 195, 0x000000, 0.78).setOrigin(0, 0).setDepth(9);
+        this.add.rectangle(380, 195, 340, 3, 0x4A90D9, 0.7).setOrigin(0, 0).setDepth(9);
 
         const makeBtn = (x, y, icon, label, onClick, color = '#FFFFFF') => {
-            // Круг под иконкой
-            const circle = this.add.circle(x, y, radius, 0x1e1e28, 0.9).setDepth(10);
-            circle.setStrokeStyle(2, 0x666666, 0.7);
+            const r = 26;
+            // Круг-подложка
+            this.add.circle(x, y, r, 0x1e1e28, 0.95).setDepth(10)
+                .setStrokeStyle(2, 0x4A90D9, 0.7);
             // Иконка
-            const ic = this.add.text(x, y - 2, icon, { fontSize: btnSize })
-                .setOrigin(0.5).setDepth(11).setInteractive({ useHandCursor: true });
-            ic.on('pointerdown', onClick);
+            this.add.text(x, y, icon, { fontSize: '32px' })
+                .setOrigin(0.5).setDepth(11);
             // Подпись
-            this.add.text(x, y + radius + 12, label, {
-                fontSize: labelSize, fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+            this.add.text(x, y + r + 12, label, {
+                fontSize: '11px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
                 stroke: '#000000', strokeThickness: 4
             }).setOrigin(0.5).setDepth(11);
-            return { circle, icon: ic };
+            // Хитбокс — вся ячейка
+            const hit = this.add.rectangle(x, y + 5, 100, 100, 0x000000, 0.001).setDepth(12);
+            hit.setInteractive({ useHandCursor: true });
+            hit.on('pointerdown', onClick);
         };
 
-        // Верхний ряд (y=42): Музей, Достижения, Задания
-        const yTop = 42;
-        const yBot = 132;
+        // Координаты столбцов и строк
+        const c1 = 445, c2 = 550, c3 = 655;
+        const r1 = 45, r2 = 130;
 
-        makeBtn(400, yTop, '🏛️', 'Музей', () => this.museum.open(), '#FFD700');
-        makeBtn(535, yTop, '🏆', 'Достиж.', () => this.achievementsUI.open(), '#FFD700');
-        makeBtn(670, yTop, '📅', 'Задания', () => this.questsUI.open(), '#FFD700');
+        makeBtn(c1, r1, '🏛️', 'Музей',     () => this.museum.open(), '#FFD700');
+        makeBtn(c2, r1, '🏆', 'Достиж.',   () => this.achievementsUI.open(), '#FFD700');
+        makeBtn(c3, r1, '📅', 'Задания',   () => this.questsUI.open(), '#FFD700');
 
-        // Нижний ряд (y=132): Рекорды, Магазин, Настройки
-        makeBtn(400, yBot, '📊', 'Рекорды', () => this.leaderboardUI.open(), '#00E5FF');
-        makeBtn(535, yBot, '🛒', 'Магазин', () => this.shop.open(), '#00FF88');
-        makeBtn(670, yBot, '⚙️', 'Настройки', () => this.settingsUI.open(), '#CCCCCC');
+        makeBtn(c1, r2, '📊', 'Рекорды',   () => this.leaderboardUI.open(), '#00E5FF');
+        makeBtn(c2, r2, '🛒', 'Магазин',   () => this.shop.open(), '#00FF88');
+        makeBtn(c3, r2, '⚙️', 'Настройки', () => this.settingsUI.open(), '#CCCCCC');
 
-        // Бейдж заданий
-        this.questBadge = this.add.text(690, 18, '●', { fontSize: '22px', fill: '#FF4444' })
-            .setOrigin(0.5).setDepth(12).setVisible(false);
+        // Красная точка на "Задания" когда есть награды
+        this.questBadge = this.add.text(c3 + 22, r1 - 22, '●', { fontSize: '20px', fill: '#FF4444' })
+            .setOrigin(0.5).setDepth(13).setVisible(false);
         this.tweens.add({
             targets: this.questBadge, alpha: { from: 1, to: 0.3 },
             duration: 700, yoyo: true, repeat: -1
         });
         this.updateQuestBadge();
 
-        // Бейдж дейли (поверх панели)
-        this.dailyBadge = this.add.text(360, 20, '', { fontSize: '20px' })
-            .setOrigin(0.5).setDepth(12);
+        // ========== ДЕЙЛИ-БОНУС (между панелями) ==========
         const ds = this.state.getDailyStatus();
         if (ds.canClaim) {
-            this.dailyBadge.setText('🎁').setFontSize(28);
+            const dailyBg = this.add.circle(360, 100, 24, 0xFFD700, 1).setDepth(14)
+                .setStrokeStyle(3, 0xFFFFFF, 0.9);
+            const dailyIcon = this.add.text(360, 100, '🎁', { fontSize: '28px' })
+                .setOrigin(0.5).setDepth(15);
             this.tweens.add({
-                targets: this.dailyBadge, scale: { from: 1, to: 1.3 },
-                duration: 500, yoyo: true, repeat: -1
+                targets: [dailyBg, dailyIcon],
+                scale: { from: 1, to: 1.15 },
+                duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
             });
-            const hit = this.add.rectangle(360, 20, 60, 60, 0x000000, 0.001).setDepth(13)
+            const hit = this.add.circle(360, 100, 30, 0x000000, 0.001).setDepth(16)
                 .setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.dailyUI.open());
         }
 
-        // Таймер
-        this.timerText = this.add.text(700, 195, '⏱ 0:00', TEXT_STYLES.stat('#CCCCCC', 18))
-            .setOrigin(1, 0).setDepth(10);
+        // ========== ПРОГРЕСС-БАР ==========
+        this.add.rectangle(W / 2, 230, 400, 30, 0x000000, 0.7).setDepth(10);
+        this.add.rectangle(W / 2, 230, 400, 30, 0x333333).setDepth(10);
+        this.progressBar = this.add.rectangle(W / 2 - 200, 230, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
+        this.progressText = this.add.text(W / 2, 230, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
 
-        // Прогресс-бар
-        this.add.rectangle(W / 2, 240, 400, 30, 0x000000, 0.6).setDepth(10);
-        this.add.rectangle(W / 2, 240, 400, 30, 0x333333).setDepth(10);
-        this.progressBar = this.add.rectangle(W / 2 - 200, 240, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
-        this.progressText = this.add.text(W / 2, 240, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
-
-        // Кнопка сдачи ковра
+        // ========== КНОПКА ПОЛУЧИТЬ ДЕНЬГИ ==========
         this.add.text(W / 2, 1050, 'ПОЛУЧИТЬ ДЕНЬГИ', {
             ...TEXT_STYLES.button('#00FF00', 30),
             backgroundColor: '#000000', padding: { x: 30, y: 15 }
