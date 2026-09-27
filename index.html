@@ -742,7 +742,6 @@ class ShopUI {
         const cx = 360, cy = 620;
         const pw = 260, ph = 160;
 
-        // рамка
         push(s.add.rectangle(cx, cy, pw + 20, ph + 20, 0x111111).setDepth(21).setStrokeStyle(3, 0x00FF00, 0.6));
         push(s.add.text(cx, cy - ph/2 - 20, `СЛЕДУЮЩИЙ КОВЁР №${nextIdx}`, {
             ...TEXT_STYLES.shop('#00FF00', 16)
@@ -752,7 +751,6 @@ class ShopUI {
         if (s.textures.exists(key)) {
             push(s.add.image(cx, cy, key).setDisplaySize(pw, ph).setDepth(22));
         } else {
-            // процедурный превью-паттерн
             const palettes = [
                 { main: 0x8B4513, accent: 0xFFD700, border: 0x654321 },
                 { main: 0x8B0000, accent: 0xFFE4B5, border: 0x5C0000 },
@@ -772,7 +770,6 @@ class ShopUI {
             push(g);
         }
 
-        // подсказки
         const hints = [];
         if (nextIdx === 2) hints.push('🐛 Появятся жуки');
         else hints.push('🐛 Жуков станет больше');
@@ -810,16 +807,16 @@ class ShopUI {
 }
 
 /* ============================================================
-   9. PRELOAD SCENE
+   9. PRELOAD SCENE  ← путь к картинкам ИСПРАВЛЕН
    ============================================================ */
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
 
     preload() {
         for (let i = 1; i <= BALANCE.totalCarpets; i++) {
-            this.load.image('carpet' + i, `carpets/carpet${i}.png`);
+            this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
         }
-        this.load.on('loaderror', () => {}); // игнорируем отсутствующие файлы
+        this.load.on('loaderror', (file) => console.warn('Не загрузилось:', file.key, file.src));
 
         const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w/2, h/2 - 50, 'Загрузка...', TEXT_STYLES.title()).setOrigin(0.5);
@@ -1161,7 +1158,6 @@ class MainScene extends Phaser.Scene {
         this.updateProgressBar(0);
         this.bugs.clear();
 
-        // если дошли до 2-го ковра — включаем мухобойку и сдвигаем кнопки
         if (this.state.carpetIndex >= 2) {
             this.swatterBtnBg.setVisible(true);
             this.swatterBtnText.setVisible(true);
@@ -1337,7 +1333,6 @@ function simulateRun(verbose = true) {
     const MAX_CARPETS = 100;
 
     for (let i = 0; i < MAX_CARPETS; i++) {
-        // при отсутствии еды — покупаем
         if (s.food <= 0) {
             if (s.money >= BALANCE.foodPrice) { s.money -= BALANCE.foodPrice; s.food += 1; }
             else {
@@ -1348,7 +1343,6 @@ function simulateRun(verbose = true) {
         const reward = s.addReward();
         minute += MIN_PER_CARPET;
 
-        // авто-стратегия: прокачивать щётку, если не хватает радиуса; покупать ковёр, если всё ок
         let guard = 0;
         while (guard++ < 20) {
             const needR = s.getRequiredRadius();
@@ -1383,7 +1377,7 @@ function simulateRun(verbose = true) {
     if (verbose) {
         console.log('%c=== СИМУЛЯЦИЯ ПРОХОЖДЕНИЯ ===', 'color:#0f0;font-weight:bold');
         console.table(log);
-        const finish = log.find(l => l.event === 'FINISH' || l.event === 'NEW_CARPET' && l.carpet === BALANCE.totalCarpets);
+        const finish = log.find(l => l.event === 'FINISH' || (l.event === 'NEW_CARPET' && l.carpet === BALANCE.totalCarpets));
         if (finish) console.log(`%cДошёл до 5-го ковра за ~${finish.minute} минут`, 'color:#ff0;font-weight:bold');
     }
     return log;
@@ -1409,7 +1403,6 @@ function printBalance() {
     console.table(rows);
 }
 
-// экспорт в window для ручного вызова
 window.__simulate = simulateRun;
 window.__balance = printBalance;
 
@@ -1427,7 +1420,6 @@ const phaserConfig = {
 
 window.addEventListener('load', () => {
     new Phaser.Game(phaserConfig);
-    // Автопрогон симуляции в консоль при загрузке (можно убрать)
     setTimeout(() => {
         console.log('💡 Вызови __simulate() для прогона 100 ковров или __balance() для таблицы дохода');
     }, 1000);
