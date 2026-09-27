@@ -64,7 +64,7 @@ const BALANCE = {
     vibrationMs: 30
 };
 
-const SAVE_KEY = 'carpetGameStats_v9';
+const SAVE_KEY = 'carpetGameStats_v10';
 
 const ACHIEVEMENTS = [
     { id: 'first_clean',  icon: '🥇', name: 'Первая чистка',   desc: 'Почисти 1 ковёр',       type: 'carpetsCleaned', target: 1,    reward: 100 },
@@ -219,7 +219,6 @@ class GameState {
         };
         this.lastAdTime = 0;
         this.tutorialDone = false;
-
         this.pets = { cat: false, dog: false, hamster: false, parrot: false };
         this.settings = { vibration: true };
         this.dailyBonus = { lastClaimDate: '', streakDay: 0 };
@@ -636,9 +635,7 @@ class LeaderboardSystem {
         this.ysdk = saveSystem.ysdk;
         this.lb = null;
     }
-    isAvailable() {
-        return !!(this.ysdk?.getLeaderboards) && !this.saveSystem.useLocal;
-    }
+    isAvailable() { return !!(this.ysdk?.getLeaderboards) && !this.saveSystem.useLocal; }
     async _init() {
         if (!this.isAvailable()) return false;
         if (this.lb) return true;
@@ -740,8 +737,7 @@ class Effects {
         });
     }
     petAction(x, y, icon) {
-        const t = this.scene.add.text(x, y, icon, { fontSize: '42px' })
-            .setOrigin(0.5).setDepth(21);
+        const t = this.scene.add.text(x, y, icon, { fontSize: '42px' }).setOrigin(0.5).setDepth(21);
         this.scene.tweens.add({
             targets: t, y: y - 60, alpha: { from: 1, to: 0 }, scale: { from: 0.8, to: 1.3 },
             duration: 800, ease: 'Back.easeOut', onComplete: () => t.destroy()
@@ -1138,7 +1134,7 @@ class PetSystem {
         order.forEach((id, i) => {
             if (!this.state.pets[id]) return;
             const pet = PETS.find(p => p.id === id);
-            const icon = this.scene.add.text(660, 220 + i * 55, pet.icon, { fontSize: '34px' })
+            const icon = this.scene.add.text(670, 240 + i * 55, pet.icon, { fontSize: '34px' })
                 .setOrigin(0.5).setDepth(10).setAlpha(0.85);
             this.icons.push({ id, icon });
         });
@@ -1151,24 +1147,15 @@ class PetSystem {
     update(delta) {
         if (this.state.pets.cat) {
             this.timers.cat += delta;
-            if (this.timers.cat >= BALANCE.petCatIntervalMs) {
-                this.timers.cat = 0;
-                this.catAction();
-            }
+            if (this.timers.cat >= BALANCE.petCatIntervalMs) { this.timers.cat = 0; this.catAction(); }
         }
         if (this.state.pets.dog) {
             this.timers.dog += delta;
-            if (this.timers.dog >= BALANCE.petDogIntervalMs) {
-                this.timers.dog = 0;
-                this.dogAction();
-            }
+            if (this.timers.dog >= BALANCE.petDogIntervalMs) { this.timers.dog = 0; this.dogAction(); }
         }
         if (this.state.pets.hamster) {
             this.timers.hamster += delta;
-            if (this.timers.hamster >= BALANCE.petHamsterIntervalMs) {
-                this.timers.hamster = 0;
-                this.hamsterAction();
-            }
+            if (this.timers.hamster >= BALANCE.petHamsterIntervalMs) { this.timers.hamster = 0; this.hamsterAction(); }
         }
     }
     catAction() {
@@ -1201,7 +1188,7 @@ class PetSystem {
     hamsterAction() {
         this.state.food += 1;
         this.state.registerPetAction();
-        this.effects.petAction(660, 300, '🐹');
+        this.effects.petAction(670, 320, '🐹');
         if (this.scene.refreshHUD) this.scene.refreshHUD();
     }
 }
@@ -1608,7 +1595,6 @@ class ShopUI {
         push(s.add.text(360, 265, 'Помогают автоматически', {
             ...TEXT_STYLES.shopInfo('#AAAAAA', 15)
         }).setOrigin(0.5).setDepth(22));
-
         PETS.forEach((pet, i) => {
             const y = 340 + i * 130;
             const owned = st.pets[pet.id];
@@ -1861,7 +1847,6 @@ class SettingsUI {
         push(s.add.rectangle(W/2, H/2, 640, 760, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0x00E5FF));
         push(s.add.text(W/2, 320, '⚙️ НАСТРОЙКИ', TEXT_STYLES.title('#00E5FF')).setOrigin(0.5).setDepth(42));
 
-        // Вибрация
         const vibY = 440;
         push(s.add.rectangle(W/2, vibY, 560, 60, 0x252525).setDepth(42).setStrokeStyle(2, 0x666666));
         push(s.add.text(120, vibY, '📳 Вибрация', {
@@ -1875,13 +1860,10 @@ class SettingsUI {
         vibBtn.on('pointerdown', async () => {
             st.settings.vibration = !st.settings.vibration;
             await this.saveSystem.save();
-            if (st.settings.vibration) {
-                try { navigator.vibrate?.(BALANCE.vibrationMs); } catch {}
-            }
+            if (st.settings.vibration) { try { navigator.vibrate?.(BALANCE.vibrationMs); } catch {} }
             this.refresh();
         });
 
-        // Экспорт
         const expY = 530;
         push(s.add.rectangle(W/2, expY, 560, 60, 0x252525).setDepth(42).setStrokeStyle(2, 0x666666));
         push(s.add.text(120, expY, '📤 Экспорт сейва', {
@@ -1908,7 +1890,6 @@ class SettingsUI {
             }
         });
 
-        // Импорт
         const impY = 600;
         push(s.add.rectangle(W/2, impY, 560, 60, 0x252525).setDepth(42).setStrokeStyle(2, 0x666666));
         push(s.add.text(120, impY, '📥 Импорт сейва', {
@@ -1930,7 +1911,6 @@ class SettingsUI {
             } catch { this.scene.showMessage('❌ Неверный формат'); }
         });
 
-        // Сброс
         const rstY = 680;
         let confirmPending = false;
         const rstBtn = push(s.add.text(W/2, rstY, '🗑️ СБРОСИТЬ ВЕСЬ ПРОГРЕСС', {
@@ -2009,8 +1989,8 @@ class LeaderboardUI {
         try { entries = await this.lb.fetchTop(this.currentBoard, 10); }
         catch { entries = []; }
         this.loading = false;
-
         if (!this.isOpen) return;
+
         loadingText.destroy();
         this.elements = this.elements.filter(e => e !== loadingText);
 
@@ -2046,7 +2026,7 @@ class LeaderboardUI {
 </script>
 <script>
 /* ============================================================
-   TUTORIAL
+   TUTORIAL — обновлена под новые механики
    ============================================================ */
 class Tutorial {
     constructor(scene) {
@@ -2055,12 +2035,46 @@ class Tutorial {
         this.elements = [];
         this.pulseTween = null;
         this.steps = [
-            { title: '🧼 Добро пожаловать!', text: 'Намыль ковёр мылом,\nпотом смывай водой.\nЗа каждый чистый ковёр — деньги!', target: null },
-            { title: '🧼 Шаг 1. Намыль', text: 'Кнопка «МЫЛО» уже активна.\nВеди пальцем по ковру.', target: { x: 120, y: 1200, w: 200, h: 80 } },
-            { title: '💧 Шаг 2. Смой', text: 'Теперь выбери «СМЫТЬ»\nи проведи по мыльным местам.', target: { x: 360, y: 1200, w: 200, h: 80 } },
-            { title: '💰 Шаг 3. Получи деньги', text: 'Когда ковёр чист —\nжми «ПОЛУЧИТЬ ДЕНЬГИ» внизу.', target: { x: 360, y: 1050, w: 320, h: 60 } },
-            { title: '🛒 Магазин', text: 'Тут: щётка, мыло, смыв,\nпитомцы, скины, новый ковёр.', target: { x: 595, y: 48, w: 60, h: 90 } },
-            { title: '🏆 Прогресс', text: '🏆 достижения · 📅 задания\n🏛️ музей · 📊 рекорды · ⚙️ настройки', target: { x: 465, y: 48, w: 60, h: 90 } }
+            {
+                title: '🧼 Добро пожаловать!',
+                text: 'Намыль ковёр мылом,\nпотом смывай водой.\nЗа каждый чистый ковёр — деньги!',
+                target: null
+            },
+            {
+                title: '🧼 Шаг 1. Намыль',
+                text: 'Кнопка «МЫЛО» уже активна.\nВеди пальцем по ковру,\nчтобы нанести мыло.',
+                target: { x: 240, y: 1200, w: 200, h: 80 }
+            },
+            {
+                title: '💧 Шаг 2. Смой',
+                text: 'Выбери «СМЫТЬ» и проведи\nпо мыльным местам.\n\nПрогресс — полоска вверху.',
+                target: { x: 480, y: 1200, w: 200, h: 80 }
+            },
+            {
+                title: '💰 Шаг 3. Получи деньги',
+                text: 'Когда ковёр чист на 100% —\nжми «ПОЛУЧИТЬ ДЕНЬГИ»\nвнизу экрана.',
+                target: { x: 360, y: 1050, w: 320, h: 60 }
+            },
+            {
+                title: '🛒 Магазин',
+                text: 'Здесь: щётка, мыло, смыв,\nдвойная награда за жуков,\nа также питомцы и скины.',
+                target: { x: 520, y: 112, w: 60, h: 60 }
+            },
+            {
+                title: '🏆 Прогресс',
+                text: 'Трекеры:\n🏆 достижения · 📅 задания\n🏛️ музей · 📊 рекорды',
+                target: { x: 520, y: 42, w: 60, h: 60 }
+            },
+            {
+                title: '🎁 Дейли и ⚙️',
+                text: '🎁 Ежедневный бонус — заходи\nкаждый день за наградой!\n\n⚙️ Настройки — вибрация,\nэкспорт/импорт сейва.',
+                target: { x: 640, y: 112, w: 60, h: 60 }
+            },
+            {
+                title: '🌗 День и ночь',
+                text: 'Игра меняется по времени суток:\n🌅 утро · ☀️ день\n🌇 вечер · 🌙 ночь — за ночь ×1.75💰',
+                target: null
+            }
         ];
     }
     start() { if (this.scene.state.tutorialDone) return; this.step = 0; this.show(); }
@@ -2071,8 +2085,8 @@ class Tutorial {
         const g = s.add.graphics().setDepth(100);
         if (step.target) {
             const t = step.target, pad = 12;
-            const left = t.x - t.w/2 - pad, right = t.x + t.w/2 + pad;
-            const top = t.y - t.h/2 - pad, bottom = t.y + t.h/2 + pad;
+            const left = t.x - t.w / 2 - pad, right = t.x + t.w / 2 + pad;
+            const top = t.y - t.h / 2 - pad, bottom = t.y + t.h / 2 + pad;
             g.fillStyle(0x000000, 0.82);
             g.fillRect(0, 0, W, top);
             g.fillRect(0, bottom, W, H - bottom);
@@ -2080,7 +2094,10 @@ class Tutorial {
             g.fillRect(right, top, W - right, bottom - top);
             g.lineStyle(5, 0xFFD700, 1);
             g.strokeRect(left, top, right - left, bottom - top);
-        } else { g.fillStyle(0x000000, 0.82); g.fillRect(0, 0, W, H); }
+        } else {
+            g.fillStyle(0x000000, 0.82);
+            g.fillRect(0, 0, W, H);
+        }
         this.elements.push(g);
         if (step.target) {
             const t = step.target;
@@ -2094,31 +2111,31 @@ class Tutorial {
                 alpha: { from: 1, to: 0.5 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
             });
             const isBottom = t.y > 640;
-            const arrowY = isBottom ? t.y - t.h/2 - 50 : t.y + t.h/2 + 50;
+            const arrowY = isBottom ? t.y - t.h / 2 - 50 : t.y + t.h / 2 + 50;
             const arrow = s.add.text(t.x, arrowY, isBottom ? '👇' : '👆', { fontSize: '60px', fontFamily: 'Arial' })
                 .setOrigin(0.5).setDepth(103);
             this.elements.push(arrow);
             s.tweens.add({ targets: arrow, y: arrowY + (isBottom ? 15 : -15), duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         }
-        const cardY = 600, cardW = 640, cardH = 300;
+        const cardY = 600, cardW = 640, cardH = 320;
         this.elements.push(s.add.rectangle(W/2 + 4, cardY + 4, cardW, cardH, 0x000000, 0.5).setDepth(103));
         const cardBg = s.add.rectangle(W/2, cardY, cardW, cardH, 0x1a1a1a, 0.98).setDepth(104);
         cardBg.setStrokeStyle(5, 0xFFD700);
         this.elements.push(cardBg);
-        this.elements.push(s.add.text(W/2, cardY - cardH/2 + 30, `Шаг ${this.step + 1} из ${this.steps.length}`, {
+        this.elements.push(s.add.text(W/2, cardY - cardH / 2 + 30, `Шаг ${this.step + 1} из ${this.steps.length}`, {
             fontSize: '14px', fill: '#AAAAAA', fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(105));
-        this.elements.push(s.add.text(W/2, cardY - cardH/2 + 68, step.title, {
+        this.elements.push(s.add.text(W/2, cardY - cardH / 2 + 68, step.title, {
             fontSize: '30px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(105));
-        this.elements.push(s.add.text(W/2, cardY - 15, step.text, {
+        this.elements.push(s.add.text(W/2, cardY - 20, step.text, {
             fontSize: '20px', fill: '#FFFFFF', fontFamily: 'Arial',
             align: 'center', lineSpacing: 10, wordWrap: { width: cardW - 60 }
         }).setOrigin(0.5).setDepth(105));
-        const btnY = cardY + cardH/2 - 50;
+        const btnY = cardY + cardH / 2 - 50;
         const isLast = this.step === this.steps.length - 1;
         const isFirst = this.step === 0;
-        const nextBtn = s.add.text(isFirst ? W/2 : W/2 + 90, btnY,
+        const nextBtn = s.add.text(isFirst ? W / 2 : W / 2 + 90, btnY,
             isLast ? '✅ Начать!' : 'Далее ▶', {
             fontSize: '20px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial',
             backgroundColor: '#FFD700', padding: { x: 30, y: 12 }
@@ -2126,7 +2143,7 @@ class Tutorial {
         nextBtn.on('pointerdown', () => this.next());
         this.elements.push(nextBtn);
         if (!isFirst) {
-            const backBtn = s.add.text(W/2 - 90, btnY, '◀ Назад', {
+            const backBtn = s.add.text(W / 2 - 90, btnY, '◀ Назад', {
                 fontSize: '18px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: 'Arial',
                 backgroundColor: '#333333', padding: { x: 20, y: 12 }
             }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
@@ -2134,7 +2151,7 @@ class Tutorial {
             this.elements.push(backBtn);
         }
         if (!isLast) {
-            const skipBtn = s.add.text(W/2, cardY + cardH/2 + 25, 'Пропустить', {
+            const skipBtn = s.add.text(W / 2, cardY + cardH / 2 + 25, 'Пропустить', {
                 fontSize: '14px', fill: '#888888', fontFamily: 'Arial'
             }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
             skipBtn.on('pointerdown', () => this.finish());
@@ -2163,9 +2180,9 @@ class PreloadScene extends Phaser.Scene {
         }
         this.load.on('loaderror', (file) => console.warn('Не загрузилось:', file.key, file.src));
         const w = this.cameras.main.width, h = this.cameras.main.height;
-        this.add.text(w/2, h/2 - 50, 'Загрузка...', TEXT_STYLES.title()).setOrigin(0.5);
-        this.add.rectangle(w/2, h/2 + 30, 400, 30, 0x333333);
-        const bar = this.add.rectangle(w/2 - 200, h/2 + 30, 0, 26, 0x00FF00).setOrigin(0, 0.5);
+        this.add.text(w / 2, h / 2 - 50, 'Загрузка...', TEXT_STYLES.title()).setOrigin(0.5);
+        this.add.rectangle(w / 2, h / 2 + 30, 400, 30, 0x333333);
+        const bar = this.add.rectangle(w / 2 - 200, h / 2 + 30, 0, 26, 0x00FF00).setOrigin(0, 0.5);
         this.load.on('progress', (v) => { bar.width = 400 * v; });
     }
     async create() {
@@ -2309,77 +2326,101 @@ class MainScene extends Phaser.Scene {
         });
     }
 
+    /* ============================================================
+       HUD — увеличенные значки с фоном
+       ============================================================ */
     buildHUD(W, H) {
-        this.add.rectangle(0, 0, 320, 195, 0x000000, 0.6).setOrigin(0, 0).setDepth(9);
+        // Левая панель со статами
+        this.add.rectangle(0, 0, 330, 200, 0x000000, 0.65).setOrigin(0, 0).setDepth(9);
         this.moneyText = this.add.text(20, 22, '💰 ' + this.state.money, TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
         this.foodText = this.add.text(20, 66, '🍞 ' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
         this.toolText = this.add.text(20, 100, '🧹 Радиус: ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 16)).setDepth(10);
         this.carpetText = this.add.text(20, 126, '🧽 Почищено: ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 16)).setDepth(10);
         this.soapLvlText = this.add.text(20, 152, `🧼${this.state.soapLevel} 💤${this.state.washLevel} 🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 14)).setDepth(10);
         if (this.state.prestigeLevel > 0) {
-            this.prestigeText = this.add.text(270, 22, '👑' + this.state.prestigeLevel, TEXT_STYLES.stat('#FFD700', 24)).setDepth(10);
+            this.prestigeText = this.add.text(280, 22, '👑' + this.state.prestigeLevel, TEXT_STYLES.stat('#FFD700', 22)).setDepth(10);
         }
 
         this.dayNightText = this.add.text(20, 176, '', {
-            fontSize: '12px', fill: '#CCCCCC', fontFamily: 'Arial',
+            fontSize: '13px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: 'Arial',
             stroke: '#000000', strokeThickness: 3
         }).setDepth(10);
         this.updateDayNightText();
 
-        this.add.rectangle(500, 52, 300, 115, 0x000000, 0.65).setDepth(9);
+        // Правая панель с кнопками (увеличенные)
+        this.add.rectangle(535, 90, 370, 190, 0x000000, 0.7).setDepth(9);
+        this.add.rectangle(535, 90, 366, 186, 0x000000, 0).setDepth(9)
+            .setStrokeStyle(2, 0x4A90D9, 0.4);
 
-        const btnY1 = 30;
-        const btnY2 = 75;
-        const btnSize = '32px';
-        const labelY1 = 55;
-        const labelY2 = 100;
+        const btnSize = '40px';
+        const labelSize = '13px';
+        const radius = 32; // радиус круга под иконкой
 
-        const makeBtn = (x, y, labelY, icon, label, onClick, color = '#FFFFFF') => {
-            const ic = this.add.text(x, y, icon, { fontSize: btnSize })
-                .setDepth(10).setInteractive({ useHandCursor: true });
+        const makeBtn = (x, y, icon, label, onClick, color = '#FFFFFF') => {
+            // Круг под иконкой
+            const circle = this.add.circle(x, y, radius, 0x1e1e28, 0.9).setDepth(10);
+            circle.setStrokeStyle(2, 0x666666, 0.7);
+            // Иконка
+            const ic = this.add.text(x, y - 2, icon, { fontSize: btnSize })
+                .setOrigin(0.5).setDepth(11).setInteractive({ useHandCursor: true });
             ic.on('pointerdown', onClick);
-            this.add.text(x, labelY, label, {
-                fontSize: '10px', fill: color, fontFamily: 'Arial',
-                stroke: '#000000', strokeThickness: 3
-            }).setOrigin(0.5).setDepth(10);
+            // Подпись
+            this.add.text(x, y + radius + 12, label, {
+                fontSize: labelSize, fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+                stroke: '#000000', strokeThickness: 4
+            }).setOrigin(0.5).setDepth(11);
+            return { circle, icon: ic };
         };
 
-        makeBtn(420, btnY1, labelY1, '🏛️', 'Музей', () => this.museum.open());
-        makeBtn(500, btnY1, labelY1, '🏆', 'Достиж.', () => this.achievementsUI.open());
-        makeBtn(580, btnY1, labelY1, '📅', 'Задания', () => this.questsUI.open(), '#FFD700');
+        // Верхний ряд (y=42): Музей, Достижения, Задания
+        const yTop = 42;
+        const yBot = 132;
 
-        makeBtn(420, btnY2, labelY2, '📊', 'Рекорды', () => this.leaderboardUI.open(), '#00E5FF');
-        makeBtn(500, btnY2, labelY2, '🛒', 'Магазин', () => this.shop.open(), '#00FF88');
-        makeBtn(580, btnY2, labelY2, '⚙️', 'Настройки', () => this.settingsUI.open(), '#CCCCCC');
+        makeBtn(400, yTop, '🏛️', 'Музей', () => this.museum.open(), '#FFD700');
+        makeBtn(535, yTop, '🏆', 'Достиж.', () => this.achievementsUI.open(), '#FFD700');
+        makeBtn(670, yTop, '📅', 'Задания', () => this.questsUI.open(), '#FFD700');
 
-        this.questBadge = this.add.text(583, 12, '●', { fontSize: '18px', fill: '#FF4444' })
-            .setOrigin(0.5).setDepth(11).setVisible(false);
+        // Нижний ряд (y=132): Рекорды, Магазин, Настройки
+        makeBtn(400, yBot, '📊', 'Рекорды', () => this.leaderboardUI.open(), '#00E5FF');
+        makeBtn(535, yBot, '🛒', 'Магазин', () => this.shop.open(), '#00FF88');
+        makeBtn(670, yBot, '⚙️', 'Настройки', () => this.settingsUI.open(), '#CCCCCC');
+
+        // Бейдж заданий
+        this.questBadge = this.add.text(690, 18, '●', { fontSize: '22px', fill: '#FF4444' })
+            .setOrigin(0.5).setDepth(12).setVisible(false);
         this.tweens.add({
             targets: this.questBadge, alpha: { from: 1, to: 0.3 },
             duration: 700, yoyo: true, repeat: -1
         });
         this.updateQuestBadge();
 
-        this.dailyBadge = this.add.text(500, 65, '', { fontSize: '14px' })
+        // Бейдж дейли (поверх панели)
+        this.dailyBadge = this.add.text(360, 20, '', { fontSize: '20px' })
             .setOrigin(0.5).setDepth(12);
         const ds = this.state.getDailyStatus();
         if (ds.canClaim) {
-            this.dailyBadge.setText('🎁').setFontSize(20);
+            this.dailyBadge.setText('🎁').setFontSize(28);
             this.tweens.add({
                 targets: this.dailyBadge, scale: { from: 1, to: 1.3 },
                 duration: 500, yoyo: true, repeat: -1
             });
+            const hit = this.add.rectangle(360, 20, 60, 60, 0x000000, 0.001).setDepth(13)
+                .setInteractive({ useHandCursor: true });
+            hit.on('pointerdown', () => this.dailyUI.open());
         }
 
-        this.timerText = this.add.text(660, 155, '⏱ 0:00', TEXT_STYLES.stat('#CCCCCC', 18))
+        // Таймер
+        this.timerText = this.add.text(700, 195, '⏱ 0:00', TEXT_STYLES.stat('#CCCCCC', 18))
             .setOrigin(1, 0).setDepth(10);
 
-        this.add.rectangle(W/2, 240, 400, 30, 0x000000, 0.6).setDepth(10);
-        this.add.rectangle(W/2, 240, 400, 30, 0x333333).setDepth(10);
-        this.progressBar = this.add.rectangle(W/2 - 200, 240, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
-        this.progressText = this.add.text(W/2, 240, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
+        // Прогресс-бар
+        this.add.rectangle(W / 2, 240, 400, 30, 0x000000, 0.6).setDepth(10);
+        this.add.rectangle(W / 2, 240, 400, 30, 0x333333).setDepth(10);
+        this.progressBar = this.add.rectangle(W / 2 - 200, 240, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
+        this.progressText = this.add.text(W / 2, 240, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
 
-        this.add.text(W/2, 1050, 'ПОЛУЧИТЬ ДЕНЬГИ', {
+        // Кнопка сдачи ковра
+        this.add.text(W / 2, 1050, 'ПОЛУЧИТЬ ДЕНЬГИ', {
             ...TEXT_STYLES.button('#00FF00', 30),
             backgroundColor: '#000000', padding: { x: 30, y: 15 }
         }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true })
@@ -2706,8 +2747,8 @@ class MainScene extends Phaser.Scene {
         this.washBtnBg.setX(480);  this.washBtnText.setX(480);
         if (this.prestigeText) this.prestigeText.destroy();
         if (this.state.prestigeLevel > 0) {
-            this.prestigeText = this.add.text(270, 22, '👑' + this.state.prestigeLevel,
-                TEXT_STYLES.stat('#FFD700', 24)).setDepth(10);
+            this.prestigeText = this.add.text(280, 22, '👑' + this.state.prestigeLevel,
+                TEXT_STYLES.stat('#FFD700', 22)).setDepth(10);
         }
         await this.saveSystem.save();
         this.checkAndNotifyAchievements();
