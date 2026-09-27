@@ -73,7 +73,7 @@ const BALANCE = {
     adCooldownMs: 60000
 };
 
-const SAVE_KEY = 'carpetGameStats_v7';
+const SAVE_KEY = 'carpetGameStats_v8';
 
 /* ============================================================
    2. ACHIEVEMENTS
@@ -158,9 +158,9 @@ const TEXT_STYLES = {
 };
 
 function formatTime(sec) {
-    if (!sec || sec <= 0 || sec > 99999) return '—';
+    if (!sec || sec <= 0) return '—';
     const m = Math.floor(sec / 60);
-    const s = Math.round(sec % 60);
+    const s = Math.floor(sec % 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
 }
 function todayKey() {
@@ -169,7 +169,84 @@ function todayKey() {
 }
 
 /* ============================================================
-   4. GAMESTATE
+   4. SOUND GENERATOR
+   ============================================================ */
+class SoundGenerator {
+    static generateWAV(frequency, duration, type = 'sine', volume = 0.3) {
+        const sampleRate = 22050;
+        const numSamples = Math.floor(sampleRate * duration);
+        const buffer = new ArrayBuffer(44 + numSamples * 2);
+        const view = new DataView(buffer);
+
+        const writeString = (offset, string) => {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        };
+
+        writeString(0, 'RIFF');
+        view.setUint32(4, 36 + numSamples * 2, true);
+        writeString(8, 'WAVE');
+        writeString(12, 'fmt ');
+        view.setUint32(16, 16, true);
+        view.setUint16(20, 1, true);
+        view.setUint16(22, 1, true);
+        view.setUint32(24, sampleRate, true);
+        view.setUint32(28, sampleRate * 2, true);
+        view.setUint16(32, 2, true);
+        view.setUint16(34, 16, true);
+        writeString(36, 'data');
+        view.setUint32(40, numSamples * 2, true);
+
+        for (let i = 0; i < numSamples; i++) {
+            const t = i / sampleRate;
+            const envelope = Math.exp(-t * 5);
+            let sample = 0;
+
+            if (type === 'sine') {
+                sample = Math.sin(2 * Math.PI * frequency * t);
+            } else if (type === 'square') {
+                sample = Math.sin(2 * Math.PI * frequency * t) > 0 ? 1 : -1;
+            } else if (type === 'noise') {
+                sample = Math.random() * 2 - 1;
+            } else if (type === 'coin') {
+                const freq1 = 880;
+                const freq2 = 1320;
+                const t1 = t < 0.1 ? t : t - 0.1;
+                sample = t < 0.1 ? Math.sin(2 * Math.PI * freq1 * t1) : Math.sin(2 * Math.PI * freq2 * t1);
+            }
+
+            sample *= envelope * volume;
+            const intSample = Math.max(-1, Math.min(1, sample)) * 32767;
+            view.setInt16(44 + i * 2, intSample, true);
+        }
+
+        return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    static generateSoapSound() {
+        return this.generateWAV(400, 0.15, 'noise', 0.15);
+    }
+
+    static generateWashSound() {
+        return this.generateWAV(200, 0.2, 'sine', 0.2);
+    }
+
+    static generateCoinSound() {
+        return this.generateWAV(880, 0.2, 'coin', 0.25);
+    }
+
+    static generateBugKillSound() {
+        return this.generateWAV(150, 0.1, 'square', 0.3);
+    }
+
+    static generateAchievementSound() {
+        return this.generateWAV(660, 0.3, 'sine', 0.25);
+    }
+}
+
+/* ============================================================
+   5. GAMESTATE
    ============================================================ */
 class GameState {
     constructor() {
@@ -212,6 +289,8 @@ class GameState {
 
         this.lastAdTime = 0;
         this.tutorialDone = false;
+
+        this.carpetElapsed = 0;
     }
 
     getCurrentRadius() {
@@ -247,6 +326,7 @@ class GameState {
         this.carpetIndex = 1;
         this.carpetLevel = 0;
         this.autoFoodEnabled = false;
+        this.carpetElapsed = 0;
         return true;
     }
 
@@ -272,6 +352,7 @@ class GameState {
             this.money -= this.getAutoFoodPrice();
             this.food += 1;
         }
+        this.carpetElapsed = 0;
         return reward;
     }
 
@@ -284,7 +365,7 @@ class GameState {
         this.bugsKilledTotal += 1;
         this.questCounters.killBugsToday += 1;
     }
-    registerSoapUse(n = 1) { this.questCounters.soapUsesToday += n; }
+    registerSoapUse() { this.questCounters.soapUsesToday += 1; }
 
     canBuyNewCarpet() {
         return this.getCurrentRadius() >= this.getRequiredRadius()
@@ -297,6 +378,7 @@ class GameState {
         this.food = BALANCE.startFood;
         this.carpetIndex += 1;
         this.carpetLevel += 1;
+        this.carpetElapsed = 0;
         return true;
     }
 
@@ -461,7 +543,8 @@ class GameState {
             questClaimed: JSON.stringify(this.questClaimed),
             questCounters: JSON.stringify(this.questCounters),
             lastAdTime: this.lastAdTime,
-            tutorialDone: this.tutorialDone ? 1 : 0
+            tutorialDone: this.tutorialDone ? 1 : 0,
+            carpetElapsed: this.carpetElapsed
         };
         for (let i = 1; i <= BALANCE.totalCarpets; i++) {
             const st = this.carpetStats[i] || { cleanings: 0, bestTime: 0 };
@@ -502,6 +585,7 @@ class GameState {
         try { this.questCounters = d.questCounters ? JSON.parse(d.questCounters) : this.questCounters; } catch {}
         this.lastAdTime = n(d.lastAdTime, 0);
         this.tutorialDone = Number(d.tutorialDone) === 1;
+        this.carpetElapsed = n(d.carpetElapsed, 0);
 
         for (let i = 1; i <= BALANCE.totalCarpets; i++) {
             this.carpetStats[i] = {
@@ -513,7 +597,7 @@ class GameState {
 }
 
 /* ============================================================
-   5. SAVESYSTEM
+   6. SAVESYSTEM
    ============================================================ */
 class SaveSystem {
     constructor(state) {
@@ -548,7 +632,7 @@ class SaveSystem {
 }
 
 /* ============================================================
-   6. ADSSYSTEM
+   7. ADSSYSTEM
    ============================================================ */
 class AdsSystem {
     constructor(saveSystem) {
@@ -597,7 +681,7 @@ class AdsSystem {
 }
 
 /* ============================================================
-   7. EFFECTS
+   8. EFFECTS
    ============================================================ */
 class Effects {
     constructor(scene) {
@@ -706,7 +790,7 @@ class Effects {
 }
 
 /* ============================================================
-   8. CLEANINGSYSTEM
+   9. CLEANINGSYSTEM
    ============================================================ */
 class CleaningSystem {
     constructor(scene, bounds, state) {
@@ -756,7 +840,7 @@ class CleaningSystem {
         const soapPower = this.state.getSoapPower();
         const washStrength = this.state.getWashStrength();
 
-        let dirtChanged = false, soapChanged = false, erased = false, soapCells = 0;
+        let dirtChanged = false, soapChanged = false, erased = false, soapUsed = false;
 
         for (let row = minRow; row <= maxRow; row++) {
             const rowOff = row * cols;
@@ -773,7 +857,7 @@ class CleaningSystem {
                     if (this.soap[i] < 1.0) {
                         this.soap[i] = Math.min(1.0, this.soap[i] + soapPower * falloff);
                         soapChanged = true;
-                        soapCells++;
+                        soapUsed = true;
                     }
                 } else {
                     if (this.soap[i] < BALANCE.soapThreshold) continue;
@@ -786,7 +870,7 @@ class CleaningSystem {
             }
         }
 
-        if (isSoap && soapCells > 0) this.state.registerSoapUse(soapCells);
+        if (isSoap && soapUsed) this.state.registerSoapUse();
 
         const screenX = localX + this.originX;
         const screenY = localY + this.originY;
@@ -800,14 +884,13 @@ class CleaningSystem {
     }
     recalcProgress() {
         let total = 0;
+        let allClean = true;
         const cells = this.dirt.length;
-        for (let i = 0; i < cells; i++) total += 1 - this.dirt[i];
-        this.progress = total / cells;
-        if (this.progress >= 0.9999) {
-            let allClean = true;
-            for (let i = 0; i < cells; i++) if (this.dirt[i] > 0.05) { allClean = false; break; }
-            this.progress = allClean ? 1.0 : 0.99;
+        for (let i = 0; i < cells; i++) {
+            total += 1 - this.dirt[i];
+            if (this.dirt[i] > 0.05) allClean = false;
         }
+        this.progress = allClean ? 1.0 : Math.min(0.99, total / cells);
         this.onProgress?.(this.progress);
         if (this.progress >= 1.0 && !this.celebrationFired) {
             this.celebrationFired = true;
@@ -851,7 +934,7 @@ class CleaningSystem {
 }
 
 /* ============================================================
-   9. BUGSYSTEM
+   10. BUGSYSTEM
    ============================================================ */
 class BugSystem {
     constructor(scene, bounds, state, opts = {}) {
@@ -912,6 +995,7 @@ class BugSystem {
             this.state.addMoney(BALANCE.bugRewardPerKill);
             this.onReward?.(bug.x, bug.y, BALANCE.bugRewardPerKill);
         }
+        try { navigator.vibrate?.(30); } catch {}
         this.scene.tweens.add({
             targets: bug, alpha: 0, scale: 1.5,
             duration: BALANCE.bugFadeDuration, ease: 'Cubic.easeOut',
@@ -957,7 +1041,7 @@ class BugSystem {
 }
 
 /* ============================================================
-   10. ROOM RENDERER
+   11. ROOM RENDERER
    ============================================================ */
 class RoomRenderer {
     constructor(scene) {
@@ -1047,7 +1131,7 @@ class RoomRenderer {
 }
 
 /* ============================================================
-   11. ACHIEVEMENTS UI
+   12. ACHIEVEMENTS UI
    ============================================================ */
 class AchievementsUI {
     constructor(scene, state) {
@@ -1110,7 +1194,7 @@ class AchievementsUI {
 }
 
 /* ============================================================
-   12. QUESTS UI
+   13. QUESTS UI
    ============================================================ */
 class QuestsUI {
     constructor(scene, state) {
@@ -1196,7 +1280,7 @@ class QuestsUI {
 }
 
 /* ============================================================
-   13. SHOP UI
+   14. SHOP UI
    ============================================================ */
 class ShopUI {
     constructor(scene, state, ads) {
@@ -1211,10 +1295,47 @@ class ShopUI {
         this.onMessage = null;
         this.onPrestige = null;
         this.onSkinChange = null;
+        this.adCooldownTimer = null;
     }
-    open() { if (this.isOpen) return; this.isOpen = true; this.render(); }
-    close() { this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; }
+    open() { if (this.isOpen) return; this.isOpen = true; this.render(); this.startAdCooldownTimer(); }
+    close() { this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; this.stopAdCooldownTimer(); }
     refresh() { if (!this.isOpen) return; this.close(); this.open(); }
+
+    startAdCooldownTimer() {
+        this.stopAdCooldownTimer();
+        this.adCooldownTimer = this.scene.time.addEvent({
+            delay: 1000,
+            repeat: -1,
+            callback: () => this.updateAdCooldownDisplay()
+        });
+    }
+
+    stopAdCooldownTimer() {
+        if (this.adCooldownTimer) {
+            this.adCooldownTimer.remove();
+            this.adCooldownTimer = null;
+        }
+    }
+
+    updateAdCooldownDisplay() {
+        if (!this.isOpen || this.activeTab !== 'upgrades') return;
+        const cooldown = this.ads.getCooldownRemaining();
+        const available = cooldown <= 0;
+        const adBlock = this.elements.find(el => el.name === 'adBlock');
+        if (adBlock && adBlock.text) {
+            const label = available
+                ? `📺 ПОСМОТРЕТЬ РЕКЛАМУ → +${BALANCE.adRewardMoney}💰`
+                : `⏳ Реклама через ${Math.ceil(cooldown / 1000)}с`;
+            adBlock.text.setText(label);
+            adBlock.text.setColor(available ? '#FFD700' : '#888888');
+            adBlock.bg.setFillStyle(available ? 0x4a3a10 : 0x2a2a2a);
+            adBlock.bg.setStrokeStyle(3, available ? 0xFFD700 : 0x666666, 0.8);
+            if (adBlock.hit) {
+                adBlock.hit.setVisible(available);
+                adBlock.hit.setInteractive(available);
+            }
+        }
+    }
 
     render() {
         const s = this.scene, W = 720, H = 1280, st = this.state;
@@ -1361,17 +1482,23 @@ class ShopUI {
             ? `📺 ПОСМОТРЕТЬ РЕКЛАМУ → +${BALANCE.adRewardMoney}💰`
             : `⏳ Реклама через ${Math.ceil(cooldown / 1000)}с`;
 
-        push(s.add.rectangle(360, y, 620, 60, available ? 0x4a3a10 : 0x2a2a2a)
+        const bg = push(s.add.rectangle(360, y, 620, 60, available ? 0x4a3a10 : 0x2a2a2a)
             .setDepth(21).setStrokeStyle(3, available ? 0xFFD700 : 0x666666, 0.8));
-        push(s.add.text(360, y, label, {
+        const txt = push(s.add.text(360, y, label, {
             fontSize: '15px', fill: available ? '#FFD700' : '#888888',
             fontStyle: 'bold', fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(22));
 
+        const adBlock = { bg, text: txt, hit: null };
+        adBlock.bg.name = 'adBlock';
+        adBlock.text.name = 'adBlock';
+        this.elements.push(adBlock);
+
         if (available) {
-            push(s.add.rectangle(360, y, 620, 60, 0x000000, 0.001).setDepth(23))
-                .setInteractive({ useHandCursor: true })
-                .on('pointerdown', async () => { await this._showAdAndRefresh(); });
+            const hit = push(s.add.rectangle(360, y, 620, 60, 0x000000, 0.001).setDepth(23));
+            hit.setInteractive({ useHandCursor: true });
+            hit.on('pointerdown', async () => { await this._showAdAndRefresh(); });
+            adBlock.hit = hit;
         }
     }
 
@@ -1604,7 +1731,7 @@ class ShopUI {
 }
 
 /* ============================================================
-   14. MUSEUM UI
+   15. MUSEUM UI
    ============================================================ */
 class MuseumUI {
     constructor(scene, state) {
@@ -1681,7 +1808,7 @@ class MuseumUI {
 }
 
 /* ============================================================
-   15. TUTORIAL
+   16. TUTORIAL
    ============================================================ */
 class Tutorial {
     constructor(scene) {
@@ -1836,7 +1963,7 @@ class Tutorial {
             const skipBtn = s.add.text(620, cardY - cardH / 2 + 15, 'Пропустить ✖', {
                 fontSize: '13px', fill: '#888888', fontFamily: 'Arial'
             }).setOrigin(0.5).setDepth(104).setInteractive({ useHandCursor: true })
-              .on('pointerdown', () => this.finish());
+              .on('pointerdown', async () => await this.finish());
             this.elements.push(skipBtn);
         }
     }
@@ -1866,7 +1993,7 @@ class Tutorial {
 }
 
 /* ============================================================
-   16. PRELOAD SCENE
+   17. PRELOAD SCENE
    ============================================================ */
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
@@ -1875,6 +2002,18 @@ class PreloadScene extends Phaser.Scene {
             this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
         }
         this.load.on('loaderror', (file) => console.warn('Не загрузилось:', file.key, file.src));
+
+        const soapBlob = SoundGenerator.generateSoapSound();
+        const washBlob = SoundGenerator.generateWashSound();
+        const coinBlob = SoundGenerator.generateCoinSound();
+        const bugBlob = SoundGenerator.generateBugKillSound();
+        const achieveBlob = SoundGenerator.generateAchievementSound();
+
+        this.load.audio('soap', URL.createObjectURL(soapBlob));
+        this.load.audio('wash', URL.createObjectURL(washBlob));
+        this.load.audio('coin', URL.createObjectURL(coinBlob));
+        this.load.audio('bug', URL.createObjectURL(bugBlob));
+        this.load.audio('achieve', URL.createObjectURL(achieveBlob));
 
         const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w/2, h/2 - 50, 'Загрузка...', TEXT_STYLES.title()).setOrigin(0.5);
@@ -1897,7 +2036,7 @@ class PreloadScene extends Phaser.Scene {
 }
 
 /* ============================================================
-   17. MAIN SCENE
+   18. MAIN SCENE
    ============================================================ */
 class MainScene extends Phaser.Scene {
     constructor() { super('MainScene'); }
@@ -1928,12 +2067,12 @@ class MainScene extends Phaser.Scene {
 
         this.cleaning = new CleaningSystem(this, this.carpetBounds, this.state);
         this.cleaning.onProgress = (p) => this.updateProgressBar(p);
-        this.cleaning.onSoap = (x, y) => this.effects.bubbles(x, y);
-        this.cleaning.onErase = (x, y) => { this.effects.splash(x, y); this.effects.star(x, y); };
-        this.cleaning.onCelebrate = () => { this.effects.celebration(W, H); this.showMessage('Ковёр чистый! ✨'); };
+        this.cleaning.onSoap = (x, y) => { this.effects.bubbles(x, y); this.playSoap(); };
+        this.cleaning.onErase = (x, y) => { this.effects.splash(x, y); this.effects.star(x, y); this.playWash(); };
+        this.cleaning.onCelebrate = () => { this.effects.celebration(W, H); this.showMessage('Ковёр чистый! ✨'); this.playCoin(); };
 
         this.bugs = new BugSystem(this, this.carpetBounds, this.state, {
-            onKill: (x, y) => this.effects.starBurst(x, y, 3),
+            onKill: (x, y) => { this.effects.starBurst(x, y, 3); this.playBugKill(); },
             onReward: (x, y, amt) => this.effects.moneyPopup(x, y, amt)
         });
         this.bugsRef = this.bugs;
@@ -1971,7 +2110,7 @@ class MainScene extends Phaser.Scene {
         this.autoCleanIdleTimer = null;
         this.autoCleanTweenTimer = null;
 
-        this.carpetElapsed = 0;
+        this.carpetElapsed = this.state.carpetElapsed || 0;
         this.prestigeText = null;
 
         this.brush = this.add.text(0, 0, this.state.getBrushIcon(), { fontSize: '70px', fontFamily: 'Arial' })
@@ -1992,6 +2131,15 @@ class MainScene extends Phaser.Scene {
         if (!this.state.tutorialDone) {
             this.tutorial = new Tutorial(this);
             this.time.delayedCall(400, () => this.tutorial.start());
+        }
+
+        this.events.on('shutdown', this.cleanup, this);
+    }
+
+    cleanup() {
+        if (this._blurHandler) {
+            window.removeEventListener('blur', this._blurHandler);
+            this._blurHandler = null;
         }
     }
 
@@ -2040,13 +2188,13 @@ class MainScene extends Phaser.Scene {
         });
         this.updateQuestBadge();
 
-        this.timerText = this.add.text(660, 100, '⏱ 0:00', TEXT_STYLES.stat('#CCCCCC', 20))
+        this.timerText = this.add.text(660, 100, '⏱ ' + formatTime(Math.floor(this.carpetElapsed / 1000)), TEXT_STYLES.stat('#CCCCCC', 20))
             .setOrigin(1, 0).setDepth(10);
 
         this.add.rectangle(W/2, 200, 400, 30, 0x000000, 0.6).setDepth(10);
         this.add.rectangle(W/2, 200, 400, 30, 0x333333).setDepth(10);
         this.progressBar = this.add.rectangle(W/2 - 200, 200, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
-        this.progressText = this.add.text(W/2, 200, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
+        this.progressText = this.add.text(W/2, 200, Math.floor(this.cleaning.progress * 100) + '%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
 
         this.add.text(W/2, 1050, 'ПОЛУЧИТЬ ДЕНЬГИ', {
             ...TEXT_STYLES.button('#00FF00', 30),
@@ -2182,7 +2330,10 @@ class MainScene extends Phaser.Scene {
         this.input.on('pointerup', stop);
         this.input.on('pointerout', stop);
         this.input.on('pointerupoutside', stop);
-        window.addEventListener('blur', stop);
+
+        this._blurHandler = stop;
+        window.addEventListener('blur', this._blurHandler);
+
         document.addEventListener('touchend', () => { this.effects.hideSwatterCursor(); }, { passive: true });
         document.addEventListener('mouseup', () => { this.effects.hideSwatterCursor(); });
     }
@@ -2277,11 +2428,13 @@ class MainScene extends Phaser.Scene {
         this.refreshHUD();
         await this.saveSystem.save();
         this.showMessage(`+${reward} 💰!  ⏱ ${formatTime(timeSec)}`);
+        this.playCoin();
 
         this.bugs.clear();
         this.cleaning.reset();
         this.updateProgressBar(0);
         this.carpetElapsed = 0;
+        this.state.carpetElapsed = 0;
 
         this.checkAndNotifyAchievements();
 
@@ -2305,6 +2458,7 @@ class MainScene extends Phaser.Scene {
             unlocked.forEach((a, i) => {
                 this.time.delayedCall(400 + i * 600, () => {
                     this.showMessage(`🏆 Достижение: ${a.name}\n+${a.reward}💰`);
+                    this.playAchievement();
                 });
             });
             this.refreshHUD();
@@ -2327,6 +2481,7 @@ class MainScene extends Phaser.Scene {
         this.cleaning.reset();
         this.updateProgressBar(0);
         this.carpetElapsed = 0;
+        this.state.carpetElapsed = 0;
         this.bugs.clear();
 
         if (this.state.carpetIndex >= 2) {
@@ -2339,6 +2494,7 @@ class MainScene extends Phaser.Scene {
         await this.saveSystem.save();
         this.checkAndNotifyAchievements();
         this.effects.celebration(720, 1280);
+        this.playCoin();
         this.time.delayedCall(50, () => this.bugs.spawnForLevel(this.state.carpetIndex));
     }
 
@@ -2358,6 +2514,7 @@ class MainScene extends Phaser.Scene {
         this.cleaning.reset();
         this.updateProgressBar(0);
         this.carpetElapsed = 0;
+        this.state.carpetElapsed = 0;
         this.bugs.clear();
 
         this.swatterBtnBg.setVisible(false);
@@ -2374,6 +2531,7 @@ class MainScene extends Phaser.Scene {
         await this.saveSystem.save();
         this.checkAndNotifyAchievements();
         this.effects.celebration(720, 1280);
+        this.playAchievement();
         this.showMessage(`👑 ПРЕСТИЖ ${this.state.prestigeLevel}! ${this.state.getPrestigeTitle()}`);
         this.time.delayedCall(50, () => this.bugs.spawnForLevel(this.state.carpetIndex));
     }
@@ -2447,7 +2605,9 @@ class MainScene extends Phaser.Scene {
     }
 
     drawCarpet() {
-        this.carpetContainer.removeAll(true);
+        this.carpetContainer.list.slice().forEach(c => c.destroy());
+        this.carpetContainer.removeAll();
+
         const carpetKey = 'carpet' + this.state.carpetIndex;
         if (this.textures.exists(carpetKey)) {
             const img = this.add.image(this.carpetX, this.carpetY, carpetKey);
@@ -2486,19 +2646,57 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    playSoap() {
+        try {
+            const sound = this.sound.add('soap', { volume: 0.3 });
+            sound.play();
+        } catch {}
+    }
+
+    playWash() {
+        try {
+            const sound = this.sound.add('wash', { volume: 0.3 });
+            sound.play();
+        } catch {}
+    }
+
+    playCoin() {
+        try {
+            const sound = this.sound.add('coin', { volume: 0.4 });
+            sound.play();
+        } catch {}
+    }
+
+    playBugKill() {
+        try {
+            const sound = this.sound.add('bug', { volume: 0.4 });
+            sound.play();
+        } catch {}
+    }
+
+    playAchievement() {
+        try {
+            const sound = this.sound.add('achieve', { volume: 0.5 });
+            sound.play();
+        } catch {}
+    }
+
     update(_, delta) {
         if (this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen) return;
         if (this.tutorial && this.tutorial.elements.length > 0) return;
         this.cleaning.draw();
         this.bugs.update(delta);
-        this.carpetElapsed += delta;
+        if (this.cleaning.progress < 1.0) {
+            this.carpetElapsed += delta;
+            this.state.carpetElapsed = this.carpetElapsed;
+        }
         const elapsedSec = Math.floor(this.carpetElapsed / 1000);
         this.timerText.setText('⏱ ' + formatTime(elapsedSec));
     }
 }
 
 /* ============================================================
-   18. BOOT
+   19. BOOT
    ============================================================ */
 const phaserConfig = {
     type: Phaser.CANVAS,
