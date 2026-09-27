@@ -27,6 +27,7 @@ const CONFIG = {
     rewardMin: 25, rewardMax: 50,
     brushRadius: 40,
     toolRadiusBonus: 0.05,
+    toolMoneyBonus: 0.1,
     soapPower: 1.0,
     soapThreshold: 0.01,
     eraseStrength: 0.9,
@@ -34,10 +35,6 @@ const CONFIG = {
     newCarpetRadiusIncrease: 10,
     newCarpetBasePrice: 5000,
     rewardMultiplierPerCarpet: 1.25,
-    penaltyStartRadius: 60,
-    penaltyIncreasePerCarpet: 5,
-    penaltyPerPixel: 0.01,
-    minRewardMultiplier: 0.3,
     starChance: 0.2,
     starLifetime: 700,
     starCount: 1,
@@ -54,8 +51,10 @@ const CONFIG = {
     splashChance: 0.5,
     bubbleChance: 0.4,
     autoCleanThreshold: 0.99,
-    autoCleanIdleDelay: 5000,
-    autoCleanDuration: 2000
+    autoCleanIdleDelay: 2000,
+    autoCleanDuration: 2000,
+    autoFoodBasePrice: 1500,
+    autoFoodPriceIncrease: 500
 };
 
 const SAVE_KEY = 'carpetGameStats_v3';
@@ -94,7 +93,9 @@ const TEXT_STYLES = {
 
 const GameState = {
     money: CONFIG.startMoney, food: CONFIG.startFood, toolLevel: CONFIG.startToolLevel,
-    carpetIndex: 1, carpetLevel: 0
+    carpetIndex: 1, carpetLevel: 0,
+    carpetsCleaned: 0,
+    autoFoodEnabled: false
 };
 let ysdk = null;
 
@@ -104,21 +105,17 @@ function getCurrentRadius() {
 function getRewardMultiplier() {
     return Math.pow(CONFIG.rewardMultiplierPerCarpet, GameState.carpetLevel);
 }
-function getPenaltyStartRadius() {
-    return CONFIG.penaltyStartRadius + (GameState.carpetLevel * CONFIG.penaltyIncreasePerCarpet);
+function getToolMoneyMultiplier() {
+    return 1 + (GameState.toolLevel - 1) * CONFIG.toolMoneyBonus;
 }
 function getRequiredRadius() {
     return CONFIG.newCarpetRadiusRequired + (GameState.carpetLevel * CONFIG.newCarpetRadiusIncrease);
 }
-function getRadiusPenaltyMultiplier() {
-    const radius = getCurrentRadius();
-    const threshold = getPenaltyStartRadius();
-    if (radius <= threshold) return 1.0;
-    const penalty = (radius - threshold) * CONFIG.penaltyPerPixel;
-    return Math.max(CONFIG.minRewardMultiplier, 1.0 - penalty);
-}
 function getNewCarpetPrice() {
     return CONFIG.newCarpetBasePrice * GameState.carpetIndex;
+}
+function getAutoFoodPrice() {
+    return CONFIG.autoFoodBasePrice + (GameState.carpetLevel * CONFIG.autoFoodPriceIncrease);
 }
 function canBuyNewCarpet() {
     return getCurrentRadius() >= getRequiredRadius()
@@ -130,12 +127,14 @@ async function initYandexSDK() {
     try {
         if (typeof YaGames === 'undefined') throw new Error('no SDK');
         ysdk = await YaGames.init();
-        const stats = await ysdk.player.getStats(['money', 'food', 'toolLevel', 'carpetIndex', 'carpetLevel']);
+        const stats = await ysdk.player.getStats(['money', 'food', 'toolLevel', 'carpetIndex', 'carpetLevel', 'carpetsCleaned', 'autoFoodEnabled']);
         if (stats.money !== undefined) GameState.money = Number(stats.money) || 0;
         if (stats.food !== undefined) GameState.food = Number(stats.food) || 3;
         if (stats.toolLevel !== undefined) GameState.toolLevel = Number(stats.toolLevel) || 1;
         if (stats.carpetIndex !== undefined) GameState.carpetIndex = Number(stats.carpetIndex) || 1;
         if (stats.carpetLevel !== undefined) GameState.carpetLevel = Number(stats.carpetLevel) || 0;
+        if (stats.carpetsCleaned !== undefined) GameState.carpetsCleaned = Number(stats.carpetsCleaned) || 0;
+        if (stats.autoFoodEnabled !== undefined) GameState.autoFoodEnabled = Number(stats.autoFoodEnabled) === 1;
     } catch (e) {
         ysdk = {
             player: {
@@ -160,6 +159,8 @@ async function initYandexSDK() {
                 if (d.toolLevel !== undefined) GameState.toolLevel = Number(d.toolLevel) || 1;
                 if (d.carpetIndex !== undefined) GameState.carpetIndex = Number(d.carpetIndex) || 1;
                 if (d.carpetLevel !== undefined) GameState.carpetLevel = Number(d.carpetLevel) || 0;
+                if (d.carpetsCleaned !== undefined) GameState.carpetsCleaned = Number(d.carpetsCleaned) || 0;
+                if (d.autoFoodEnabled !== undefined) GameState.autoFoodEnabled = Number(d.autoFoodEnabled) === 1;
             } catch (err) {}
         }
     }
@@ -170,7 +171,9 @@ async function saveGame() {
     try {
         await ysdk.player.setStats({
             money: GameState.money, food: GameState.food, toolLevel: GameState.toolLevel,
-            carpetIndex: GameState.carpetIndex, carpetLevel: GameState.carpetLevel
+            carpetIndex: GameState.carpetIndex, carpetLevel: GameState.carpetLevel,
+            carpetsCleaned: GameState.carpetsCleaned,
+            autoFoodEnabled: GameState.autoFoodEnabled ? 1 : 0
         });
     } catch (e) {}
 }
@@ -256,12 +259,12 @@ class MainScene extends Phaser.Scene {
         this.brush.setVisible(false);
         this.swatterGfx = this.add.graphics().setDepth(6);
         this.swatterGfx.setVisible(false);
-        this.add.rectangle(0, 0, 260, 180, 0x000000, 0.5).setOrigin(0, 0).setDepth(9);
+        this.add.rectangle(0, 0, 280, 180, 0x000000, 0.5).setOrigin(0, 0).setDepth(9);
         
         this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, TEXT_STYLES.stat('#FFD700', 34)).setDepth(10);
         this.foodText = this.add.text(30, 80, '🍞 ' + GameState.food, TEXT_STYLES.stat('#FFFFFF', 26)).setDepth(10);
         this.toolText = this.add.text(30, 118, '🧹 Радиус: ' + getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 20)).setDepth(10);
-        this.carpetText = this.add.text(30, 148, '🟫 Ковёр: ' + GameState.carpetIndex + '/' + CONFIG.totalCarpets, TEXT_STYLES.stat('#FFD700', 20)).setDepth(10);
+        this.carpetText = this.add.text(30, 148, '🧽 Почищено: ' + GameState.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 20)).setDepth(10);
         
         this.add.rectangle(W/2, 200, 400, 30, 0x000000, 0.6).setDepth(10);
         this.add.rectangle(W/2, 200, 400, 30, 0x333333).setDepth(10);
@@ -811,7 +814,6 @@ class MainScene extends Phaser.Scene {
         this.needRedrawDirt = false;
     }
 
-    // ✅ Мыло рисуется ТОЛЬКО там, где ещё есть грязь
     drawSoap() {
         this.soapGfx.clear();
         const cs = this.gridCellSize;
@@ -824,7 +826,6 @@ class MainScene extends Phaser.Scene {
             for (let col = 0; col < cols; col++) {
                 const soap = this.soapGrid[rowOffset + col];
                 if (soap < 0.05) continue;
-                // ✅ Не рисуем мыло на уже чистых ячейках
                 if (this.dirtGrid[rowOffset + col] < 0.1) continue;
                 const px = cx + col * cs;
                 this.soapGfx.fillStyle(0xAAE0FF, soap * 0.75);
@@ -1049,19 +1050,24 @@ class MainScene extends Phaser.Scene {
         
         const baseReward = Math.floor(CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin));
         const carpetMultiplier = getRewardMultiplier();
-        const radiusPenalty = getRadiusPenaltyMultiplier();
-        const reward = Math.floor(baseReward * GameState.toolLevel * carpetMultiplier * radiusPenalty);
+        const toolMultiplier = getToolMoneyMultiplier();
+        const reward = Math.floor(baseReward * carpetMultiplier * toolMultiplier);
         
         GameState.money += reward;
         GameState.food -= 1;
+        GameState.carpetsCleaned += 1;
+        
+        if (GameState.autoFoodEnabled && GameState.money >= getAutoFoodPrice()) {
+            GameState.money -= getAutoFoodPrice();
+            GameState.food += 1;
+        }
+        
         this.moneyText.setText('💰 ' + GameState.money);
         this.foodText.setText('🍞 ' + GameState.food);
+        this.carpetText.setText('🧽 Почищено: ' + GameState.carpetsCleaned);
         await saveGame();
         
-        let msg = `+${reward} 💰`;
-        if (carpetMultiplier > 1.0) msg += ` (×${carpetMultiplier.toFixed(2)})`;
-        if (radiusPenalty < 1.0) msg += ` (-${Math.floor((1 - radiusPenalty) * 100)}%)`;
-        this.showMessage(msg);
+        this.showMessage(`+${reward} 💰!`);
         
         this.children.list.forEach(child => {
             if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) child.destroy();
@@ -1089,13 +1095,13 @@ class MainScene extends Phaser.Scene {
         const els = [];
         const ov = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.9).setDepth(20);
         ov.setInteractive(); els.push(ov);
-        const bg = this.add.rectangle(W/2, H/2, 660, 1040, 0x2a2a2a).setDepth(21);
+        const bg = this.add.rectangle(W/2, H/2, 660, 1100, 0x2a2a2a).setDepth(21);
         bg.setStrokeStyle(5, 0xFFD700); els.push(bg);
-        els.push(this.add.text(W/2, 190, 'МАГАЗИН', TEXT_STYLES.title()).setOrigin(0.5).setDepth(22));
+        els.push(this.add.text(W/2, 130, 'МАГАЗИН', TEXT_STYLES.title()).setOrigin(0.5).setDepth(22));
         
-        const fb = this.add.text(W/2, 310, `Купить еду (${CONFIG.foodPrice}💰)\n🍞 +1`, {
-            ...TEXT_STYLES.shop('#FFFFFF', 28),
-            backgroundColor: '#444444', padding: { x: 30, y: 15 }
+        const fb = this.add.text(W/2, 220, `Купить еду (${CONFIG.foodPrice}💰)\n🍞 +1`, {
+            ...TEXT_STYLES.shop('#FFFFFF', 24),
+            backgroundColor: '#444444', padding: { x: 25, y: 10 }
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
           .on('pointerdown', async () => {
             if (GameState.money >= CONFIG.foodPrice) {
@@ -1107,20 +1113,48 @@ class MainScene extends Phaser.Scene {
         });
         els.push(fb);
         
+        const autoFoodPrice = getAutoFoodPrice();
+        let autoFoodLabel = '';
+        let autoFoodColor = '#FFFFFF';
+        if (GameState.autoFoodEnabled) {
+            autoFoodLabel = `✅ АВТОЕДА ВКЛ\nЦена: ${autoFoodPrice}💰`;
+            autoFoodColor = '#00FF00';
+        } else {
+            autoFoodLabel = `🛒 АВТОЕДА (${autoFoodPrice}💰)\nВкл. навсегда`;
+            autoFoodColor = '#FFAA00';
+        }
+        const autoFoodBtn = this.add.text(W/2, 340, autoFoodLabel, {
+            ...TEXT_STYLES.shop(autoFoodColor, 22),
+            backgroundColor: '#1a1a1a', padding: { x: 25, y: 12 }
+        }).setOrigin(0.5).setDepth(22);
+        if (!GameState.autoFoodEnabled) {
+            autoFoodBtn.setInteractive({ useHandCursor: true })
+              .on('pointerdown', async () => {
+                if (GameState.money >= autoFoodPrice) {
+                    GameState.money -= autoFoodPrice;
+                    GameState.autoFoodEnabled = true;
+                    this.moneyText.setText('💰 ' + GameState.money);
+                    await saveGame();
+                    this.showMessage('✅ Автоеда включена!');
+                    els.forEach(el => el.destroy());
+                    this.openShop();
+                } else {
+                    this.showMessage('Не хватает денег!');
+                }
+            });
+        }
+        els.push(autoFoodBtn);
+        
         const tc = GameState.toolLevel * CONFIG.toolBasePrice;
         const cr = getCurrentRadius();
         const nr = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
-        const penaltyStart = getPenaltyStartRadius();
-        let warningText = '';
-        if (nr > penaltyStart) {
-            const newMult = Math.max(CONFIG.minRewardMultiplier, 1.0 - (nr - penaltyStart) * CONFIG.penaltyPerPixel);
-            warningText = `\n⚠️ Награда: ${Math.floor(newMult * 100)}%`;
-        }
+        const moneyBonus = Math.round(getToolMoneyMultiplier() * 100);
+        const nextMoneyBonus = Math.round((1 + GameState.toolLevel * CONFIG.toolMoneyBonus) * 100);
         
-        const tb = this.add.text(W/2, 480,
-            `Улучшить щётку (${tc}💰)\nРадиус: ${cr} → ${nr}${warningText}`, {
-            ...TEXT_STYLES.shop(warningText ? '#FFAA00' : '#FFFFFF', 26),
-            backgroundColor: '#444444', padding: { x: 30, y: 15 }
+        const tb = this.add.text(W/2, 470,
+            `Улучшить щётку (${tc}💰)\nРадиус: ${cr} → ${nr}\n💰 Доход: ${moneyBonus}% → ${nextMoneyBonus}%`, {
+            ...TEXT_STYLES.shop('#FFFFFF', 22),
+            backgroundColor: '#444444', padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
           .on('pointerdown', async () => {
             const cost = GameState.toolLevel * CONFIG.toolBasePrice;
@@ -1130,19 +1164,16 @@ class MainScene extends Phaser.Scene {
                 const r = getCurrentRadius();
                 this.toolText.setText('🧹 Радиус: ' + r);
                 await saveGame(); this.showMessage('Щётка улучшена!');
+                
                 if (r >= getRequiredRadius() && GameState.carpetIndex < CONFIG.totalCarpets) {
                     this.showMessage('Новый ковёр доступен в магазине!');
                 }
+                
                 const nc = GameState.toolLevel * CONFIG.toolBasePrice;
                 const nr2 = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
-                const ps2 = getPenaltyStartRadius();
-                let warn2 = '';
-                if (nr2 > ps2) {
-                    const m2 = Math.max(CONFIG.minRewardMultiplier, 1.0 - (nr2 - ps2) * CONFIG.penaltyPerPixel);
-                    warn2 = `\n⚠️ Награда: ${Math.floor(m2 * 100)}%`;
-                }
-                tb.setText(`Улучшить щётку (${nc}💰)\nРадиус: ${r} → ${nr2}${warn2}`);
-                tb.setColor(warn2 ? '#FFAA00' : '#FFFFFF');
+                const mb2 = Math.round(getToolMoneyMultiplier() * 100);
+                const nextMb = Math.round((1 + GameState.toolLevel * CONFIG.toolMoneyBonus) * 100);
+                tb.setText(`Улучшить щётку (${nc}💰)\nРадиус: ${r} → ${nr2}\n💰 Доход: ${mb2}% → ${nextMb}%`);
             } else this.showMessage('Не хватает денег!');
         });
         els.push(tb);
@@ -1152,21 +1183,52 @@ class MainScene extends Phaser.Scene {
         const requiredRadius = getRequiredRadius();
         const radiusEnough = getCurrentRadius() >= requiredRadius;
         const hasNextCarpet = GameState.carpetIndex < CONFIG.totalCarpets;
+        
+        const currentMultiplier = Math.round(Math.pow(CONFIG.rewardMultiplierPerCarpet, GameState.carpetLevel) * 100);
+        const nextMultiplier = Math.round(Math.pow(CONFIG.rewardMultiplierPerCarpet, GameState.carpetLevel + 1) * 100);
+        const nextCarpetNum = GameState.carpetIndex + 1;
+        const nextRequiredRadius = requiredRadius + CONFIG.newCarpetRadiusIncrease;
+        const nextAutoFoodPrice = getAutoFoodPrice() + CONFIG.autoFoodPriceIncrease;
+        
         let newCarpetLabel = '';
         let newCarpetColor = '#888888';
+        
         if (!hasNextCarpet) {
-            newCarpetLabel = '🏆 ВСЕ КОВРЫ ОТКРЫТЫ'; newCarpetColor = '#FFD700';
+            newCarpetLabel = '🏆 ВСЕ КОВРЫ ОТКРЫТЫ';
+            newCarpetColor = '#FFD700';
         } else if (!radiusEnough) {
-            newCarpetLabel = `🔒 Нужен радиус ${requiredRadius}\n(сейчас ${getCurrentRadius()})`; newCarpetColor = '#AAAAAA';
+            newCarpetLabel = `🔒 Нужен радиус ${requiredRadius}\n(сейчас ${getCurrentRadius()})`;
+            newCarpetColor = '#AAAAAA';
         } else if (GameState.money < newCarpetPrice) {
-            newCarpetLabel = `🆕 НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nНе хватает денег`; newCarpetColor = '#AAAAAA';
+            newCarpetLabel = `🆕 НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nНе хватает денег`;
+            newCarpetColor = '#AAAAAA';
         } else {
-            newCarpetLabel = `🆕 КУПИТЬ НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nКовёр ${GameState.carpetIndex} → ${GameState.carpetIndex + 1}\n⚠️ Сброс щётки и денег\n✅ Заработок ×1.25 навсегда`;
+            const addedItems = [];
+            if (nextCarpetNum === 2) {
+                addedItems.push('🐛 Добавляются жуки');
+            } else {
+                addedItems.push('🐛 Жуков больше');
+            }
+            
+            let addsText = '';
+            if (addedItems.length > 0) {
+                addsText = '➕ ' + addedItems.join('\n➕ ') + '\n';
+            }
+            
+            newCarpetLabel = 
+                `🆕 КУПИТЬ КОВЁР №${nextCarpetNum} (${newCarpetPrice}💰)\n` +
+                `────────────────\n` +
+                `📈 Множитель: ${currentMultiplier}% → ${nextMultiplier}%\n` +
+                addsText +
+                `🧹 Радиус нужен: ${nextRequiredRadius}\n` +
+                `🛒 Автоеда дороже: ${nextAutoFoodPrice}💰\n` +
+                `────────────────\n` +
+                `⚠️ Сброс: щётка, деньги, еда`;
             newCarpetColor = '#00FF00';
         }
         
-        const nb = this.add.text(W/2, 700, newCarpetLabel, {
-            ...TEXT_STYLES.shop(newCarpetColor, 22),
+        const nb = this.add.text(W/2, 720, newCarpetLabel, {
+            ...TEXT_STYLES.shop(newCarpetColor, 20),
             backgroundColor: '#1a1a1a', padding: { x: 25, y: 15 }
         }).setOrigin(0.5).setDepth(22);
         if (canBuy) {
@@ -1179,14 +1241,17 @@ class MainScene extends Phaser.Scene {
         }
         els.push(nb);
         
-        const infoText = `Уровень ковра: ${GameState.carpetLevel}\nМножитель: ×${getRewardMultiplier().toFixed(2)}\nШтраф радиуса с: ${getPenaltyStartRadius()}`;
-        const ib = this.add.text(W/2, 900, infoText, {
-            ...TEXT_STYLES.shopInfo('#CCCCCC', 20),
+        const infoText = 
+            `Уровень ковра: ${GameState.carpetLevel}\n` +
+            `Множитель: ×${getRewardMultiplier().toFixed(2)}\n` +
+            `💰 Доход от щётки: ${Math.round(getToolMoneyMultiplier() * 100)}%`;
+        const ib = this.add.text(W/2, 1010, infoText, {
+            ...TEXT_STYLES.shopInfo('#CCCCCC', 18),
             backgroundColor: '#1a1a1a', padding: { x: 20, y: 12 }
         }).setOrigin(0.5).setDepth(22);
         els.push(ib);
         
-        const cb = this.add.text(620, 190, '✖', {
+        const cb = this.add.text(620, 130, '✖', {
             fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', fontFamily: 'Arial',
             stroke: '#000000', strokeThickness: 6
         }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
@@ -1204,14 +1269,16 @@ class MainScene extends Phaser.Scene {
         if (this.autoCleanIdleTimer) { this.autoCleanIdleTimer.remove(); this.autoCleanIdleTimer = null; }
         if (this.autoCleanTweenTimer) { this.autoCleanTweenTimer.remove(); this.autoCleanTweenTimer = null; }
         
+        // ✅ Сброс щётки, денег, еды
         GameState.money = 0;
+        GameState.food = CONFIG.startFood;
         GameState.toolLevel = CONFIG.startToolLevel;
         GameState.carpetIndex += 1;
         GameState.carpetLevel += 1;
         
         this.moneyText.setText('💰 ' + GameState.money);
+        this.foodText.setText('🍞 ' + GameState.food);
         this.toolText.setText('🧹 Радиус: ' + getCurrentRadius());
-        this.carpetText.setText('🟫 Ковёр: ' + GameState.carpetIndex + '/' + CONFIG.totalCarpets);
         
         this.drawRoom();
         this.drawCarpet();
