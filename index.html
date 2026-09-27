@@ -7,7 +7,7 @@
     <script src="phaser.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body { 
+        html, body {
             width: 100%; height: 100%;
             background: #1a1a1a; overflow: hidden;
             touch-action: none;
@@ -21,44 +21,47 @@
 <body>
 
 <script>
-const CONFIG = {
-    startMoney: 0, startFood: 3, startToolLevel: 1,
-    foodPrice: 10, toolBasePrice: 50,
-    rewardMin: 25, rewardMax: 50,
-    brushRadius: 40,
-    toolRadiusBonus: 0.05,
-    toolMoneyBonus: 1.0,
-    soapPower: 1.0,
-    soapThreshold: 0.01,
-    eraseStrength: 0.9,
-    newCarpetRadiusRequired: 70,
-    newCarpetRadiusIncrease: 10,
-    newCarpetBasePrice: 5000,
-    rewardMultiplierPerCarpet: 1.25,
-    starChance: 0.2,
-    starLifetime: 700,
-    starCount: 1,
-    finishStarCount: 25,
-    finishStarDuration: 1800,
+/* ============================================================
+   1. BALANCE — все числа в одном месте
+   ============================================================ */
+const BALANCE = {
+    startMoney: 0, startFood: 5, startToolLevel: 1,
     totalCarpets: 5,
+
+    foodPrice: 8,
+
+    rewardMin: 80, rewardMax: 140,
+    rewardMultiplierPerCarpet: 1.5,
+
+    brushRadius: 40,
+    toolRadiusBonus: 0.15,
+    toolMoneyBonus: 0.35,
+    toolBasePrice: 60,
+
+    newCarpetRadiusRequired: 55,
+    newCarpetRadiusIncrease: 8,
+    newCarpetBasePrice: 400,
+
+    autoFoodBasePrice: 300,
+    autoFoodPriceIncrease: 150,
+
+    soapPower: 1.0, soapThreshold: 0.01, eraseStrength: 0.9,
+    autoCleanThreshold: 0.99, autoCleanIdleDelay: 2000, autoCleanDuration: 2000,
     inputLockDuration: 300,
-    bugCountBase: 4,
-    bugCountIncrease: 1,
-    bugSpeed: 135,
-    bugFadeDuration: 400,
-    swatterRadius: 50,
-    swatterCooldown: 200,
-    splashChance: 0.5,
-    bubbleChance: 0.4,
-    autoCleanThreshold: 0.99,
-    autoCleanIdleDelay: 2000,
-    autoCleanDuration: 2000,
-    autoFoodBasePrice: 1500,
-    autoFoodPriceIncrease: 500
+    starChance: 0.2, starLifetime: 700,
+    finishStarCount: 25, finishStarDuration: 1800,
+    bugCountBase: 4, bugSpeed: 135, bugFadeDuration: 400,
+    swatterRadius: 50, swatterCooldown: 200,
+    splashChance: 0.5, bubbleChance: 0.4,
+
+    gridCellSize: 20
 };
 
-const SAVE_KEY = 'carpetGameStats_v3';
+const SAVE_KEY = 'carpetGameStats_v4';
 
+/* ============================================================
+   2. TEXT STYLES
+   ============================================================ */
 const TEXT_STYLES = {
     title: (color = '#FFD700') => ({
         fontSize: '48px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
@@ -91,404 +94,484 @@ const TEXT_STYLES = {
     })
 };
 
-const GameState = {
-    money: CONFIG.startMoney, food: CONFIG.startFood, toolLevel: CONFIG.startToolLevel,
-    carpetIndex: 1, carpetLevel: 0,
-    carpetsCleaned: 0,
-    autoFoodEnabled: false
-};
-let ysdk = null;
+/* ============================================================
+   3. GAMESTATE
+   ============================================================ */
+class GameState {
+    constructor() {
+        this.money = BALANCE.startMoney;
+        this.food = BALANCE.startFood;
+        this.toolLevel = BALANCE.startToolLevel;
+        this.carpetIndex = 1;
+        this.carpetLevel = 0;
+        this.carpetsCleaned = 0;
+        this.autoFoodEnabled = false;
+    }
 
-function getCurrentRadius() {
-    return Math.floor(CONFIG.brushRadius * (1 + (GameState.toolLevel - 1) * CONFIG.toolRadiusBonus));
-}
-function getRewardMultiplier() {
-    return Math.pow(CONFIG.rewardMultiplierPerCarpet, GameState.carpetLevel);
-}
-function getToolMoneyMultiplier() {
-    return 1 + (GameState.toolLevel - 1) * CONFIG.toolMoneyBonus;
-}
-function getRequiredRadius() {
-    return CONFIG.newCarpetRadiusRequired + (GameState.carpetLevel * CONFIG.newCarpetRadiusIncrease);
-}
-function getNewCarpetPrice() {
-    return CONFIG.newCarpetBasePrice * GameState.carpetIndex;
-}
-function getAutoFoodPrice() {
-    return CONFIG.autoFoodBasePrice + (GameState.carpetLevel * CONFIG.autoFoodPriceIncrease);
-}
-function canBuyNewCarpet() {
-    return getCurrentRadius() >= getRequiredRadius()
-        && GameState.money >= getNewCarpetPrice()
-        && GameState.carpetIndex < CONFIG.totalCarpets;
-}
+    getCurrentRadius() {
+        return Math.floor(BALANCE.brushRadius * (1 + (this.toolLevel - 1) * BALANCE.toolRadiusBonus));
+    }
+    getRewardMultiplier() {
+        return Math.pow(BALANCE.rewardMultiplierPerCarpet, this.carpetLevel);
+    }
+    getToolMoneyMultiplier() {
+        return 1 + (this.toolLevel - 1) * BALANCE.toolMoneyBonus;
+    }
+    getRequiredRadius() {
+        return BALANCE.newCarpetRadiusRequired + this.carpetLevel * BALANCE.newCarpetRadiusIncrease;
+    }
+    getNewCarpetPrice() {
+        return BALANCE.newCarpetBasePrice * this.carpetIndex;
+    }
+    getAutoFoodPrice() {
+        return BALANCE.autoFoodBasePrice + this.carpetLevel * BALANCE.autoFoodPriceIncrease;
+    }
+    getToolUpgradePrice() {
+        return this.toolLevel * BALANCE.toolBasePrice;
+    }
 
-async function initYandexSDK() {
-    try {
-        if (typeof YaGames === 'undefined') throw new Error('no SDK');
-        ysdk = await YaGames.init();
-        const stats = await ysdk.player.getStats(['money', 'food', 'toolLevel', 'carpetIndex', 'carpetLevel', 'carpetsCleaned', 'autoFoodEnabled']);
-        if (stats.money !== undefined) GameState.money = Number(stats.money) || 0;
-        if (stats.food !== undefined) GameState.food = Number(stats.food) || 3;
-        if (stats.toolLevel !== undefined) GameState.toolLevel = Number(stats.toolLevel) || 1;
-        if (stats.carpetIndex !== undefined) GameState.carpetIndex = Number(stats.carpetIndex) || 1;
-        if (stats.carpetLevel !== undefined) GameState.carpetLevel = Number(stats.carpetLevel) || 0;
-        if (stats.carpetsCleaned !== undefined) GameState.carpetsCleaned = Number(stats.carpetsCleaned) || 0;
-        if (stats.autoFoodEnabled !== undefined) GameState.autoFoodEnabled = Number(stats.autoFoodEnabled) === 1;
-    } catch (e) {
-        ysdk = {
-            player: {
-                getStats: async () => {
-                    const s = localStorage.getItem(SAVE_KEY);
-                    return s ? JSON.parse(s) : {};
-                },
-                setStats: async (stats) => localStorage.setItem(SAVE_KEY, JSON.stringify(stats))
-            },
-            adv: {
-                showRewardedVideo: (o) => { if (o?.callbacks?.onRewarded) o.callbacks.onRewarded(); if (o?.callbacks?.onClose) o.callbacks.onClose(); },
-                showFullscreenAdv: (o) => { if (o?.callbacks?.onClose) o.callbacks.onClose(); }
-            },
-            features: { LoadingAPI: { ready: () => {} } }
+    addReward() {
+        const base = Math.floor(BALANCE.rewardMin + Math.random() * (BALANCE.rewardMax - BALANCE.rewardMin));
+        const reward = Math.floor(base * this.getRewardMultiplier() * this.getToolMoneyMultiplier());
+        this.money += reward;
+        this.food -= 1;
+        this.carpetsCleaned += 1;
+        if (this.autoFoodEnabled && this.money >= this.getAutoFoodPrice()) {
+            this.money -= this.getAutoFoodPrice();
+            this.food += 1;
+        }
+        return reward;
+    }
+
+    canBuyNewCarpet() {
+        return this.getCurrentRadius() >= this.getRequiredRadius()
+            && this.money >= this.getNewCarpetPrice()
+            && this.carpetIndex < BALANCE.totalCarpets;
+    }
+
+    buyNewCarpet() {
+        if (!this.canBuyNewCarpet()) return false;
+        this.money = 0;
+        // toolLevel и food НЕ сбрасываются — ключевая правка баланса
+        this.carpetIndex += 1;
+        this.carpetLevel += 1;
+        return true;
+    }
+
+    upgradeTool() {
+        const price = this.getToolUpgradePrice();
+        if (this.money < price) return false;
+        this.money -= price;
+        this.toolLevel += 1;
+        return true;
+    }
+    buyFood() {
+        if (this.money < BALANCE.foodPrice) return false;
+        this.money -= BALANCE.foodPrice;
+        this.food += 1;
+        return true;
+    }
+    buyAutoFood() {
+        if (this.autoFoodEnabled) return false;
+        const price = this.getAutoFoodPrice();
+        if (this.money < price) return false;
+        this.money -= price;
+        this.autoFoodEnabled = true;
+        return true;
+    }
+
+    toSaveObject() {
+        return {
+            money: this.money, food: this.food, toolLevel: this.toolLevel,
+            carpetIndex: this.carpetIndex, carpetLevel: this.carpetLevel,
+            carpetsCleaned: this.carpetsCleaned,
+            autoFoodEnabled: this.autoFoodEnabled ? 1 : 0
         };
-        const s = localStorage.getItem(SAVE_KEY);
-        if (s) {
+    }
+    fromSaveObject(d) {
+        if (!d) return;
+        const n = (v, fallback) => (v === undefined || v === null ? fallback : Number(v));
+        this.money = n(d.money, this.money);
+        this.food = n(d.food, this.food);
+        this.toolLevel = n(d.toolLevel, this.toolLevel);
+        this.carpetIndex = n(d.carpetIndex, this.carpetIndex);
+        this.carpetLevel = n(d.carpetLevel, this.carpetLevel);
+        this.carpetsCleaned = n(d.carpetsCleaned, this.carpetsCleaned);
+        this.autoFoodEnabled = Number(d.autoFoodEnabled) === 1;
+    }
+}
+
+/* ============================================================
+   4. SAVESYSTEM
+   ============================================================ */
+class SaveSystem {
+    constructor(state) {
+        this.state = state;
+        this.ysdk = null;
+        this.useLocal = false;
+    }
+
+    async init() {
+        try {
+            if (typeof YaGames === 'undefined') throw new Error('no SDK');
+            this.ysdk = await YaGames.init();
+            const keys = ['money','food','toolLevel','carpetIndex','carpetLevel','carpetsCleaned','autoFoodEnabled'];
+            const stats = await this.ysdk.player.getStats(keys);
+            this.state.fromSaveObject(stats);
+        } catch (e) {
+            this.useLocal = true;
             try {
-                const d = JSON.parse(s);
-                if (d.money !== undefined) GameState.money = Number(d.money) || 0;
-                if (d.food !== undefined) GameState.food = Number(d.food) || 3;
-                if (d.toolLevel !== undefined) GameState.toolLevel = Number(d.toolLevel) || 1;
-                if (d.carpetIndex !== undefined) GameState.carpetIndex = Number(d.carpetIndex) || 1;
-                if (d.carpetLevel !== undefined) GameState.carpetLevel = Number(d.carpetLevel) || 0;
-                if (d.carpetsCleaned !== undefined) GameState.carpetsCleaned = Number(d.carpetsCleaned) || 0;
-                if (d.autoFoodEnabled !== undefined) GameState.autoFoodEnabled = Number(d.autoFoodEnabled) === 1;
-            } catch (err) {}
+                const raw = localStorage.getItem(SAVE_KEY);
+                if (raw) this.state.fromSaveObject(JSON.parse(raw));
+            } catch {}
         }
+        return this;
+    }
+
+    ready() {
+        try { this.ysdk?.features?.LoadingAPI?.ready(); } catch {}
+    }
+
+    async save() {
+        const data = this.state.toSaveObject();
+        if (!this.useLocal && this.ysdk) {
+            try { await this.ysdk.player.setStats(data); } catch {}
+        }
+        try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
     }
 }
 
-async function saveGame() {
-    if (!ysdk) return;
-    try {
-        await ysdk.player.setStats({
-            money: GameState.money, food: GameState.food, toolLevel: GameState.toolLevel,
-            carpetIndex: GameState.carpetIndex, carpetLevel: GameState.carpetLevel,
-            carpetsCleaned: GameState.carpetsCleaned,
-            autoFoodEnabled: GameState.autoFoodEnabled ? 1 : 0
-        });
-    } catch (e) {}
-}
-
-class PreloadScene extends Phaser.Scene {
-    constructor() { super('PreloadScene'); }
-    preload() {
-        for (let i = 1; i <= CONFIG.totalCarpets; i++) {
-            this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
-        }
-        const w = this.cameras.main.width, h = this.cameras.main.height;
-        this.add.text(w/2, h/2 - 50, 'Загрузка...', TEXT_STYLES.title()).setOrigin(0.5);
-        this.add.rectangle(w/2, h/2 + 30, 400, 30, 0x333333);
-        const bar = this.add.rectangle(w/2 - 200, h/2 + 30, 0, 26, 0x00FF00).setOrigin(0, 0.5);
-        this.load.on('progress', (v) => { bar.width = 400 * v; });
-    }
-    create() { initYandexSDK(); this.scene.start('MainScene'); }
-}
-
-class MainScene extends Phaser.Scene {
-    constructor() { super('MainScene'); }
-
-    create() {
-        if (this.input.mouse) this.input.mouse.disableContextMenu();
-        if (ysdk?.features?.LoadingAPI) ysdk.features.LoadingAPI.ready();
-        
-        const W = 720, H = 1280;
-        this.carpetW = 500;
-        this.carpetH = 700;
-        this.carpetX = W/2;
-        this.carpetY = 600;
-        
-        this.roomGfx = this.add.graphics().setDepth(-10);
-        this.drawRoom();
-        this.carpetContainer = this.add.container(0, 0).setDepth(0);
-        this.drawCarpet();
-        
-        this.gridCellSize = 20;
-        this.gridCols = Math.ceil(this.carpetW / this.gridCellSize);
-        this.gridRows = Math.ceil(this.carpetH / this.gridCellSize);
-        this.gridOffsetX = this.carpetX - this.carpetW / 2;
-        this.gridOffsetY = this.carpetY - this.carpetH / 2;
-        
-        this.dirtGrid = new Float32Array(this.gridCols * this.gridRows);
-        this.soapGrid = new Float32Array(this.gridCols * this.gridRows);
-        this.dirtGrid.fill(1.0);
-        
-        this.dirtGfx = this.add.graphics().setDepth(1);
-        this.soapGfx = this.add.graphics().setDepth(2);
-        this.needRedrawDirt = true;
-        this.needRedrawSoap = true;
-        this.lastShownPercent = -1;
-        
-        this.autoCleanStarted = false;
-        this.autoCleanPending = false;
-        this.autoCleanIdleTimer = null;
-        this.autoCleanTweenTimer = null;
-        
-        this.carpetBounds = new Phaser.Geom.Rectangle(
-            this.carpetX - this.carpetW/2, this.carpetY - this.carpetH/2,
-            this.carpetW, this.carpetH
-        );
-        
-        this.cleanProgress = 0;
-        this.isPointerDown = false;
-        this.currentTool = 'soap';
-        this.lastLocalX = -9999;
-        this.lastLocalY = -9999;
-        this.celebrationShown = false;
-        this.inputLocked = false;
-        this.shopOpen = false;
-        this.noFoodText = null;
-        this.noFoodTween = null;
-        this.noFoodCooldown = false;
-        this.bugWarningText = null;
-        this.bugWarningTween = null;
-        this.bugWarningCooldown = false;
-        this.bugs = [];
-        this.swatterCooldownTime = 0;
-        
-        this.brush = this.add.text(0, 0, '🧼', { fontSize: '70px', fontFamily: 'Arial' })
-            .setOrigin(0.5).setDepth(3);
-        this.brush.setVisible(false);
-        this.swatterGfx = this.add.graphics().setDepth(6);
-        this.swatterGfx.setVisible(false);
-        this.add.rectangle(0, 0, 280, 180, 0x000000, 0.5).setOrigin(0, 0).setDepth(9);
-        
-        this.moneyText = this.add.text(30, 30, '💰 ' + GameState.money, TEXT_STYLES.stat('#FFD700', 34)).setDepth(10);
-        this.foodText = this.add.text(30, 80, '🍞 ' + GameState.food, TEXT_STYLES.stat('#FFFFFF', 26)).setDepth(10);
-        this.toolText = this.add.text(30, 118, '🧹 Радиус: ' + getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 20)).setDepth(10);
-        this.carpetText = this.add.text(30, 148, '🧽 Почищено: ' + GameState.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 20)).setDepth(10);
-        
-        this.add.rectangle(W/2, 200, 400, 30, 0x000000, 0.6).setDepth(10);
-        this.add.rectangle(W/2, 200, 400, 30, 0x333333).setDepth(10);
-        this.progressBar = this.add.rectangle(W/2 - 200, 200, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
-        this.progressText = this.add.text(W/2, 200, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
-        
-        this.add.text(640, 40, '🛒', { fontSize: '48px' })
-            .setDepth(10).setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.openShop());
-        
-        const btnY = 1200;
-        const hasSwatter = GameState.carpetIndex >= 2;
-        const soapX = hasSwatter ? 120 : 240;
-        const washX = hasSwatter ? 360 : 480;
-        const swatterX = 600;
-        
-        this.soapBtnBg = this.add.rectangle(soapX, btnY, 200, 80, 0x4A90D9).setDepth(10);
-        this.soapBtnBg.setStrokeStyle(5, 0xFFFFFF);
-        this.soapBtnText = this.add.text(soapX, btnY, '🧼 МЫЛО', TEXT_STYLES.button('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
-        this.soapBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('soap'));
-        
-        this.washBtnBg = this.add.rectangle(washX, btnY, 200, 80, 0x555555).setDepth(10);
-        this.washBtnBg.setStrokeStyle(5, 0x888888);
-        this.washBtnText = this.add.text(washX, btnY, '💧 СМЫТЬ', TEXT_STYLES.button('#AAAAAA', 22)).setOrigin(0.5).setDepth(11);
-        this.washBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('wash'));
-        
-        this.swatterBtnBg = this.add.rectangle(swatterX, btnY, 200, 80, 0x555555).setDepth(10);
-        this.swatterBtnBg.setStrokeStyle(5, 0x888888);
-        this.swatterBtnText = this.add.text(swatterX, btnY, '🪰 МУХОБОЙКА', TEXT_STYLES.button('#AAAAAA', 18)).setOrigin(0.5).setDepth(11);
-        this.swatterBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('swatter'));
-        
-        this.swatterBtnBg.setVisible(hasSwatter);
-        this.swatterBtnText.setVisible(hasSwatter);
-        
-        this.add.text(W/2, 1050, 'ПОЛУЧИТЬ ДЕНЬГИ', {
-            ...TEXT_STYLES.button('#00FF00', 30),
-            backgroundColor: '#000000', padding: { x: 30, y: 15 }
-        }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => this.finishCarpet());
-        
-        this.selectTool('soap');
-        this.setupCleaning();
-        this.spawnBugsIfNeeded();
+/* ============================================================
+   5. EFFECTS — визуальные эффекты
+   ============================================================ */
+class Effects {
+    constructor(scene) {
+        this.scene = scene;
+        this.gfxSwatter = scene.add.graphics().setDepth(6);
+        this.gfxSwatter.setVisible(false);
     }
 
-    scheduleAutoClean() {
-        if (this.autoCleanStarted || this.autoCleanPending) return;
-        if (this.cleanProgress < CONFIG.autoCleanThreshold) return;
-        this.autoCleanPending = true;
-        this.autoCleanIdleTimer = this.time.delayedCall(CONFIG.autoCleanIdleDelay, () => {
-            this.autoCleanPending = false;
-            this.autoCleanIdleTimer = null;
-            if (this.cleanProgress >= CONFIG.autoCleanThreshold && this.cleanProgress < 1.0) {
-                this.startAutoClean();
-            }
+    bubbles(x, y) {
+        if (Math.random() > BALANCE.bubbleChance) return;
+        const s = ['🫧','💭','⭕'][Math.floor(Math.random() * 3)];
+        const t = this.scene.add.text(x, y, s, { fontSize: (25 + Math.random() * 20) + 'px' })
+            .setOrigin(0.5).setDepth(8).setAlpha(0.85);
+        const a = Math.random() * Math.PI * 2;
+        const d = 30 + Math.random() * 50;
+        this.scene.tweens.add({
+            targets: t, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d - 50,
+            alpha: { from: 0.85, to: 0 }, scale: { from: 1, to: 1.6 },
+            duration: 700 + Math.random() * 300, ease: 'Cubic.easeOut',
+            onComplete: () => t.destroy()
         });
     }
-    
-    cancelAutoClean() {
-        if (this.autoCleanPending) {
-            this.autoCleanPending = false;
-            if (this.autoCleanIdleTimer) {
-                this.autoCleanIdleTimer.remove();
-                this.autoCleanIdleTimer = null;
-            }
-        }
-    }
-    
-    startAutoClean() {
-        if (this.autoCleanStarted) return;
-        this.autoCleanStarted = true;
-        this.showMessage('✨ Ковёр сам очищается...');
-        
-        const dirtyIndices = [];
-        const total = this.dirtGrid.length;
-        for (let i = 0; i < total; i++) {
-            if (this.dirtGrid[i] > 0.01) dirtyIndices.push(i);
-        }
-        
-        if (dirtyIndices.length === 0) { this.finishAutoClean(); return; }
-        
-        const tickDelay = 50;
-        const totalTicks = CONFIG.autoCleanDuration / tickDelay;
-        const cellsPerTick = Math.max(1, Math.ceil(dirtyIndices.length / totalTicks));
-        let index = 0;
-        
-        this.autoCleanTweenTimer = this.time.addEvent({
-            delay: tickDelay,
-            repeat: totalTicks,
-            callback: () => {
-                for (let i = 0; i < cellsPerTick && index < dirtyIndices.length; i++) {
-                    this.dirtGrid[dirtyIndices[index]] = 0;
-                    this.soapGrid[dirtyIndices[index]] = 0;
-                    index++;
-                }
-                this.needRedrawDirt = true;
-                this.needRedrawSoap = true;
-                this.recalcProgress(true);
-                if (index >= dirtyIndices.length) {
-                    if (this.autoCleanTweenTimer) {
-                        this.autoCleanTweenTimer.remove();
-                        this.autoCleanTweenTimer = null;
-                    }
-                    this.finishAutoClean();
-                }
-            }
-        });
-    }
-    
-    finishAutoClean() {
-        this.cleanProgress = 1.0;
-        this.updateProgressBar();
-        if (!this.celebrationShown) {
-            this.celebrationShown = true;
-            this.spawnCelebration();
-            this.showMessage('Ковёр чистый! ✨');
-        }
-    }
-    
-    resetAutoCleanTimer() {
-        this.cancelAutoClean();
-        if (this.autoCleanStarted) return;
-        this.scheduleAutoClean();
-    }
 
-    spawnBubbles(x, y) {
-        if (Math.random() > CONFIG.bubbleChance) return;
-        const symbols = ['🫧', '💭', '⭕'];
-        const bubble = this.add.text(x, y, symbols[Math.floor(Math.random() * symbols.length)], {
-            fontSize: (25 + Math.random() * 20) + 'px', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(8).setAlpha(0.85);
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 30 + Math.random() * 50;
-        this.tweens.add({
-            targets: bubble,
-            x: x + Math.cos(angle) * distance,
-            y: y + Math.sin(angle) * distance - 50,
-            alpha: { from: 0.85, to: 0 },
-            scale: { from: 1, to: 1.6 },
-            duration: 700 + Math.random() * 300,
-            ease: 'Cubic.easeOut',
-            onComplete: () => bubble.destroy()
-        });
-    }
-    
-    spawnSplash(x, y) {
-        if (Math.random() > CONFIG.splashChance) return;
-        const count = 1 + Math.floor(Math.random() * 2);
-        for (let i = 0; i < count; i++) {
-            const symbols = ['💧', '💦', '·', '°'];
-            const splash = this.add.text(x, y, symbols[Math.floor(Math.random() * symbols.length)], {
-                fontSize: (20 + Math.random() * 25) + 'px', fontFamily: 'Arial'
-            }).setOrigin(0.5).setDepth(8).setAlpha(0.9);
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 40 + Math.random() * 70;
-            this.tweens.add({
-                targets: splash,
-                x: x + Math.cos(angle) * distance,
-                y: y + Math.sin(angle) * distance,
-                alpha: { from: 0.9, to: 0 },
-                scale: { from: 1, to: 0.3 },
+    splash(x, y) {
+        if (Math.random() > BALANCE.splashChance) return;
+        const n = 1 + Math.floor(Math.random() * 2);
+        for (let i = 0; i < n; i++) {
+            const s = ['💧','💦','·','°'][Math.floor(Math.random() * 4)];
+            const t = this.scene.add.text(x, y, s, { fontSize: (20 + Math.random() * 25) + 'px' })
+                .setOrigin(0.5).setDepth(8).setAlpha(0.9);
+            const a = Math.random() * Math.PI * 2;
+            const d = 40 + Math.random() * 70;
+            this.scene.tweens.add({
+                targets: t, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d,
+                alpha: { from: 0.9, to: 0 }, scale: { from: 1, to: 0.3 },
                 angle: { from: 0, to: (Math.random() - 0.5) * 360 },
-                duration: 500 + Math.random() * 300,
-                ease: 'Cubic.easeOut',
-                onComplete: () => splash.destroy()
+                duration: 500 + Math.random() * 300, ease: 'Cubic.easeOut',
+                onComplete: () => t.destroy()
             });
         }
     }
 
-    spawnBugsIfNeeded() {
-        if (GameState.carpetIndex < 2) return;
-        const maxBugs = CONFIG.bugCountBase + GameState.carpetIndex;
-        const count = Phaser.Math.Between(1, maxBugs);
-        for (let i = 0; i < count; i++) this.spawnBug();
+    star(x, y) {
+        if (Math.random() > BALANCE.starChance) return;
+        const s = Math.random() > 0.5 ? '⭐' : '✨';
+        const t = this.scene.add.text(x, y, s, { fontSize: (20 + Math.random() * 15) + 'px' })
+            .setOrigin(0.5).setDepth(5);
+        const a = Math.random() * Math.PI * 2;
+        const d = 30 + Math.random() * 60;
+        this.scene.tweens.add({
+            targets: t, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d - 40,
+            alpha: { from: 1, to: 0 }, scale: { from: 1, to: 0.3 },
+            duration: BALANCE.starLifetime, ease: 'Cubic.easeOut',
+            onComplete: () => t.destroy()
+        });
     }
-    
-    spawnBug() {
-        const padding = 40;
-        const x = Phaser.Math.Between(this.carpetX - this.carpetW/2 + padding, this.carpetX + this.carpetW/2 - padding);
-        const y = Phaser.Math.Between(this.carpetY - this.carpetH/2 + padding, this.carpetY + this.carpetH/2 - padding);
-        const bug = this.add.container(x, y).setDepth(4);
-        const bodyGfx = this.add.graphics();
-        bodyGfx.fillStyle(0x1a1a1a, 1); bodyGfx.fillEllipse(0, 0, 36, 24);
-        bodyGfx.lineStyle(2, 0x000000, 1); bodyGfx.strokeEllipse(0, 0, 36, 24);
-        bodyGfx.fillStyle(0x0a0a0a, 1); bodyGfx.fillCircle(15, 0, 9);
-        bodyGfx.fillStyle(0xFFFFFF, 1); bodyGfx.fillCircle(18, -4, 2.5); bodyGfx.fillCircle(18, 4, 2.5);
-        bodyGfx.fillStyle(0x000000, 1); bodyGfx.fillCircle(19, -4, 1.2); bodyGfx.fillCircle(19, 4, 1.2);
-        bodyGfx.lineStyle(1.5, 0x4a2a0a, 1);
-        bodyGfx.beginPath();
-        bodyGfx.moveTo(-8, -8); bodyGfx.lineTo(-8, 8);
-        bodyGfx.moveTo(0, -10); bodyGfx.lineTo(0, 10);
-        bodyGfx.moveTo(8, -8); bodyGfx.lineTo(8, 8);
-        bodyGfx.strokePath();
-        bodyGfx.lineStyle(1.5, 0x1a1a1a, 1);
-        bodyGfx.beginPath();
-        bodyGfx.moveTo(22, -3); bodyGfx.lineTo(30, -8);
-        bodyGfx.moveTo(22, 3); bodyGfx.lineTo(30, 8);
-        bodyGfx.strokePath();
-        bodyGfx.lineStyle(2, 0x0a0a0a, 1);
-        bodyGfx.beginPath();
-        bodyGfx.moveTo(-10, -10); bodyGfx.lineTo(-15, -15);
-        bodyGfx.moveTo(-10, 10); bodyGfx.lineTo(-15, 15);
-        bodyGfx.moveTo(0, -12); bodyGfx.lineTo(-2, -18);
-        bodyGfx.moveTo(0, 12); bodyGfx.lineTo(-2, 18);
-        bodyGfx.moveTo(10, -10); bodyGfx.lineTo(15, -15);
-        bodyGfx.moveTo(10, 10); bodyGfx.lineTo(15, 15);
-        bodyGfx.strokePath();
-        bug.add(bodyGfx);
+
+    starBurst(x, y, count = 3) {
+        for (let i = 0; i < count; i++) this.star(x, y);
+    }
+
+    swatEffect(x, y) {
+        const t = this.scene.add.text(x, y, '💥', { fontSize: '60px' }).setOrigin(0.5).setDepth(20);
+        this.scene.tweens.add({
+            targets: t, alpha: 0, scale: 1.8, duration: 400, ease: 'Cubic.easeOut',
+            onComplete: () => t.destroy()
+        });
+    }
+
+    drawSwatterCursor(x, y) {
+        const g = this.gfxSwatter;
+        g.clear();
+        g.lineStyle(6, 0xFF4444, 0.8); g.strokeCircle(x, y, BALANCE.swatterRadius);
+        g.lineStyle(4, 0xFF8888, 0.6);
+        g.beginPath();
+        g.moveTo(x - 15, y); g.lineTo(x + 15, y);
+        g.moveTo(x, y - 15); g.lineTo(x, y + 15);
+        g.strokePath();
+        g.setVisible(true);
+    }
+    hideSwatterCursor() { this.gfxSwatter.setVisible(false); }
+
+    celebration(W, H) {
+        const sym = ['⭐','✨','🌟','💫'];
+        for (let i = 0; i < BALANCE.finishStarCount; i++) {
+            const sx = Math.random() * W, sy = Math.random() * H;
+            const t = this.scene.add.text(sx, sy, sym[Math.floor(Math.random() * 4)], {
+                fontSize: (25 + Math.random() * 30) + 'px'
+            }).setOrigin(0.5).setDepth(15);
+            const a = Math.random() * Math.PI * 2;
+            const d = 60 + Math.random() * 150;
+            this.scene.tweens.add({
+                targets: t, x: sx + Math.cos(a) * d, y: sy + Math.sin(a) * d,
+                alpha: { from: 0, to: 1 }, scale: { from: 0.3, to: 1.2 },
+                delay: Math.random() * 600, duration: BALANCE.finishStarDuration * 0.4, ease: 'Back.easeOut',
+                onComplete: () => this.scene.tweens.add({
+                    targets: t, alpha: 0, scale: 0.2, y: t.y - 60,
+                    duration: BALANCE.finishStarDuration * 0.6, ease: 'Cubic.easeIn',
+                    onComplete: () => t.destroy()
+                })
+            });
+        }
+    }
+}
+
+/* ============================================================
+   6. CLEANINGSYSTEM — сетка грязи / мыла / прогресс
+   ============================================================ */
+class CleaningSystem {
+    constructor(scene, bounds, opts = {}) {
+        this.scene = scene;
+        this.bounds = bounds;
+        this.cellSize = opts.cellSize || BALANCE.gridCellSize;
+        this.cols = Math.ceil(bounds.width / this.cellSize);
+        this.rows = Math.ceil(bounds.height / this.cellSize);
+        this.originX = bounds.x;
+        this.originY = bounds.y;
+
+        this.dirt = new Float32Array(this.cols * this.rows);
+        this.soap = new Float32Array(this.cols * this.rows);
+        this.dirt.fill(1.0);
+
+        this.dirtGfx = scene.add.graphics().setDepth(1);
+        this.soapGfx = scene.add.graphics().setDepth(2);
+        this.needRedrawDirt = true;
+        this.needRedrawSoap = true;
+        this.progress = 0;
+
+        this.onProgress = null;
+        this.onErase = null;
+        this.onSoap = null;
+        this.onCelebrate = null;
+        this.celebrationFired = false;
+    }
+
+    reset() {
+        this.dirt.fill(1.0);
+        this.soap.fill(0.0);
+        this.needRedrawDirt = true;
+        this.needRedrawSoap = true;
+        this.progress = 0;
+        this.celebrationFired = false;
+        this.onProgress?.(this.progress);
+    }
+
+    isComplete() { return this.progress >= 1.0; }
+
+    applyStroke(localX, localY, radius, tool) {
+        const cs = this.cellSize, cols = this.cols, rows = this.rows;
+        const r2 = radius * radius;
+        const minCol = Math.max(0, Math.floor((localX - radius) / cs));
+        const maxCol = Math.min(cols - 1, Math.floor((localX + radius) / cs));
+        const minRow = Math.max(0, Math.floor((localY - radius) / cs));
+        const maxRow = Math.min(rows - 1, Math.floor((localY + radius) / cs));
+
+        const isSoap = tool === 'soap';
+        let dirtChanged = false, soapChanged = false, erased = false;
+
+        for (let row = minRow; row <= maxRow; row++) {
+            const rowOff = row * cols;
+            const dy = row * cs + cs / 2 - localY;
+            const dy2 = dy * dy;
+            if (dy2 > r2) continue;
+            for (let col = minCol; col <= maxCol; col++) {
+                const dx = col * cs + cs / 2 - localX;
+                const d2 = dx * dx + dy2;
+                if (d2 > r2) continue;
+                const falloff = Math.max(0.5, 1 - Math.sqrt(d2) / radius);
+                const i = rowOff + col;
+                if (isSoap) {
+                    if (this.soap[i] < 1.0) {
+                        this.soap[i] = Math.min(1.0, this.soap[i] + BALANCE.soapPower * falloff);
+                        soapChanged = true;
+                    }
+                } else {
+                    if (this.soap[i] < BALANCE.soapThreshold) continue;
+                    if (this.dirt[i] > 0.01) {
+                        this.dirt[i] = Math.max(0, this.dirt[i] - BALANCE.eraseStrength * falloff);
+                        this.soap[i] = Math.max(0, this.soap[i] - 0.05);
+                        dirtChanged = true; soapChanged = true; erased = true;
+                    }
+                }
+            }
+        }
+
+        const screenX = localX + this.originX;
+        const screenY = localY + this.originY;
+        if (isSoap && soapChanged) this.onSoap?.(screenX, screenY);
+        if (!isSoap && erased) this.onErase?.(screenX, screenY);
+
+        if (dirtChanged) { this.needRedrawDirt = true; this.recalcProgress(); }
+        if (soapChanged) this.needRedrawSoap = true;
+
+        return { dirtChanged, soapChanged, erased };
+    }
+
+    recalcProgress() {
+        let total = 0;
+        const cells = this.dirt.length;
+        for (let i = 0; i < cells; i++) total += 1 - this.dirt[i];
+        this.progress = total / cells;
+
+        if (this.progress >= 0.9999) {
+            let allClean = true;
+            for (let i = 0; i < cells; i++) if (this.dirt[i] > 0.05) { allClean = false; break; }
+            this.progress = allClean ? 1.0 : 0.99;
+        }
+        this.onProgress?.(this.progress);
+        if (this.progress >= 1.0 && !this.celebrationFired) {
+            this.celebrationFired = true;
+            this.onCelebrate?.();
+        }
+    }
+
+    draw() {
+        if (this.needRedrawDirt) this.drawDirt();
+        if (this.needRedrawSoap) this.drawSoap();
+    }
+
+    drawDirt() {
+        const g = this.dirtGfx, cs = this.cellSize;
+        g.clear();
+        for (let row = 0; row < this.rows; row++) {
+            const rowOff = row * this.cols;
+            const py = this.originY + row * cs;
+            for (let col = 0; col < this.cols; col++) {
+                const d = this.dirt[rowOff + col];
+                if (d <= 0.05) continue;
+                g.fillStyle(0x2a1a0a, d * 0.75);
+                g.fillRect(this.originX + col * cs, py, cs, cs);
+            }
+        }
+        this.needRedrawDirt = false;
+    }
+
+    drawSoap() {
+        const g = this.soapGfx, cs = this.cellSize;
+        g.clear();
+        for (let row = 0; row < this.rows; row++) {
+            const rowOff = row * this.cols;
+            const py = this.originY + row * cs;
+            for (let col = 0; col < this.cols; col++) {
+                const s = this.soap[rowOff + col];
+                if (s < 0.05 || this.dirt[rowOff + col] < 0.1) continue;
+                g.fillStyle(0xAAE0FF, s * 0.75);
+                g.fillRect(this.originX + col * cs, py, cs, cs);
+            }
+        }
+        this.needRedrawSoap = false;
+    }
+}
+
+/* ============================================================
+   7. BUGSYSTEM
+   ============================================================ */
+class BugSystem {
+    constructor(scene, bounds, opts = {}) {
+        this.scene = scene;
+        this.bounds = bounds;
+        this.padding = 40;
+        this.bugs = [];
+        this.lastSwat = 0;
+        this.onKill = opts.onKill || null;
+    }
+
+    get count() { return this.bugs.length; }
+
+    clear() {
+        this.bugs.forEach(b => b.destroy());
+        this.bugs = [];
+    }
+
+    spawnForLevel(carpetIndex) {
+        if (carpetIndex < 2) return;
+        const maxBugs = BALANCE.bugCountBase + carpetIndex;
+        const n = Phaser.Math.Between(1, maxBugs);
+        for (let i = 0; i < n; i++) this.spawnOne();
+    }
+
+    spawnOne() {
+        const b = this.bounds;
+        const x = Phaser.Math.Between(b.x + this.padding, b.x + b.width - this.padding);
+        const y = Phaser.Math.Between(b.y + this.padding, b.y + b.height - this.padding);
+        const bug = this.scene.add.container(x, y).setDepth(4);
+        bug.add(this.buildBody());
         bug.bugAngle = Math.random() * Math.PI * 2;
-        bug.bugSpeed = CONFIG.bugSpeed * (0.7 + Math.random() * 0.6);
+        bug.bugSpeed = BALANCE.bugSpeed * (0.7 + Math.random() * 0.6);
         bug.isDead = false;
         bug.setRotation(bug.bugAngle);
         this.bugs.push(bug);
     }
-    
-    killBug(bug) {
+
+    buildBody() {
+        const g = this.scene.add.graphics();
+        g.fillStyle(0x1a1a1a, 1); g.fillEllipse(0, 0, 36, 24);
+        g.lineStyle(2, 0x000000, 1); g.strokeEllipse(0, 0, 36, 24);
+        g.fillStyle(0x0a0a0a, 1); g.fillCircle(15, 0, 9);
+        g.fillStyle(0xFFFFFF, 1); g.fillCircle(18, -4, 2.5); g.fillCircle(18, 4, 2.5);
+        g.fillStyle(0x000000, 1); g.fillCircle(19, -4, 1.2); g.fillCircle(19, 4, 1.2);
+        g.lineStyle(1.5, 0x4a2a0a, 1);
+        g.beginPath();
+        g.moveTo(-8, -8); g.lineTo(-8, 8);
+        g.moveTo(0, -10); g.lineTo(0, 10);
+        g.moveTo(8, -8); g.lineTo(8, 8);
+        g.strokePath();
+        g.lineStyle(1.5, 0x1a1a1a, 1);
+        g.beginPath();
+        g.moveTo(22, -3); g.lineTo(30, -8);
+        g.moveTo(22, 3); g.lineTo(30, 8);
+        g.strokePath();
+        g.lineStyle(2, 0x0a0a0a, 1);
+        g.beginPath();
+        g.moveTo(-10, -10); g.lineTo(-15, -15);
+        g.moveTo(-10, 10); g.lineTo(-15, 15);
+        g.moveTo(0, -12); g.lineTo(-2, -18);
+        g.moveTo(0, 12); g.lineTo(-2, 18);
+        g.moveTo(10, -10); g.lineTo(15, -15);
+        g.moveTo(10, 10); g.lineTo(15, 15);
+        g.strokePath();
+        return g;
+    }
+
+    kill(bug) {
         if (bug.isDead) return;
         bug.isDead = true;
-        this.spawnStarsAt(bug.x, bug.y);
-        this.spawnStarsAt(bug.x, bug.y);
-        this.spawnStarsAt(bug.x, bug.y);
-        this.tweens.add({
+        this.onKill?.(bug.x, bug.y);
+        this.scene.tweens.add({
             targets: bug, alpha: 0, scale: 1.5,
-            duration: CONFIG.bugFadeDuration, ease: 'Cubic.easeOut',
+            duration: BALANCE.bugFadeDuration, ease: 'Cubic.easeOut',
             onComplete: () => {
                 const idx = this.bugs.indexOf(bug);
                 if (idx > -1) this.bugs.splice(idx, 1);
@@ -496,69 +579,28 @@ class MainScene extends Phaser.Scene {
             }
         });
     }
-    
-    swatAt(x, y) {
-        const now = this.time.now;
-        if (now - this.swatterCooldownTime < CONFIG.swatterCooldown) return;
-        this.swatterCooldownTime = now;
-        this.showSwatEffect(x, y);
-        const radiusSq = CONFIG.swatterRadius * CONFIG.swatterRadius;
+
+    swat(x, y, now) {
+        if (now - this.lastSwat < BALANCE.swatterCooldown) return false;
+        this.lastSwat = now;
+        const r2 = BALANCE.swatterRadius * BALANCE.swatterRadius;
+        let hit = false;
         for (let i = this.bugs.length - 1; i >= 0; i--) {
             const bug = this.bugs[i];
             if (bug.isDead) continue;
             const dx = bug.x - x, dy = bug.y - y;
-            if (dx*dx + dy*dy <= radiusSq) this.killBug(bug);
+            if (dx * dx + dy * dy <= r2) { this.kill(bug); hit = true; }
         }
+        return hit;
     }
-    
-    showSwatEffect(x, y) {
-        const effect = this.add.text(x, y, '💥', { fontSize: '60px', fontFamily: 'Arial' })
-            .setOrigin(0.5).setDepth(20);
-        this.tweens.add({
-            targets: effect, alpha: 0, scale: 1.8, duration: 400, ease: 'Cubic.easeOut',
-            onComplete: () => effect.destroy()
-        });
-    }
-    
-    drawSwatter(x, y) {
-        this.swatterGfx.clear();
-        this.swatterGfx.lineStyle(6, 0xFF4444, 0.8);
-        this.swatterGfx.strokeCircle(x, y, CONFIG.swatterRadius);
-        this.swatterGfx.lineStyle(4, 0xFF8888, 0.6);
-        this.swatterGfx.beginPath();
-        this.swatterGfx.moveTo(x - 15, y); this.swatterGfx.lineTo(x + 15, y);
-        this.swatterGfx.moveTo(x, y - 15); this.swatterGfx.lineTo(x, y + 15);
-        this.swatterGfx.strokePath();
-    }
-    
-    spawnStarsAt(x, y) {
-        const symbols = ['⭐', '✨', '🌟'];
-        const star = this.add.text(x, y, symbols[Math.floor(Math.random() * symbols.length)], {
-            fontSize: (25 + Math.random() * 20) + 'px', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(15);
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 40 + Math.random() * 60;
-        this.tweens.add({
-            targets: star,
-            x: x + Math.cos(angle) * distance,
-            y: y + Math.sin(angle) * distance - 30,
-            alpha: { from: 1, to: 0 }, scale: { from: 1, to: 0.3 },
-            angle: { from: 0, to: (Math.random() - 0.5) * 360 },
-            duration: 800, ease: 'Cubic.easeOut',
-            onComplete: () => star.destroy()
-        });
-    }
-    
-    updateBugs(delta) {
+
+    update(delta) {
         if (this.bugs.length === 0) return;
         const dt = delta / 1000;
-        const padding = 30;
-        const minX = this.carpetX - this.carpetW/2 + padding;
-        const maxX = this.carpetX + this.carpetW/2 - padding;
-        const minY = this.carpetY - this.carpetH/2 + padding;
-        const maxY = this.carpetY + this.carpetH/2 - padding;
-        for (let i = this.bugs.length - 1; i >= 0; i--) {
-            const bug = this.bugs[i];
+        const b = this.bounds;
+        const minX = b.x + this.padding, maxX = b.x + b.width - this.padding;
+        const minY = b.y + this.padding, maxY = b.y + b.height - this.padding;
+        for (const bug of this.bugs) {
             if (bug.isDead) continue;
             bug.x += Math.cos(bug.bugAngle) * bug.bugSpeed * dt;
             bug.y += Math.sin(bug.bugAngle) * bug.bugSpeed * dt;
@@ -570,18 +612,592 @@ class MainScene extends Phaser.Scene {
             if (Math.random() < 0.005) bug.bugAngle += (Math.random() - 0.5) * 1.5;
         }
     }
+}
+
+/* ============================================================
+   8. SHOPUI — с превью следующего ковра
+   ============================================================ */
+class ShopUI {
+    constructor(scene, state) {
+        this.scene = scene;
+        this.state = state;
+        this.elements = [];
+        this.isOpen = false;
+        this.onBuyCarpet = null;
+        this.onChanged = null;
+        this.onMessage = null;
+    }
+
+    open() {
+        if (this.isOpen) return;
+        this.isOpen = true;
+        this.render();
+    }
+    close() {
+        this.isOpen = false;
+        this.elements.forEach(e => e.destroy());
+        this.elements = [];
+    }
+    refresh() {
+        if (!this.isOpen) return;
+        this.close();
+        this.open();
+    }
+
+    render() {
+        const s = this.scene, W = 720, H = 1280, st = this.state;
+        const push = (el) => { this.elements.push(el); return el; };
+
+        const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.9).setDepth(20));
+        ov.setInteractive();
+        push(s.add.rectangle(W/2, H/2, 660, 1100, 0x2a2a2a).setDepth(21).setStrokeStyle(5, 0xFFD700));
+        push(s.add.text(W/2, 120, 'МАГАЗИН', TEXT_STYLES.title()).setOrigin(0.5).setDepth(22));
+
+        /* --- Еда --- */
+        push(s.add.text(W/2, 200, `Купить еду (${BALANCE.foodPrice}💰)\n🍞 +1`, {
+            ...TEXT_STYLES.shop('#FFFFFF', 22), backgroundColor: '#444444', padding: { x: 25, y: 10 }
+        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
+          .on('pointerdown', async () => {
+            if (st.buyFood()) { await this.onChanged?.(); this.onMessage?.('Куплена еда!'); this.refresh(); }
+            else this.onMessage?.('Не хватает денег!');
+          }));
+
+        /* --- Автоеда --- */
+        const afPrice = st.getAutoFoodPrice();
+        const afLabel = st.autoFoodEnabled
+            ? `✅ АВТОЕДА ВКЛ\nПокупает еду за ${afPrice}💰`
+            : `🛒 АВТОЕДА (${afPrice}💰)\nВкл. навсегда`;
+        const afColor = st.autoFoodEnabled ? '#00FF00' : '#FFAA00';
+        const afBtn = push(s.add.text(W/2, 300, afLabel, {
+            ...TEXT_STYLES.shop(afColor, 20), backgroundColor: '#1a1a1a', padding: { x: 25, y: 10 }
+        }).setOrigin(0.5).setDepth(22));
+        if (!st.autoFoodEnabled) {
+            afBtn.setInteractive({ useHandCursor: true }).on('pointerdown', async () => {
+                if (st.buyAutoFood()) {
+                    await this.onChanged?.();
+                    this.onMessage?.('✅ Автоеда включена!');
+                    this.refresh();
+                } else this.onMessage?.('Не хватает денег!');
+            });
+        }
+
+        /* --- Щётка --- */
+        const t = st.toolLevel;
+        const curR = st.getCurrentRadius();
+        const nextR = Math.floor(BALANCE.brushRadius * (1 + t * BALANCE.toolRadiusBonus));
+        const curM = Math.round(st.getToolMoneyMultiplier() * 100);
+        const nextM = Math.round((1 + t * BALANCE.toolMoneyBonus) * 100);
+        const toolPrice = st.getToolUpgradePrice();
+        push(s.add.text(W/2, 410,
+            `Улучшить щётку (${toolPrice}💰)\nРадиус: ${curR} → ${nextR}\n💰 Доход: ${curM}% → ${nextM}%`, {
+            ...TEXT_STYLES.shop('#FFFFFF', 20), backgroundColor: '#444444', padding: { x: 25, y: 10 }
+        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
+          .on('pointerdown', async () => {
+            if (!st.upgradeTool()) { this.onMessage?.('Не хватает денег!'); return; }
+            await this.onChanged?.();
+            this.onMessage?.('Щётка улучшена!');
+            if (st.getCurrentRadius() >= st.getRequiredRadius() && st.carpetIndex < BALANCE.totalCarpets) {
+                this.onMessage?.('Новый ковёр доступен!');
+            }
+            this.refresh();
+        }));
+
+        /* --- Превью следующего ковра --- */
+        this._renderPreview(push);
+
+        /* --- Кнопка «новый ковёр» --- */
+        const canBuy = st.canBuyNewCarpet();
+        const { label, color } = this._newCarpetLabel();
+        const nb = push(s.add.text(W/2, 920, label, {
+            ...TEXT_STYLES.shop(color, 18), backgroundColor: '#1a1a1a', padding: { x: 25, y: 12 }
+        }).setOrigin(0.5).setDepth(22));
+        if (canBuy) {
+            nb.setInteractive({ useHandCursor: true }).on('pointerdown', async () => {
+                await this.onBuyCarpet?.();
+                this.close();
+            });
+        }
+
+        /* --- Инфо --- */
+        push(s.add.text(W/2, 1080,
+            `Уровень ковра: ${st.carpetLevel}  •  Множитель: ×${st.getRewardMultiplier().toFixed(2)}\n` +
+            `Доход от щётки: ${Math.round(st.getToolMoneyMultiplier() * 100)}%  •  ` +
+            `Почищено: ${st.carpetsCleaned}`, {
+            ...TEXT_STYLES.shopInfo('#CCCCCC', 16), backgroundColor: '#1a1a1a', padding: { x: 20, y: 10 }
+        }).setOrigin(0.5).setDepth(22));
+
+        /* --- Закрыть --- */
+        push(s.add.text(620, 120, '✖', {
+            fontSize: '52px', fill: '#FF4444', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 6
+        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => this.close()));
+    }
+
+    _renderPreview(push) {
+        const s = this.scene, st = this.state;
+        const nextIdx = st.carpetIndex + 1;
+        if (nextIdx > BALANCE.totalCarpets) return;
+
+        const cx = 360, cy = 620;
+        const pw = 260, ph = 160;
+
+        // рамка
+        push(s.add.rectangle(cx, cy, pw + 20, ph + 20, 0x111111).setDepth(21).setStrokeStyle(3, 0x00FF00, 0.6));
+        push(s.add.text(cx, cy - ph/2 - 20, `СЛЕДУЮЩИЙ КОВЁР №${nextIdx}`, {
+            ...TEXT_STYLES.shop('#00FF00', 16)
+        }).setOrigin(0.5).setDepth(22));
+
+        const key = 'carpet' + nextIdx;
+        if (s.textures.exists(key)) {
+            push(s.add.image(cx, cy, key).setDisplaySize(pw, ph).setDepth(22));
+        } else {
+            // процедурный превью-паттерн
+            const palettes = [
+                { main: 0x8B4513, accent: 0xFFD700, border: 0x654321 },
+                { main: 0x8B0000, accent: 0xFFE4B5, border: 0x5C0000 },
+                { main: 0x191970, accent: 0xC0C0C0, border: 0x0F0F40 },
+                { main: 0x2E8B57, accent: 0xFFE4E1, border: 0x1F5F3A },
+                { main: 0x4B0082, accent: 0xFFD700, border: 0x2F0050 }
+            ];
+            const p = palettes[(nextIdx - 1) % palettes.length];
+            const g = s.add.graphics().setDepth(22);
+            g.fillStyle(p.main, 1); g.fillRect(cx - pw/2, cy - ph/2, pw, ph);
+            g.lineStyle(8, p.border, 1); g.strokeRect(cx - pw/2 + 6, cy - ph/2 + 6, pw - 12, ph - 12);
+            g.lineStyle(3, p.accent, 0.7);
+            g.beginPath();
+            g.moveTo(cx, cy - 40); g.lineTo(cx + 50, cy);
+            g.lineTo(cx, cy + 40); g.lineTo(cx - 50, cy);
+            g.closePath(); g.strokePath();
+            push(g);
+        }
+
+        // подсказки
+        const hints = [];
+        if (nextIdx === 2) hints.push('🐛 Появятся жуки');
+        else hints.push('🐛 Жуков станет больше');
+        hints.push(`🧹 Нужен радиус: ${st.getRequiredRadius() + BALANCE.newCarpetRadiusIncrease}`);
+        hints.push(`🛒 Автоеда: ${st.getAutoFoodPrice() + BALANCE.autoFoodPriceIncrease}💰`);
+
+        push(s.add.text(cx, cy + ph/2 + 30, hints.join('   •   '), {
+            ...TEXT_STYLES.shopInfo('#FFFF00', 14), wordWrap: { width: 620 }
+        }).setOrigin(0.5).setDepth(22));
+    }
+
+    _newCarpetLabel() {
+        const st = this.state;
+        const price = st.getNewCarpetPrice();
+        const reqR = st.getRequiredRadius();
+        const hasNext = st.carpetIndex < BALANCE.totalCarpets;
+        const radiusOk = st.getCurrentRadius() >= reqR;
+        const moneyOk = st.money >= price;
+
+        if (!hasNext) return { label: '🏆 ВСЕ КОВРЫ ОТКРЫТЫ', color: '#FFD700' };
+        if (!radiusOk) return { label: `🔒 Нужен радиус ${reqR}\n(сейчас ${st.getCurrentRadius()})`, color: '#AAAAAA' };
+        if (!moneyOk)  return { label: `🆕 КУПИТЬ (${price}💰)\nНе хватает денег`, color: '#AAAAAA' };
+
+        const nextNum = st.carpetIndex + 1;
+        const curMult = Math.round(st.getRewardMultiplier() * 100);
+        const nextMult = Math.round(Math.pow(BALANCE.rewardMultiplierPerCarpet, st.carpetLevel + 1) * 100);
+        return {
+            label:
+                `🆕 КУПИТЬ КОВЁР №${nextNum} (${price}💰)\n` +
+                `📈 Множитель: ${curMult}% → ${nextMult}%\n` +
+                `⚠️ Сброс: только деньги (щётка остаётся!)`,
+            color: '#00FF00'
+        };
+    }
+}
+
+/* ============================================================
+   9. PRELOAD SCENE
+   ============================================================ */
+class PreloadScene extends Phaser.Scene {
+    constructor() { super('PreloadScene'); }
+
+    preload() {
+        for (let i = 1; i <= BALANCE.totalCarpets; i++) {
+            this.load.image('carpet' + i, `carpets/carpet${i}.png`);
+        }
+        this.load.on('loaderror', () => {}); // игнорируем отсутствующие файлы
+
+        const w = this.cameras.main.width, h = this.cameras.main.height;
+        this.add.text(w/2, h/2 - 50, 'Загрузка...', TEXT_STYLES.title()).setOrigin(0.5);
+        this.add.rectangle(w/2, h/2 + 30, 400, 30, 0x333333);
+        const bar = this.add.rectangle(w/2 - 200, h/2 + 30, 0, 26, 0x00FF00).setOrigin(0, 0.5);
+        this.load.on('progress', (v) => { bar.width = 400 * v; });
+    }
+
+    async create() {
+        const state = new GameState();
+        const saveSystem = await new SaveSystem(state).init();
+        this.registry.set('gameState', state);
+        this.registry.set('saveSystem', saveSystem);
+        this.scene.start('MainScene');
+    }
+}
+
+/* ============================================================
+   10. MAIN SCENE
+   ============================================================ */
+class MainScene extends Phaser.Scene {
+    constructor() { super('MainScene'); }
+
+    create() {
+        this.state = this.registry.get('gameState');
+        this.saveSystem = this.registry.get('saveSystem');
+
+        if (this.input.mouse) this.input.mouse.disableContextMenu();
+        this.saveSystem.ready();
+
+        const W = 720, H = 1280;
+        this.carpetW = 500; this.carpetH = 700;
+        this.carpetX = W / 2; this.carpetY = 600;
+        this.carpetBounds = new Phaser.Geom.Rectangle(
+            this.carpetX - this.carpetW / 2, this.carpetY - this.carpetH / 2,
+            this.carpetW, this.carpetH
+        );
+
+        this.roomGfx = this.add.graphics().setDepth(-10);
+        this.drawRoom();
+        this.carpetContainer = this.add.container(0, 0).setDepth(0);
+        this.drawCarpet();
+
+        /* --- Системы --- */
+        this.effects = new Effects(this);
+
+        this.cleaning = new CleaningSystem(this, this.carpetBounds);
+        this.cleaning.onProgress = (p) => this.updateProgressBar(p);
+        this.cleaning.onSoap = (x, y) => this.effects.bubbles(x, y);
+        this.cleaning.onErase = (x, y) => { this.effects.splash(x, y); this.effects.star(x, y); };
+        this.cleaning.onCelebrate = () => { this.effects.celebration(W, H); this.showMessage('Ковёр чистый! ✨'); };
+
+        this.bugs = new BugSystem(this, this.carpetBounds, {
+            onKill: (x, y) => this.effects.starBurst(x, y, 3)
+        });
+
+        this.shop = new ShopUI(this, this.state);
+        this.shop.onChanged = async () => { this.refreshHUD(); await this.saveSystem.save(); };
+        this.shop.onMessage = (t) => this.showMessage(t);
+        this.shop.onBuyCarpet = async () => this.buyNewCarpet();
+
+        /* --- Инструменты / ввод --- */
+        this.currentTool = 'soap';
+        this.isPointerDown = false;
+        this.lastLocalX = -9999;
+        this.lastLocalY = -9999;
+        this.inputLocked = false;
+
+        this.noFoodText = null; this.noFoodTween = null; this.noFoodCooldown = false;
+        this.bugWarningText = null; this.bugWarningTween = null; this.bugWarningCooldown = false;
+
+        this.autoCleanStarted = false;
+        this.autoCleanPending = false;
+        this.autoCleanIdleTimer = null;
+        this.autoCleanTweenTimer = null;
+
+        this.brush = this.add.text(0, 0, '🧼', { fontSize: '70px', fontFamily: 'Arial' })
+            .setOrigin(0.5).setDepth(3).setVisible(false);
+
+        this.buildHUD(W, H);
+        this.buildToolButtons(W, H);
+        this.setupInput();
+        this.selectTool('soap');
+
+        this.bugs.spawnForLevel(this.state.carpetIndex);
+    }
+
+    /* ---------- HUD ---------- */
+    buildHUD(W, H) {
+        this.add.rectangle(0, 0, 280, 180, 0x000000, 0.5).setOrigin(0, 0).setDepth(9);
+        this.moneyText = this.add.text(30, 30, '💰 ' + this.state.money, TEXT_STYLES.stat('#FFD700', 34)).setDepth(10);
+        this.foodText = this.add.text(30, 80, '🍞 ' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 26)).setDepth(10);
+        this.toolText = this.add.text(30, 118, '🧹 Радиус: ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 20)).setDepth(10);
+        this.carpetText = this.add.text(30, 148, '🧽 Почищено: ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 20)).setDepth(10);
+
+        this.add.rectangle(W/2, 200, 400, 30, 0x000000, 0.6).setDepth(10);
+        this.add.rectangle(W/2, 200, 400, 30, 0x333333).setDepth(10);
+        this.progressBar = this.add.rectangle(W/2 - 200, 200, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
+        this.progressText = this.add.text(W/2, 200, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
+
+        this.add.text(640, 40, '🛒', { fontSize: '48px' })
+            .setDepth(10).setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => { this.shop.open(); });
+
+        this.add.text(W/2, 1050, 'ПОЛУЧИТЬ ДЕНЬГИ', {
+            ...TEXT_STYLES.button('#00FF00', 30),
+            backgroundColor: '#000000', padding: { x: 30, y: 15 }
+        }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => this.finishCarpet());
+    }
+
+    refreshHUD() {
+        this.moneyText.setText('💰 ' + this.state.money);
+        this.foodText.setText('🍞 ' + this.state.food);
+        this.toolText.setText('🧹 Радиус: ' + this.state.getCurrentRadius());
+        this.carpetText.setText('🧽 Почищено: ' + this.state.carpetsCleaned);
+    }
+
+    buildToolButtons(W, H) {
+        const btnY = 1200;
+        const hasSwatter = this.state.carpetIndex >= 2;
+        const soapX = hasSwatter ? 120 : 240;
+        const washX = hasSwatter ? 360 : 480;
+        const swatterX = 600;
+
+        this.soapBtnBg = this.add.rectangle(soapX, btnY, 200, 80, 0x4A90D9).setDepth(10).setStrokeStyle(5, 0xFFFFFF);
+        this.soapBtnText = this.add.text(soapX, btnY, '🧼 МЫЛО', TEXT_STYLES.button('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
+        this.soapBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('soap'));
+
+        this.washBtnBg = this.add.rectangle(washX, btnY, 200, 80, 0x555555).setDepth(10).setStrokeStyle(5, 0x888888);
+        this.washBtnText = this.add.text(washX, btnY, '💧 СМЫТЬ', TEXT_STYLES.button('#AAAAAA', 22)).setOrigin(0.5).setDepth(11);
+        this.washBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('wash'));
+
+        this.swatterBtnBg = this.add.rectangle(swatterX, btnY, 200, 80, 0x555555).setDepth(10).setStrokeStyle(5, 0x888888);
+        this.swatterBtnText = this.add.text(swatterX, btnY, '🪰 МУХОБОЙКА', TEXT_STYLES.button('#AAAAAA', 18)).setOrigin(0.5).setDepth(11);
+        this.swatterBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('swatter'));
+
+        this.swatterBtnBg.setVisible(hasSwatter);
+        this.swatterBtnText.setVisible(hasSwatter);
+    }
+
+    selectTool(tool) {
+        this.currentTool = tool;
+
+        const setStyle = (bg, txt, active, activeColor = 0x4A90D9) => {
+            if (active) { bg.setFillStyle(activeColor); bg.setStrokeStyle(5, 0xFFFFFF); txt.setColor('#FFFFFF'); }
+            else { bg.setFillStyle(0x555555); bg.setStrokeStyle(5, 0x888888); txt.setColor('#AAAAAA'); }
+        };
+
+        setStyle(this.soapBtnBg, this.soapBtnText, tool === 'soap');
+        setStyle(this.washBtnBg, this.washBtnText, tool === 'wash');
+        setStyle(this.swatterBtnBg, this.swatterBtnText, tool === 'swatter', 0xFF4444);
+
+        if (tool === 'soap') this.brush.setText('🧼');
+        else if (tool === 'wash') this.brush.setText('🧹');
+        else this.brush.setVisible(false);
+
+        if (tool !== 'swatter') this.effects.hideSwatterCursor();
+    }
+
+    /* ---------- Ввод ---------- */
+    setupInput() {
+        this.game.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+        this.game.canvas.addEventListener('touchmove',  (e) => e.preventDefault(), { passive: false });
+
+        const handlePointer = (pointer) => {
+            if (this.inputLocked || this.shop.isOpen) return;
+            if (this.currentTool === 'swatter') {
+                this.effects.drawSwatterCursor(pointer.x, pointer.y);
+                this.brush.setVisible(false);
+                return;
+            }
+            this.effects.hideSwatterCursor();
+            this.brush.setPosition(pointer.x, pointer.y);
+            const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+            this.brush.setVisible(inBounds);
+            if (!inBounds) return;
+
+            const localX = pointer.x - this.carpetBounds.x;
+            const localY = pointer.y - this.carpetBounds.y;
+            const dx = localX - this.lastLocalX;
+            const dy = localY - this.lastLocalY;
+            if (dx * dx + dy * dy < 64) return;
+            this.lastLocalX = localX;
+            this.lastLocalY = localY;
+            this.applyTool(localX, localY);
+        };
+
+        this.input.on('pointerdown', (pointer) => {
+            if (this.inputLocked || this.shop.isOpen) return;
+            if (this.currentTool === 'swatter') {
+                this.effects.drawSwatterCursor(pointer.x, pointer.y);
+                this.effects.swatEffect(pointer.x, pointer.y);
+                this.bugs.swat(pointer.x, pointer.y, this.time.now);
+                return;
+            }
+            this.isPointerDown = true;
+            this.lastLocalX = -9999; this.lastLocalY = -9999;
+            handlePointer(pointer);
+        });
+
+        this.input.on('pointermove', (pointer) => {
+            if (this.inputLocked || this.shop.isOpen) return;
+            if (this.currentTool !== 'swatter') {
+                this.brush.setPosition(pointer.x, pointer.y);
+                this.brush.setVisible(Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y));
+            }
+            if (!pointer.isDown) { this.isPointerDown = false; return; }
+            if (this.currentTool === 'swatter') {
+                this.effects.drawSwatterCursor(pointer.x, pointer.y);
+                return;
+            }
+            handlePointer(pointer);
+        });
+
+        const stop = () => {
+            this.isPointerDown = false;
+            this.effects.hideSwatterCursor();
+            this.brush.setVisible(false);
+            this.lastLocalX = -9999; this.lastLocalY = -9999;
+        };
+        this.input.on('pointerup', stop);
+        this.input.on('pointerout', stop);
+        this.input.on('pointerupoutside', stop);
+        window.addEventListener('blur', stop);
+        document.addEventListener('touchend', () => { this.effects.hideSwatterCursor(); }, { passive: true });
+        document.addEventListener('mouseup', () => { this.effects.hideSwatterCursor(); });
+    }
+
+    applyTool(localX, localY) {
+        if (this.shop.isOpen) return;
+        if (this.state.food <= 0) { this.showNoFoodWarning(); return; }
+        if (this.bugs.count > 0) { this.showBugWarning(); return; }
+
+        this.resetAutoCleanTimer();
+        this.cleaning.applyStroke(localX, localY, this.state.getCurrentRadius(), this.currentTool);
+    }
+
+    /* ---------- Авто-очистка (последний %) ---------- */
+    scheduleAutoClean() {
+        if (this.autoCleanStarted || this.autoCleanPending) return;
+        if (this.cleaning.progress < BALANCE.autoCleanThreshold) return;
+        this.autoCleanPending = true;
+        this.autoCleanIdleTimer = this.time.delayedCall(BALANCE.autoCleanIdleDelay, () => {
+            this.autoCleanPending = false;
+            this.autoCleanIdleTimer = null;
+            if (this.cleaning.progress >= BALANCE.autoCleanThreshold && this.cleaning.progress < 1.0) {
+                this.startAutoClean();
+            }
+        });
+    }
+    cancelAutoClean() {
+        if (!this.autoCleanPending) return;
+        this.autoCleanPending = false;
+        if (this.autoCleanIdleTimer) { this.autoCleanIdleTimer.remove(); this.autoCleanIdleTimer = null; }
+    }
+    startAutoClean() {
+        if (this.autoCleanStarted) return;
+        this.autoCleanStarted = true;
+        this.showMessage('✨ Ковёр сам очищается...');
+
+        const dirt = this.cleaning.dirt;
+        const soap = this.cleaning.soap;
+        const dirtyIndices = [];
+        for (let i = 0; i < dirt.length; i++) if (dirt[i] > 0.01) dirtyIndices.push(i);
+
+        if (dirtyIndices.length === 0) { this.cleaning.recalcProgress(); return; }
+
+        const tickDelay = 50;
+        const totalTicks = BALANCE.autoCleanDuration / tickDelay;
+        const cellsPerTick = Math.max(1, Math.ceil(dirtyIndices.length / totalTicks));
+        let index = 0;
+
+        this.autoCleanTweenTimer = this.time.addEvent({
+            delay: tickDelay,
+            repeat: totalTicks,
+            callback: () => {
+                for (let i = 0; i < cellsPerTick && index < dirtyIndices.length; i++) {
+                    dirt[dirtyIndices[index]] = 0;
+                    soap[dirtyIndices[index]] = 0;
+                    index++;
+                }
+                this.cleaning.needRedrawDirt = true;
+                this.cleaning.needRedrawSoap = true;
+                this.cleaning.recalcProgress();
+                if (index >= dirtyIndices.length) {
+                    if (this.autoCleanTweenTimer) { this.autoCleanTweenTimer.remove(); this.autoCleanTweenTimer = null; }
+                }
+            }
+        });
+    }
+    resetAutoCleanTimer() {
+        this.cancelAutoClean();
+        if (this.autoCleanStarted) return;
+        this.scheduleAutoClean();
+    }
+
+    /* ---------- Финализация ковра ---------- */
+    async finishCarpet() {
+        if (this.shop.isOpen) return;
+        if (this.cleaning.progress < 1.0) { this.showMessage('Ковёр ещё грязный! Нужно 100%.'); return; }
+        if (this.bugs.count > 0) { this.showBugWarning(); return; }
+
+        this.unlockInput();
+        this.autoCleanStarted = false;
+        this.autoCleanPending = false;
+        if (this.autoCleanIdleTimer) { this.autoCleanIdleTimer.remove(); this.autoCleanIdleTimer = null; }
+        if (this.autoCleanTweenTimer) { this.autoCleanTweenTimer.remove(); this.autoCleanTweenTimer = null; }
+
+        const reward = this.state.addReward();
+        this.refreshHUD();
+        await this.saveSystem.save();
+        this.showMessage(`+${reward} 💰!`);
+
+        this.bugs.clear();
+        this.cleaning.reset();
+        this.updateProgressBar(0);
+
+        this.time.delayedCall(50, () => {
+            this.bugs.spawnForLevel(this.state.carpetIndex);
+        });
+    }
+
+    /* ---------- Покупка ковра ---------- */
+    async buyNewCarpet() {
+        if (!this.state.buyNewCarpet()) return;
+        this.unlockInput();
+        this.shop.close();
+
+        this.autoCleanStarted = false;
+        this.autoCleanPending = false;
+        if (this.autoCleanIdleTimer) { this.autoCleanIdleTimer.remove(); this.autoCleanIdleTimer = null; }
+        if (this.autoCleanTweenTimer) { this.autoCleanTweenTimer.remove(); this.autoCleanTweenTimer = null; }
+
+        this.refreshHUD();
+        this.drawRoom();
+        this.drawCarpet();
+        this.cleaning.reset();
+        this.updateProgressBar(0);
+        this.bugs.clear();
+
+        // если дошли до 2-го ковра — включаем мухобойку и сдвигаем кнопки
+        if (this.state.carpetIndex >= 2) {
+            this.swatterBtnBg.setVisible(true);
+            this.swatterBtnText.setVisible(true);
+            this.soapBtnBg.setX(120);  this.soapBtnText.setX(120);
+            this.washBtnBg.setX(360);  this.washBtnText.setX(360);
+        }
+
+        await this.saveSystem.save();
+        this.effects.celebration(720, 1280);
+        this.time.delayedCall(50, () => this.bugs.spawnForLevel(this.state.carpetIndex));
+    }
+
+    /* ---------- Вспомогательные ---------- */
+    unlockInput() {
+        this.inputLocked = true;
+        this.isPointerDown = false;
+        this.lastLocalX = -9999; this.lastLocalY = -9999;
+        this.brush.setVisible(false);
+        this.effects.hideSwatterCursor();
+        this.time.delayedCall(BALANCE.inputLockDuration, () => { this.inputLocked = false; });
+    }
+
+    updateProgressBar(p) {
+        this.progressBar.width = 400 * p;
+        this.progressText.setText(Math.min(100, Math.floor(p * 100)) + '%');
+    }
 
     showNoFoodWarning() {
         if (this.noFoodCooldown) return;
         this.noFoodCooldown = true;
         if (this.noFoodText) {
             if (this.noFoodTween) this.noFoodTween.remove();
-            this.noFoodText.destroy();
-            this.noFoodText = null;
+            this.noFoodText.destroy(); this.noFoodText = null;
         }
-        const W = 720, H = 640;
-        this.noFoodText = this.add.text(W/2, H, '🍞 НЕТ ЕДЫ!\nКУПИ В МАГАЗИНЕ', {
-            fontSize: '56px', fill: '#FF0000', fontStyle: 'bold', fontFamily: 'Arial',
+        this.noFoodText = this.add.text(360, 640, '🍞 НЕТ ЕДЫ!\nКУПИ В МАГАЗИНЕ', {
+            fontSize: '52px', fill: '#FF0000', fontStyle: 'bold', fontFamily: 'Arial',
             align: 'center', stroke: '#000000', strokeThickness: 8,
             shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, fill: true }
         }).setOrigin(0.5).setDepth(50);
@@ -595,18 +1211,16 @@ class MainScene extends Phaser.Scene {
         });
         this.time.delayedCall(1500, () => { this.noFoodCooldown = false; });
     }
-    
+
     showBugWarning() {
         if (this.bugWarningCooldown) return;
         this.bugWarningCooldown = true;
         if (this.bugWarningText) {
             if (this.bugWarningTween) this.bugWarningTween.remove();
-            this.bugWarningText.destroy();
-            this.bugWarningText = null;
+            this.bugWarningText.destroy(); this.bugWarningText = null;
         }
-        const W = 720, H = 640;
-        this.bugWarningText = this.add.text(W/2, H, '🐛 СНАЧАЛА УБЕРИ ЖУКОВ!\n(мухобойка 🪰)', {
-            fontSize: '44px', fill: '#FF4444', fontStyle: 'bold', fontFamily: 'Arial',
+        this.bugWarningText = this.add.text(360, 640, '🐛 СНАЧАЛА УБЕРИ ЖУКОВ!\n(мухобойка 🪰)', {
+            fontSize: '42px', fill: '#FF4444', fontStyle: 'bold', fontFamily: 'Arial',
             align: 'center', stroke: '#000000', strokeThickness: 8,
             shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, fill: true }
         }).setOrigin(0.5).setDepth(50);
@@ -621,51 +1235,36 @@ class MainScene extends Phaser.Scene {
         this.time.delayedCall(1500, () => { this.bugWarningCooldown = false; });
     }
 
-    unlockInput() {
-        this.inputLocked = true;
-        this.isPointerDown = false;
-        this.lastLocalX = -9999;
-        this.lastLocalY = -9999;
-        this.brush.setVisible(false);
-        this.swatterGfx.setVisible(false);
-        this.time.delayedCall(CONFIG.inputLockDuration, () => {
-            this.inputLocked = false;
-            this.isPointerDown = false;
-            this.lastLocalX = -9999;
-            this.lastLocalY = -9999;
-        });
+    showMessage(text) {
+        const msg = this.add.text(360, 1000, text, {
+            ...TEXT_STYLES.message('#FFFF00', 26),
+            backgroundColor: '#000000', padding: { x: 25, y: 12 }
+        }).setOrigin(0.5).setDepth(30);
+        this.time.delayedCall(2200, () => msg.destroy());
     }
 
+    /* ---------- Отрисовка комнаты и ковра ---------- */
     drawRoom() {
         const W = 720, H = 1280;
-        const level = GameState.carpetLevel;
+        const level = this.state.carpetLevel;
         const g = this.roomGfx;
         g.clear();
         const isCozy = (level % 2 === 0);
-        
         if (isCozy) {
             const wallColors = [0xE8D5B7, 0xD4B896, 0xC9A87C, 0xB89A6A, 0xA8895A];
             const wallColor = wallColors[level % wallColors.length];
             g.fillStyle(wallColor, 1); g.fillRect(0, 0, W, 900);
-            for (let x = 0; x < W; x += 60) {
-                g.fillStyle(0x000000, 0.05); g.fillRect(x, 0, 30, 900);
-            }
+            for (let x = 0; x < W; x += 60) { g.fillStyle(0x000000, 0.05); g.fillRect(x, 0, 30, 900); }
             g.fillStyle(0x8B5A2B, 1); g.fillRect(0, 900, W, H - 900);
-            for (let y = 900; y < H; y += 40) {
-                g.fillStyle(0x000000, 0.15); g.fillRect(0, y, W, 3);
-            }
-            for (let x = 0; x < W; x += 100) {
-                g.fillStyle(0x000000, 0.1); g.fillRect(x, 900, 2, H - 900);
-            }
+            for (let y = 900; y < H; y += 40) { g.fillStyle(0x000000, 0.15); g.fillRect(0, y, W, 3); }
+            for (let x = 0; x < W; x += 100) { g.fillStyle(0x000000, 0.1); g.fillRect(x, 900, 2, H - 900); }
             g.fillStyle(0x5C3A1E, 1); g.fillRect(0, 880, W, 20);
-            g.fillStyle(0x87CEEB, 1); g.fillRect(80, 150, 200, 250);
             g.fillStyle(0xFFFFFF, 1); g.fillRect(80, 150, 200, 250);
             g.lineStyle(8, 0x5C3A1E, 1); g.strokeRect(80, 150, 200, 250);
             g.fillStyle(0x5C3A1E, 1); g.fillRect(175, 150, 10, 250); g.fillRect(80, 270, 200, 10);
             g.fillStyle(0xFFEB3B, 0.8); g.fillCircle(240, 200, 35);
             g.fillStyle(0x8B4513, 1); g.fillRect(480, 200, 150, 120);
             g.fillStyle(0x87CEEB, 1); g.fillRect(490, 210, 130, 100);
-            g.fillStyle(0x228B22, 1); g.fillTriangle(490, 310, 555, 240, 620, 310);
         } else {
             const colors = [0x2C3E50, 0x34495E, 0x1A252F, 0x3D5A80, 0x293241];
             const wallColor = colors[level % colors.length];
@@ -673,9 +1272,6 @@ class MainScene extends Phaser.Scene {
             g.fillStyle(0x00E5FF, 0.5); g.fillRect(0, 400, W, 4);
             g.fillStyle(0xFF00E5, 0.5); g.fillRect(0, 500, W, 4);
             g.fillStyle(0x1a1a1a, 1); g.fillRect(0, 900, W, H - 900);
-            for (let i = 0; i < 5; i++) {
-                g.fillStyle(0x00E5FF, 0.05); g.fillRect(0, 900 + i * 40, W, 10);
-            }
             g.lineStyle(3, 0x00E5FF, 0.6); g.strokeCircle(600, 250, 80);
             g.lineStyle(3, 0xFF00E5, 0.6); g.strokeRect(100, 180, 120, 120);
             g.fillStyle(0x000000, 1); g.fillRect(0, 880, W, 20);
@@ -684,7 +1280,7 @@ class MainScene extends Phaser.Scene {
 
     drawCarpet() {
         this.carpetContainer.removeAll(true);
-        const carpetKey = 'carpet' + GameState.carpetIndex;
+        const carpetKey = 'carpet' + this.state.carpetIndex;
         if (this.textures.exists(carpetKey)) {
             const img = this.add.image(this.carpetX, this.carpetY, carpetKey);
             img.setDisplaySize(this.carpetW, this.carpetH);
@@ -700,7 +1296,7 @@ class MainScene extends Phaser.Scene {
                 { main: 0x2E8B57, accent: 0xFFE4E1, border: 0x1F5F3A },
                 { main: 0x4B0082, accent: 0xFFD700, border: 0x2F0050 }
             ];
-            const p = palettes[(GameState.carpetIndex - 1) % palettes.length];
+            const p = palettes[(this.state.carpetIndex - 1) % palettes.length];
             g.fillStyle(p.main, 1); g.fillRect(cx, cy, this.carpetW, this.carpetH);
             g.lineStyle(20, p.border, 1); g.strokeRect(cx + 10, cy + 10, this.carpetW - 20, this.carpetH - 20);
             g.lineStyle(4, p.accent, 0.7);
@@ -711,8 +1307,7 @@ class MainScene extends Phaser.Scene {
                 g.lineTo(this.carpetX + size, this.carpetY);
                 g.lineTo(this.carpetX, this.carpetY + size);
                 g.lineTo(this.carpetX - size, this.carpetY);
-                g.closePath();
-                g.strokePath();
+                g.closePath(); g.strokePath();
             }
             g.fillStyle(p.accent, 1);
             g.fillCircle(cx + 50, cy + 50, 12);
@@ -723,603 +1318,104 @@ class MainScene extends Phaser.Scene {
         }
     }
 
-    selectTool(tool) {
-        this.currentTool = tool;
-        if (tool === 'soap') {
-            this.soapBtnBg.setFillStyle(0x4A90D9); this.soapBtnBg.setStrokeStyle(5, 0xFFFFFF); this.soapBtnText.setColor('#FFFFFF');
-            this.brush.setText('🧼');
-        } else {
-            this.soapBtnBg.setFillStyle(0x555555); this.soapBtnBg.setStrokeStyle(5, 0x888888); this.soapBtnText.setColor('#AAAAAA');
-        }
-        if (tool === 'wash') {
-            this.washBtnBg.setFillStyle(0x4A90D9); this.washBtnBg.setStrokeStyle(5, 0xFFFFFF); this.washBtnText.setColor('#FFFFFF');
-            this.brush.setText('🧹');
-        } else {
-            this.washBtnBg.setFillStyle(0x555555); this.washBtnBg.setStrokeStyle(5, 0x888888); this.washBtnText.setColor('#AAAAAA');
-        }
-        if (tool === 'swatter') {
-            this.swatterBtnBg.setFillStyle(0xFF4444); this.swatterBtnBg.setStrokeStyle(5, 0xFFFFFF); this.swatterBtnText.setColor('#FFFFFF');
-            this.brush.setVisible(false);
-        } else {
-            this.swatterBtnBg.setFillStyle(0x555555); this.swatterBtnBg.setStrokeStyle(5, 0x888888); this.swatterBtnText.setColor('#AAAAAA');
-            this.swatterGfx.setVisible(false);
-        }
-    }
-
-    spawnStars(x, y) {
-        if (Math.random() > CONFIG.starChance) return;
-        for (let i = 0; i < CONFIG.starCount; i++) {
-            const star = this.add.text(x, y, Math.random() > 0.5 ? '⭐' : '✨', {
-                fontSize: (20 + Math.random() * 15) + 'px', fontFamily: 'Arial'
-            }).setOrigin(0.5).setDepth(5);
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 30 + Math.random() * 60;
-            this.tweens.add({
-                targets: star, x: x + Math.cos(angle) * distance, y: y + Math.sin(angle) * distance - 40,
-                alpha: { from: 1, to: 0 }, scale: { from: 1, to: 0.3 },
-                duration: CONFIG.starLifetime, ease: 'Cubic.easeOut',
-                onComplete: () => star.destroy()
-            });
-        }
-    }
-
-    spawnCelebration() {
-        const W = 720, H = 1280;
-        const symbols = ['⭐', '✨', '🌟', '💫'];
-        for (let i = 0; i < CONFIG.finishStarCount; i++) {
-            const startX = Math.random() * W;
-            const startY = Math.random() * H;
-            const star = this.add.text(startX, startY, symbols[Math.floor(Math.random() * symbols.length)], {
-                fontSize: (25 + Math.random() * 30) + 'px', fontFamily: 'Arial'
-            }).setOrigin(0.5).setDepth(15);
-            const delay = Math.random() * 600;
-            const angle = Math.random() * Math.PI * 2;
-            const distance = 60 + Math.random() * 150;
-            this.tweens.add({
-                targets: star, x: startX + Math.cos(angle) * distance, y: startY + Math.sin(angle) * distance,
-                alpha: { from: 0, to: 1 }, scale: { from: 0.3, to: 1.2 },
-                delay: delay, duration: CONFIG.finishStarDuration * 0.4, ease: 'Back.easeOut',
-                onComplete: () => {
-                    this.tweens.add({
-                        targets: star, alpha: 0, scale: 0.2, y: star.y - 60,
-                        duration: CONFIG.finishStarDuration * 0.6, ease: 'Cubic.easeIn',
-                        onComplete: () => star.destroy()
-                    });
-                }
-            });
-        }
-    }
-
-    drawDirt() {
-        this.dirtGfx.clear();
-        const cs = this.gridCellSize;
-        const cols = this.gridCols;
-        const cx = this.gridOffsetX;
-        const cy = this.gridOffsetY;
-        for (let row = 0; row < this.gridRows; row++) {
-            const rowOffset = row * cols;
-            const py = cy + row * cs;
-            for (let col = 0; col < cols; col++) {
-                const dirt = this.dirtGrid[rowOffset + col];
-                const px = cx + col * cs;
-                if (dirt > 0.05) {
-                    this.dirtGfx.fillStyle(0x2a1a0a, dirt * 0.75);
-                    this.dirtGfx.fillRect(px, py, cs, cs);
-                } else {
-                    this.dirtGfx.fillStyle(0xFFFFFF, 0.12);
-                    this.dirtGfx.fillRect(px, py, cs, cs);
-                }
-            }
-        }
-        this.needRedrawDirt = false;
-    }
-
-    drawSoap() {
-        this.soapGfx.clear();
-        const cs = this.gridCellSize;
-        const cols = this.gridCols;
-        const cx = this.gridOffsetX;
-        const cy = this.gridOffsetY;
-        for (let row = 0; row < this.gridRows; row++) {
-            const rowOffset = row * cols;
-            const py = cy + row * cs;
-            for (let col = 0; col < cols; col++) {
-                const soap = this.soapGrid[rowOffset + col];
-                if (soap < 0.05) continue;
-                if (this.dirtGrid[rowOffset + col] < 0.1) continue;
-                const px = cx + col * cs;
-                this.soapGfx.fillStyle(0xAAE0FF, soap * 0.75);
-                this.soapGfx.fillRect(px, py, cs, cs);
-            }
-        }
-        this.needRedrawSoap = false;
-    }
-
-    update(time, delta) {
-        if (this.needRedrawDirt) this.drawDirt();
-        if (this.needRedrawSoap) this.drawSoap();
-        this.updateBugs(delta);
-    }
-
-    setupCleaning() {
-        this.game.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-        this.game.canvas.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
-        
-        const handlePointer = (pointer) => {
-            if (this.inputLocked || this.shopOpen) return;
-            if (this.currentTool === 'swatter') {
-                this.drawSwatter(pointer.x, pointer.y);
-                this.swatterGfx.setVisible(true);
-                this.brush.setVisible(false);
-                return;
-            }
-            this.swatterGfx.setVisible(false);
-            this.brush.setPosition(pointer.x, pointer.y);
-            const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-            this.brush.setVisible(inBounds);
-            if (!inBounds) return;
-            const localX = pointer.x - (this.carpetX - this.carpetW/2);
-            const localY = pointer.y - (this.carpetY - this.carpetH/2);
-            const dx = localX - this.lastLocalX;
-            const dy = localY - this.lastLocalY;
-            if (dx*dx + dy*dy < 64) return;
-            this.lastLocalX = localX;
-            this.lastLocalY = localY;
-            this.applyTool(localX, localY);
-        };
-        
-        this.input.on('pointerdown', (pointer) => {
-            if (this.inputLocked || this.shopOpen) return;
-            if (this.currentTool === 'swatter') {
-                this.drawSwatter(pointer.x, pointer.y);
-                this.swatterGfx.setVisible(true);
-                this.swatAt(pointer.x, pointer.y);
-                this.isPointerDown = false;
-                return;
-            }
-            this.isPointerDown = true;
-            this.lastLocalX = -9999;
-            this.lastLocalY = -9999;
-            handlePointer(pointer);
-        });
-        
-        this.input.on('pointermove', (pointer) => {
-            if (this.inputLocked || this.shopOpen) return;
-            if (this.currentTool !== 'swatter') {
-                this.brush.setPosition(pointer.x, pointer.y);
-                const inBounds = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-                this.brush.setVisible(inBounds);
-            }
-            if (!pointer.isDown) { this.isPointerDown = false; return; }
-            if (this.currentTool === 'swatter') {
-                this.drawSwatter(pointer.x, pointer.y);
-                this.swatterGfx.setVisible(true);
-                return;
-            }
-            handlePointer(pointer);
-        });
-        
-        this.input.on('pointerup', () => {
-            this.isPointerDown = false;
-            this.swatterGfx.setVisible(false);
-            this.lastLocalX = -9999;
-            this.lastLocalY = -9999;
-        });
-        
-        this.input.on('pointerout', () => {
-            this.isPointerDown = false;
-            this.brush.setVisible(false);
-            this.swatterGfx.setVisible(false);
-            this.lastLocalX = -9999;
-            this.lastLocalY = -9999;
-        });
-        
-        this.input.on('pointerupoutside', () => {
-            this.isPointerDown = false;
-            this.brush.setVisible(false);
-            this.swatterGfx.setVisible(false);
-            this.lastLocalX = -9999;
-            this.lastLocalY = -9999;
-        });
-        
-        window.addEventListener('blur', () => {
-            this.isPointerDown = false;
-            this.brush.setVisible(false);
-            this.swatterGfx.setVisible(false);
-        });
-        
-        document.addEventListener('touchend', () => {
-            this.isPointerDown = false;
-            this.swatterGfx.setVisible(false);
-        }, { passive: true });
-        
-        document.addEventListener('mouseup', () => {
-            this.isPointerDown = false;
-            this.swatterGfx.setVisible(false);
-        });
-    }
-
-    applyTool(localX, localY) {
-        if (this.shopOpen) return;
-        if (GameState.food <= 0) { this.showNoFoodWarning(); return; }
-        if (this.bugs.length > 0) { this.showBugWarning(); return; }
-        
-        this.resetAutoCleanTimer();
-        
-        const radius = getCurrentRadius();
-        const cs = this.gridCellSize;
-        const cols = this.gridCols;
-        const rows = this.gridRows;
-        const radiusSq = radius * radius;
-        
-        const minCol = Math.max(0, Math.floor((localX - radius) / cs));
-        const maxCol = Math.min(cols - 1, Math.floor((localX + radius) / cs));
-        const minRow = Math.max(0, Math.floor((localY - radius) / cs));
-        const maxRow = Math.min(rows - 1, Math.floor((localY + radius) / cs));
-        
-        const isSoap = this.currentTool === 'soap';
-        let dirtChanged = false, soapChanged = false, erased = false;
-        const screenX = localX + (this.carpetX - this.carpetW/2);
-        const screenY = localY + (this.carpetY - this.carpetH/2);
-        
-        for (let row = minRow; row <= maxRow; row++) {
-            const rowOffset = row * cols;
-            const ccy = row * cs + cs / 2;
-            const dy = ccy - localY;
-            const dySq = dy * dy;
-            if (dySq > radiusSq) continue;
-            for (let col = minCol; col <= maxCol; col++) {
-                const ccx = col * cs + cs / 2;
-                const dx = ccx - localX;
-                const distSq = dx*dx + dySq;
-                if (distSq > radiusSq) continue;
-                const falloff = Math.max(0.5, 1 - Math.sqrt(distSq) / radius);
-                const index = rowOffset + col;
-                if (isSoap) {
-                    if (this.soapGrid[index] < 1.0) {
-                        this.soapGrid[index] = Math.min(1.0, this.soapGrid[index] + CONFIG.soapPower * falloff);
-                        soapChanged = true;
-                    }
-                } else {
-                    if (this.soapGrid[index] < CONFIG.soapThreshold) continue;
-                    if (this.dirtGrid[index] > 0.01) {
-                        this.dirtGrid[index] = Math.max(0, this.dirtGrid[index] - CONFIG.eraseStrength * falloff);
-                        dirtChanged = true;
-                        erased = true;
-                        this.soapGrid[index] = Math.max(0, this.soapGrid[index] - 0.05);
-                        soapChanged = true;
-                    }
-                }
-            }
-        }
-        
-        if (isSoap && soapChanged) this.spawnBubbles(screenX, screenY);
-        if (!isSoap && erased) {
-            this.spawnSplash(screenX, screenY);
-            this.spawnStars(screenX, screenY);
-        }
-        if (dirtChanged) { this.needRedrawDirt = true; this.recalcProgress(); }
-        if (soapChanged) this.needRedrawSoap = true;
-    }
-
-    recalcProgress(silent = false) {
-        let total = 0;
-        const cells = this.dirtGrid.length;
-        for (let i = 0; i < cells; i++) total += (1 - this.dirtGrid[i]);
-        this.cleanProgress = total / cells;
-        if (this.cleanProgress >= 0.9999) {
-            let allClean = true;
-            for (let i = 0; i < cells; i++) {
-                if (this.dirtGrid[i] > 0.05) { allClean = false; break; }
-            }
-            if (allClean) {
-                this.cleanProgress = 1.0;
-                if (!this.celebrationShown) {
-                    this.celebrationShown = true;
-                    this.spawnCelebration();
-                    this.showMessage('Ковёр чистый! ✨');
-                }
-            } else {
-                this.cleanProgress = 0.99;
-            }
-        }
-        this.updateProgressBar();
-        if (!silent && !this.autoCleanStarted && this.cleanProgress >= CONFIG.autoCleanThreshold && this.cleanProgress < 1.0) {
-            this.scheduleAutoClean();
-        }
-    }
-
-    updateProgressBar() {
-        const p = Math.min(100, Math.floor(this.cleanProgress * 100));
-        if (p === this.lastShownPercent) return;
-        this.lastShownPercent = p;
-        this.progressBar.width = 400 * this.cleanProgress;
-        this.progressText.setText(p + '%');
-    }
-
-    async finishCarpet() {
-        if (this.shopOpen) return;
-        if (this.cleanProgress < 1.0) { this.showMessage('Ковёр ещё грязный! Нужно 100%.'); return; }
-        if (this.bugs.length > 0) { this.showBugWarning(); return; }
-        
-        this.unlockInput();
-        this.autoCleanStarted = false;
-        this.autoCleanPending = false;
-        if (this.autoCleanIdleTimer) { this.autoCleanIdleTimer.remove(); this.autoCleanIdleTimer = null; }
-        if (this.autoCleanTweenTimer) { this.autoCleanTweenTimer.remove(); this.autoCleanTweenTimer = null; }
-        
-        const baseReward = Math.floor(CONFIG.rewardMin + Math.random() * (CONFIG.rewardMax - CONFIG.rewardMin));
-        const carpetMultiplier = getRewardMultiplier();
-        const toolMultiplier = getToolMoneyMultiplier();
-        const reward = Math.floor(baseReward * carpetMultiplier * toolMultiplier);
-        
-        GameState.money += reward;
-        GameState.food -= 1;
-        GameState.carpetsCleaned += 1;
-        
-        if (GameState.autoFoodEnabled && GameState.money >= getAutoFoodPrice()) {
-            GameState.money -= getAutoFoodPrice();
-            GameState.food += 1;
-        }
-        
-        this.moneyText.setText('💰 ' + GameState.money);
-        this.foodText.setText('🍞 ' + GameState.food);
-        this.carpetText.setText('🧽 Почищено: ' + GameState.carpetsCleaned);
-        await saveGame();
-        
-        this.showMessage(`+${reward} 💰!`);
-        
-        this.children.list.forEach(child => {
-            if (child.type === 'Text' && child.text && ['⭐','✨','🌟','💫'].includes(child.text)) child.destroy();
-        });
-        this.bugs.forEach(bug => bug.destroy());
-        this.bugs = [];
-        
-        this.dirtGrid.fill(1.0);
-        this.soapGrid.fill(0.0);
-        this.needRedrawDirt = true;
-        this.needRedrawSoap = true;
-        this.cleanProgress = 0;
-        this.lastShownPercent = -1;
-        this.celebrationShown = false;
-        
-        this.updateProgressBar();
-        this.drawDirt();
-        this.drawSoap();
-        this.spawnBugsIfNeeded();
-    }
-
-    openShop() {
-        this.shopOpen = true;
-        const W = 720, H = 1280;
-        const els = [];
-        const ov = this.add.rectangle(W/2, H/2, W, H, 0x000000, 0.9).setDepth(20);
-        ov.setInteractive(); els.push(ov);
-        const bg = this.add.rectangle(W/2, H/2, 660, 1100, 0x2a2a2a).setDepth(21);
-        bg.setStrokeStyle(5, 0xFFD700); els.push(bg);
-        els.push(this.add.text(W/2, 130, 'МАГАЗИН', TEXT_STYLES.title()).setOrigin(0.5).setDepth(22));
-        
-        const fb = this.add.text(W/2, 220, `Купить еду (${CONFIG.foodPrice}💰)\n🍞 +1`, {
-            ...TEXT_STYLES.shop('#FFFFFF', 24),
-            backgroundColor: '#444444', padding: { x: 25, y: 10 }
-        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
-          .on('pointerdown', async () => {
-            if (GameState.money >= CONFIG.foodPrice) {
-                GameState.money -= CONFIG.foodPrice; GameState.food += 1;
-                this.moneyText.setText('💰 ' + GameState.money);
-                this.foodText.setText('🍞 ' + GameState.food);
-                await saveGame(); this.showMessage('Куплена еда!');
-            } else this.showMessage('Не хватает денег!');
-        });
-        els.push(fb);
-        
-        const autoFoodPrice = getAutoFoodPrice();
-        let autoFoodLabel = '';
-        let autoFoodColor = '#FFFFFF';
-        if (GameState.autoFoodEnabled) {
-            autoFoodLabel = `✅ АВТОЕДА ВКЛ\nЦена: ${autoFoodPrice}💰`;
-            autoFoodColor = '#00FF00';
-        } else {
-            autoFoodLabel = `🛒 АВТОЕДА (${autoFoodPrice}💰)\nВкл. навсегда`;
-            autoFoodColor = '#FFAA00';
-        }
-        const autoFoodBtn = this.add.text(W/2, 340, autoFoodLabel, {
-            ...TEXT_STYLES.shop(autoFoodColor, 22),
-            backgroundColor: '#1a1a1a', padding: { x: 25, y: 12 }
-        }).setOrigin(0.5).setDepth(22);
-        if (!GameState.autoFoodEnabled) {
-            autoFoodBtn.setInteractive({ useHandCursor: true })
-              .on('pointerdown', async () => {
-                if (GameState.money >= autoFoodPrice) {
-                    GameState.money -= autoFoodPrice;
-                    GameState.autoFoodEnabled = true;
-                    this.moneyText.setText('💰 ' + GameState.money);
-                    await saveGame();
-                    this.showMessage('✅ Автоеда включена!');
-                    els.forEach(el => el.destroy());
-                    this.openShop();
-                } else {
-                    this.showMessage('Не хватает денег!');
-                }
-            });
-        }
-        els.push(autoFoodBtn);
-        
-        const tc = GameState.toolLevel * CONFIG.toolBasePrice;
-        const cr = getCurrentRadius();
-        const nr = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
-        const moneyBonus = Math.round(getToolMoneyMultiplier() * 100);
-        const nextMoneyBonus = Math.round((1 + GameState.toolLevel * CONFIG.toolMoneyBonus) * 100);
-        
-        const tb = this.add.text(W/2, 470,
-            `Улучшить щётку (${tc}💰)\nРадиус: ${cr} → ${nr}\n💰 Доход: ${moneyBonus}% → ${nextMoneyBonus}%`, {
-            ...TEXT_STYLES.shop('#FFFFFF', 22),
-            backgroundColor: '#444444', padding: { x: 25, y: 12 }
-        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
-          .on('pointerdown', async () => {
-            const cost = GameState.toolLevel * CONFIG.toolBasePrice;
-            if (GameState.money >= cost) {
-                GameState.money -= cost; GameState.toolLevel += 1;
-                this.moneyText.setText('💰 ' + GameState.money);
-                const r = getCurrentRadius();
-                this.toolText.setText('🧹 Радиус: ' + r);
-                await saveGame(); this.showMessage('Щётка улучшена!');
-                
-                if (r >= getRequiredRadius() && GameState.carpetIndex < CONFIG.totalCarpets) {
-                    this.showMessage('Новый ковёр доступен в магазине!');
-                }
-                
-                const nc = GameState.toolLevel * CONFIG.toolBasePrice;
-                const nr2 = Math.floor(CONFIG.brushRadius * (1 + GameState.toolLevel * CONFIG.toolRadiusBonus));
-                const mb2 = Math.round(getToolMoneyMultiplier() * 100);
-                const nextMb = Math.round((1 + GameState.toolLevel * CONFIG.toolMoneyBonus) * 100);
-                tb.setText(`Улучшить щётку (${nc}💰)\nРадиус: ${r} → ${nr2}\n💰 Доход: ${mb2}% → ${nextMb}%`);
-            } else this.showMessage('Не хватает денег!');
-        });
-        els.push(tb);
-        
-        const newCarpetPrice = getNewCarpetPrice();
-        const canBuy = canBuyNewCarpet();
-        const requiredRadius = getRequiredRadius();
-        const radiusEnough = getCurrentRadius() >= requiredRadius;
-        const hasNextCarpet = GameState.carpetIndex < CONFIG.totalCarpets;
-        
-        const currentMultiplier = Math.round(Math.pow(CONFIG.rewardMultiplierPerCarpet, GameState.carpetLevel) * 100);
-        const nextMultiplier = Math.round(Math.pow(CONFIG.rewardMultiplierPerCarpet, GameState.carpetLevel + 1) * 100);
-        const nextCarpetNum = GameState.carpetIndex + 1;
-        const nextRequiredRadius = requiredRadius + CONFIG.newCarpetRadiusIncrease;
-        const nextAutoFoodPrice = getAutoFoodPrice() + CONFIG.autoFoodPriceIncrease;
-        
-        let newCarpetLabel = '';
-        let newCarpetColor = '#888888';
-        
-        if (!hasNextCarpet) {
-            newCarpetLabel = '🏆 ВСЕ КОВРЫ ОТКРЫТЫ';
-            newCarpetColor = '#FFD700';
-        } else if (!radiusEnough) {
-            newCarpetLabel = `🔒 Нужен радиус ${requiredRadius}\n(сейчас ${getCurrentRadius()})`;
-            newCarpetColor = '#AAAAAA';
-        } else if (GameState.money < newCarpetPrice) {
-            newCarpetLabel = `🆕 НОВЫЙ КОВЁР (${newCarpetPrice}💰)\nНе хватает денег`;
-            newCarpetColor = '#AAAAAA';
-        } else {
-            const addedItems = [];
-            if (nextCarpetNum === 2) {
-                addedItems.push('🐛 Добавляются жуки');
-            } else {
-                addedItems.push('🐛 Жуков больше');
-            }
-            
-            let addsText = '';
-            if (addedItems.length > 0) {
-                addsText = '➕ ' + addedItems.join('\n➕ ') + '\n';
-            }
-            
-            newCarpetLabel = 
-                `🆕 КУПИТЬ КОВЁР №${nextCarpetNum} (${newCarpetPrice}💰)\n` +
-                `────────────────\n` +
-                `📈 Множитель: ${currentMultiplier}% → ${nextMultiplier}%\n` +
-                addsText +
-                `🧹 Радиус нужен: ${nextRequiredRadius}\n` +
-                `🛒 Автоеда дороже: ${nextAutoFoodPrice}💰\n` +
-                `────────────────\n` +
-                `⚠️ Сброс: щётка, деньги, еда`;
-            newCarpetColor = '#00FF00';
-        }
-        
-        const nb = this.add.text(W/2, 720, newCarpetLabel, {
-            ...TEXT_STYLES.shop(newCarpetColor, 20),
-            backgroundColor: '#1a1a1a', padding: { x: 25, y: 15 }
-        }).setOrigin(0.5).setDepth(22);
-        if (canBuy) {
-            nb.setInteractive({ useHandCursor: true })
-              .on('pointerdown', async () => {
-                this.showMessage('Ковёр куплен! Всё сброшено.');
-                await this.buyNewCarpet();
-                els.forEach(el => el.destroy());
-              });
-        }
-        els.push(nb);
-        
-        const infoText = 
-            `Уровень ковра: ${GameState.carpetLevel}\n` +
-            `Множитель: ×${getRewardMultiplier().toFixed(2)}\n` +
-            `💰 Доход от щётки: ${Math.round(getToolMoneyMultiplier() * 100)}%`;
-        const ib = this.add.text(W/2, 1010, infoText, {
-            ...TEXT_STYLES.shopInfo('#CCCCCC', 18),
-            backgroundColor: '#1a1a1a', padding: { x: 20, y: 12 }
-        }).setOrigin(0.5).setDepth(22);
-        els.push(ib);
-        
-        const cb = this.add.text(620, 130, '✖', {
-            fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', fontFamily: 'Arial',
-            stroke: '#000000', strokeThickness: 6
-        }).setOrigin(0.5).setDepth(22).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => { els.forEach(el => el.destroy()); this.shopOpen = false; });
-        els.push(cb);
-    }
-
-    async buyNewCarpet() {
-        if (!canBuyNewCarpet()) return;
-        this.shopOpen = false;
-        this.unlockInput();
-        
-        this.autoCleanStarted = false;
-        this.autoCleanPending = false;
-        if (this.autoCleanIdleTimer) { this.autoCleanIdleTimer.remove(); this.autoCleanIdleTimer = null; }
-        if (this.autoCleanTweenTimer) { this.autoCleanTweenTimer.remove(); this.autoCleanTweenTimer = null; }
-        
-        // ✅ Сброс щётки, денег, еды
-        GameState.money = 0;
-        GameState.food = CONFIG.startFood;
-        GameState.toolLevel = CONFIG.startToolLevel;
-        GameState.carpetIndex += 1;
-        GameState.carpetLevel += 1;
-        
-        this.moneyText.setText('💰 ' + GameState.money);
-        this.foodText.setText('🍞 ' + GameState.food);
-        this.toolText.setText('🧹 Радиус: ' + getCurrentRadius());
-        
-        this.drawRoom();
-        this.drawCarpet();
-        
-        this.dirtGrid.fill(1.0);
-        this.soapGrid.fill(0.0);
-        this.needRedrawDirt = true;
-        this.needRedrawSoap = true;
-        this.cleanProgress = 0;
-        this.lastShownPercent = -1;
-        this.celebrationShown = false;
-        
-        this.bugs.forEach(bug => bug.destroy());
-        this.bugs = [];
-        
-        if (GameState.carpetIndex >= 2) {
-            this.swatterBtnBg.setVisible(true);
-            this.swatterBtnText.setVisible(true);
-            this.soapBtnBg.setX(120);
-            this.soapBtnText.setX(120);
-            this.washBtnBg.setX(360);
-            this.washBtnText.setX(360);
-        }
-        
-        this.updateProgressBar();
-        this.drawDirt();
-        this.drawSoap();
-        await saveGame();
-        this.spawnCelebration();
-        this.spawnBugsIfNeeded();
-    }
-
-    showMessage(text) {
-        const msg = this.add.text(360, 1000, text, {
-            ...TEXT_STYLES.message('#FFFF00', 26),
-            backgroundColor: '#000000', padding: { x: 25, y: 12 }
-        }).setOrigin(0.5).setDepth(30);
-        this.time.delayedCall(2200, () => msg.destroy());
+    /* ---------- UPDATE ---------- */
+    update(_, delta) {
+        if (this.shop.isOpen) return;      // жуки на паузе
+        this.cleaning.draw();
+        this.bugs.update(delta);
     }
 }
 
+/* ============================================================
+   11. SIMULATOR — вызывай __simulate() в консоли
+   ============================================================ */
+function simulateRun(verbose = true) {
+    const s = new GameState();
+    const log = [];
+    let minute = 0;
+    const MIN_PER_CARPET = 1;
+    const MAX_CARPETS = 100;
+
+    for (let i = 0; i < MAX_CARPETS; i++) {
+        // при отсутствии еды — покупаем
+        if (s.food <= 0) {
+            if (s.money >= BALANCE.foodPrice) { s.money -= BALANCE.foodPrice; s.food += 1; }
+            else {
+                log.push({ minute, event: 'STUCK', reason: 'no food, no money', money: s.money });
+                break;
+            }
+        }
+        const reward = s.addReward();
+        minute += MIN_PER_CARPET;
+
+        // авто-стратегия: прокачивать щётку, если не хватает радиуса; покупать ковёр, если всё ок
+        let guard = 0;
+        while (guard++ < 20) {
+            const needR = s.getRequiredRadius();
+            const curR = s.getCurrentRadius();
+            const carpetPrice = s.getNewCarpetPrice();
+            const toolPrice = s.getToolUpgradePrice();
+            const radiusOk = curR >= needR;
+            const hasNext = s.carpetIndex < BALANCE.totalCarpets;
+
+            if (hasNext && radiusOk && s.money >= carpetPrice) {
+                s.buyNewCarpet();
+                log.push({
+                    minute, event: 'NEW_CARPET', carpet: s.carpetIndex, level: s.carpetLevel,
+                    toolLevel: s.toolLevel, radius: s.getCurrentRadius(),
+                    money: s.money, food: s.food, reward
+                });
+                break;
+            }
+            if (!radiusOk && s.money >= toolPrice) { s.upgradeTool(); continue; }
+            if (s.food < 5 && s.money >= BALANCE.foodPrice * 3) {
+                s.money -= BALANCE.foodPrice; s.food += 1; continue;
+            }
+            break;
+        }
+
+        if (s.carpetIndex >= BALANCE.totalCarpets && s.getCurrentRadius() >= s.getRequiredRadius()) {
+            log.push({ minute, event: 'FINISH', carpet: s.carpetIndex, money: s.money, food: s.food });
+            break;
+        }
+    }
+
+    if (verbose) {
+        console.log('%c=== СИМУЛЯЦИЯ ПРОХОЖДЕНИЯ ===', 'color:#0f0;font-weight:bold');
+        console.table(log);
+        const finish = log.find(l => l.event === 'FINISH' || l.event === 'NEW_CARPET' && l.carpet === BALANCE.totalCarpets);
+        if (finish) console.log(`%cДошёл до 5-го ковра за ~${finish.minute} минут`, 'color:#ff0;font-weight:bold');
+    }
+    return log;
+}
+
+function printBalance() {
+    console.log('%c=== КРИВАЯ ДОХОДА ===', 'color:#0ff;font-weight:bold');
+    const s = new GameState();
+    const rows = [];
+    for (let lvl = 0; lvl < BALANCE.totalCarpets; lvl++) {
+        s.carpetLevel = lvl;
+        for (let t = 1; t <= 14; t += 2) {
+            s.toolLevel = t;
+            const mult = s.getRewardMultiplier() * s.getToolMoneyMultiplier();
+            rows.push({
+                carpetLevel: lvl, toolLevel: t,
+                radius: s.getCurrentRadius(),
+                avgReward: Math.round((BALANCE.rewardMin + BALANCE.rewardMax) / 2 * mult),
+                multiplier: mult.toFixed(2)
+            });
+        }
+    }
+    console.table(rows);
+}
+
+// экспорт в window для ручного вызова
+window.__simulate = simulateRun;
+window.__balance = printBalance;
+
+/* ============================================================
+   12. BOOT
+   ============================================================ */
 const phaserConfig = {
     type: Phaser.CANVAS,
     width: 720, height: 1280,
@@ -1331,6 +1427,10 @@ const phaserConfig = {
 
 window.addEventListener('load', () => {
     new Phaser.Game(phaserConfig);
+    // Автопрогон симуляции в консоль при загрузке (можно убрать)
+    setTimeout(() => {
+        console.log('💡 Вызови __simulate() для прогона 100 ковров или __balance() для таблицы дохода');
+    }, 1000);
 });
 </script>
 
