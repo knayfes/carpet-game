@@ -152,7 +152,7 @@ class GameState {
     buyNewCarpet() {
         if (!this.canBuyNewCarpet()) return false;
         this.money = 0;
-        // toolLevel и food НЕ сбрасываются — ключевая правка баланса
+        this.food = BALANCE.startFood;   // ✅ еда пополняется на новом ковре — фикс софтлока
         this.carpetIndex += 1;
         this.carpetLevel += 1;
         return true;
@@ -242,7 +242,7 @@ class SaveSystem {
 }
 
 /* ============================================================
-   5. EFFECTS — визуальные эффекты
+   5. EFFECTS
    ============================================================ */
 class Effects {
     constructor(scene) {
@@ -349,7 +349,7 @@ class Effects {
 }
 
 /* ============================================================
-   6. CLEANINGSYSTEM — сетка грязи / мыла / прогресс
+   6. CLEANINGSYSTEM
    ============================================================ */
 class CleaningSystem {
     constructor(scene, bounds, opts = {}) {
@@ -615,7 +615,7 @@ class BugSystem {
 }
 
 /* ============================================================
-   8. SHOPUI — с превью следующего ковра
+   8. SHOPUI
    ============================================================ */
 class ShopUI {
     constructor(scene, state) {
@@ -800,14 +800,14 @@ class ShopUI {
             label:
                 `🆕 КУПИТЬ КОВЁР №${nextNum} (${price}💰)\n` +
                 `📈 Множитель: ${curMult}% → ${nextMult}%\n` +
-                `⚠️ Сброс: только деньги (щётка остаётся!)`,
+                `🍞 Еда: +${BALANCE.startFood}  •  ⚠️ Деньги: 0`,
             color: '#00FF00'
         };
     }
 }
 
 /* ============================================================
-   9. PRELOAD SCENE  ← путь к картинкам ИСПРАВЛЕН
+   9. PRELOAD SCENE
    ============================================================ */
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
@@ -1046,16 +1046,29 @@ class MainScene extends Phaser.Scene {
         document.addEventListener('mouseup', () => { this.effects.hideSwatterCursor(); });
     }
 
+    /* ---------- Применение инструмента (с защитой от софтлока) ---------- */
     applyTool(localX, localY) {
         if (this.shop.isOpen) return;
-        if (this.state.food <= 0) { this.showNoFoodWarning(); return; }
+
+        if (this.state.food <= 0) {
+            // Спасательный круг: если денег тоже нет — выдаём 1 еду бесплатно
+            if (this.state.money < BALANCE.foodPrice) {
+                this.state.food = 1;
+                this.refreshHUD();
+                this.showMessage('🎁 Бонус: 1 еда!');
+            } else {
+                this.showNoFoodWarning();
+                return;
+            }
+        }
+
         if (this.bugs.count > 0) { this.showBugWarning(); return; }
 
         this.resetAutoCleanTimer();
         this.cleaning.applyStroke(localX, localY, this.state.getCurrentRadius(), this.currentTool);
     }
 
-    /* ---------- Авто-очистка (последний %) ---------- */
+    /* ---------- Авто-очистка ---------- */
     scheduleAutoClean() {
         if (this.autoCleanStarted || this.autoCleanPending) return;
         if (this.cleaning.progress < BALANCE.autoCleanThreshold) return;
@@ -1316,14 +1329,14 @@ class MainScene extends Phaser.Scene {
 
     /* ---------- UPDATE ---------- */
     update(_, delta) {
-        if (this.shop.isOpen) return;      // жуки на паузе
+        if (this.shop.isOpen) return;
         this.cleaning.draw();
         this.bugs.update(delta);
     }
 }
 
 /* ============================================================
-   11. SIMULATOR — вызывай __simulate() в консоли
+   11. SIMULATOR
    ============================================================ */
 function simulateRun(verbose = true) {
     const s = new GameState();
