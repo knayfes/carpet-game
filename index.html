@@ -33,7 +33,6 @@ const BALANCE = {
     prestigeMultiplier: 1.5,
     brushRadius: 35, toolRadiusBonus: 0.10, toolMoneyBonus: 0.10, toolBasePrice: 100,
 
-    // ↓ Понижено: старт слабый, прокачка ощутима
     soapPower: 0.35,
     soapBasePrice: 120,
     washStrength: 0.30,
@@ -45,7 +44,7 @@ const BALANCE = {
     doubleBugPrice: 2000, bugRewardPerKill: 5,
 
     soapThreshold: 0.01,
-    eraseStrength: 0.30,          // ← было 0.9
+    eraseStrength: 0.30,
     autoCleanThreshold: 0.99, autoCleanIdleDelay: 2000, autoCleanDuration: 2000,
     inputLockDuration: 300,
     starChance: 0.2, starLifetime: 700,
@@ -196,8 +195,6 @@ class GameState {
     getSoapUpgradePrice() { return this.soapLevel * BALANCE.soapBasePrice; }
     getWashUpgradePrice() { return this.washLevel * BALANCE.washBasePrice; }
     getSwatterUpgradePrice() { return BALANCE.swatterBasePrice + this.swatterLevel * BALANCE.swatterBasePrice; }
-
-    // ↓ Усилен рост за уровень — прокачка ощутима
     getSoapPower() { return BALANCE.soapPower * (1 + (this.soapLevel - 1) * 0.40); }
     getWashStrength() { return BALANCE.washStrength * (1 + (this.washLevel - 1) * 0.35); }
     getSwatterCooldown() { return Math.max(80, BALANCE.swatterCooldown - this.swatterLevel * 20); }
@@ -700,7 +697,7 @@ class CleaningSystem {
         if (isSoap && soapChanged) this.onSoap?.(screenX, screenY);
         if (!isSoap && erased) this.onErase?.(screenX, screenY);
         if (dirtChanged) { this.needRedrawDirt = true; this.recalcProgress(); }
-        if (soapChanged) this.needRedrawSoap = true;
+        if (soapChanged) { this.needRedrawSoap = true; }
         return { dirtChanged, soapChanged, erased };
     }
     recalcProgress() {
@@ -1175,21 +1172,18 @@ class ShopUI {
             st.getToolUpgradePrice(),
             async () => { st.upgradeTool(); await this._afterBuy(); });
         y += 62;
-
         const curSoap = (st.getSoapPower() * 100).toFixed(0);
         const nextSoap = ((st.getSoapPower() + BALANCE.soapPower * 0.40) * 100).toFixed(0);
         item(y, `🧼 Мыло ур.${st.soapLevel}  сила ${curSoap}%→${nextSoap}%`,
             st.getSoapUpgradePrice(),
             async () => { st.upgradeSoap(); await this._afterBuy(); });
         y += 62;
-
         const curWash = (st.getWashStrength() * 100).toFixed(0);
         const nextWash = ((st.getWashStrength() + BALANCE.washStrength * 0.35) * 100).toFixed(0);
         item(y, `💧 Смыв ур.${st.washLevel}  сила ${curWash}%→${nextWash}%`,
             st.getWashUpgradePrice(),
             async () => { st.upgradeWash(); await this._afterBuy(); });
         y += 62;
-
         const curCd = st.getSwatterCooldown();
         const nextCd = Math.max(80, curCd - 20);
         item(y, `🪰 Мухобойка ур.${st.swatterLevel}  перезаряд ${curCd}→${nextCd}мс`,
@@ -1496,7 +1490,7 @@ class MuseumUI {
 }
 
 /* ============================================================
-   TUTORIAL — чистая версия
+   TUTORIAL
    ============================================================ */
 class Tutorial {
     constructor(scene) {
@@ -1559,13 +1553,11 @@ class Tutorial {
             const right = t.x + t.w / 2 + pad;
             const top = t.y - t.h / 2 - pad;
             const bottom = t.y + t.h / 2 + pad;
-
             g.fillStyle(0x000000, 0.82);
             g.fillRect(0, 0, W, top);
             g.fillRect(0, bottom, W, H - bottom);
             g.fillRect(0, top, left, bottom - top);
             g.fillRect(right, top, W - right, bottom - top);
-
             g.lineStyle(5, 0xFFD700, 1);
             g.strokeRect(left, top, right - left, bottom - top);
         } else {
@@ -1576,23 +1568,17 @@ class Tutorial {
 
         if (step.target) {
             const t = step.target;
-            const glow = s.add.rectangle(t.x, t.y, t.w + 24, t.h + 24, 0xFFFF00, 0.2)
-                .setDepth(101);
+            const glow = s.add.rectangle(t.x, t.y, t.w + 24, t.h + 24, 0xFFFF00, 0.2).setDepth(101);
             this.elements.push(glow);
-
-            const pulseRing = s.add.rectangle(t.x, t.y, t.w + 24, t.h + 24, 0x000000, 0)
-                .setDepth(102);
+            const pulseRing = s.add.rectangle(t.x, t.y, t.w + 24, t.h + 24, 0x000000, 0).setDepth(102);
             pulseRing.setStrokeStyle(4, 0xFFFFFF);
             this.elements.push(pulseRing);
-
             this.pulseTween = s.tweens.add({
                 targets: [glow, pulseRing],
-                scaleX: { from: 1, to: 1.10 },
-                scaleY: { from: 1, to: 1.10 },
+                scaleX: { from: 1, to: 1.10 }, scaleY: { from: 1, to: 1.10 },
                 alpha: { from: 1, to: 0.5 },
                 duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
             });
-
             const isBottom = t.y > 640;
             const arrowY = isBottom ? t.y - t.h / 2 - 50 : t.y + t.h / 2 + 50;
             const arrow = s.add.text(t.x, arrowY, isBottom ? '👇' : '👆', {
@@ -1605,38 +1591,29 @@ class Tutorial {
             });
         }
 
-        const cardY = 600;
-        const cardW = 640;
-        const cardH = 300;
-
+        const cardY = 600, cardW = 640, cardH = 300;
         const cardShadow = s.add.rectangle(W/2 + 4, cardY + 4, cardW, cardH, 0x000000, 0.5).setDepth(103);
         this.elements.push(cardShadow);
-
         const cardBg = s.add.rectangle(W/2, cardY, cardW, cardH, 0x1a1a1a, 0.98).setDepth(104);
         cardBg.setStrokeStyle(5, 0xFFD700);
         this.elements.push(cardBg);
-
         const stepLabel = s.add.text(W/2, cardY - cardH / 2 + 30,
             `Шаг ${this.step + 1} из ${this.steps.length}`, {
             fontSize: '14px', fill: '#AAAAAA', fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(105);
         this.elements.push(stepLabel);
-
         const title = s.add.text(W/2, cardY - cardH / 2 + 68, step.title, {
             fontSize: '30px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
         }).setOrigin(0.5).setDepth(105);
         this.elements.push(title);
-
         const desc = s.add.text(W/2, cardY - 15, step.text, {
             fontSize: '20px', fill: '#FFFFFF', fontFamily: 'Arial',
             align: 'center', lineSpacing: 10, wordWrap: { width: cardW - 60 }
         }).setOrigin(0.5).setDepth(105);
         this.elements.push(desc);
-
         const btnY = cardY + cardH / 2 - 50;
         const isLast = this.step === this.steps.length - 1;
         const isFirst = this.step === 0;
-
         const nextBtn = s.add.text(isFirst ? W / 2 : W / 2 + 90, btnY,
             isLast ? '✅ Начать!' : 'Далее ▶', {
             fontSize: '20px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial',
@@ -1644,7 +1621,6 @@ class Tutorial {
         }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
         nextBtn.on('pointerdown', () => this.next());
         this.elements.push(nextBtn);
-
         if (!isFirst) {
             const backBtn = s.add.text(W / 2 - 90, btnY, '◀ Назад', {
                 fontSize: '18px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: 'Arial',
@@ -1653,7 +1629,6 @@ class Tutorial {
             backBtn.on('pointerdown', () => this.prev());
             this.elements.push(backBtn);
         }
-
         if (!isLast) {
             const skipBtn = s.add.text(W / 2, cardY + cardH / 2 + 25, 'Пропустить', {
                 fontSize: '14px', fill: '#888888', fontFamily: 'Arial'
@@ -1994,6 +1969,10 @@ class MainScene extends Phaser.Scene {
         document.addEventListener('mouseup', () => { this.effects.hideSwatterCursor(); });
     }
 
+    /* ============================================================
+       ★ ИСПРАВЛЕННЫЙ applyTool: автоочистка теперь запускается ПОСЛЕ
+       обновления прогресса, а не до него
+       ============================================================ */
     applyTool(localX, localY) {
         if (this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen) return;
         if (this.state.food <= 0) {
@@ -2007,8 +1986,14 @@ class MainScene extends Phaser.Scene {
             }
         }
         if (this.bugs.count > 0) { this.showBugWarning(); return; }
-        this.resetAutoCleanTimer();
+
+        // Сначала применяем мазок — прогресс обновляется внутри
         this.cleaning.applyStroke(localX, localY, this.state.getCurrentRadius(), this.currentTool);
+
+        // Теперь, когда прогресс свежий, решаем, планировать ли автоочистку
+        if (this.cleaning.progress >= BALANCE.autoCleanThreshold && this.cleaning.progress < 1.0) {
+            this.resetAutoCleanTimer();
+        }
     }
 
     scheduleAutoClean() {
@@ -2028,6 +2013,12 @@ class MainScene extends Phaser.Scene {
         this.autoCleanPending = false;
         if (this.autoCleanIdleTimer) { this.autoCleanIdleTimer.remove(); this.autoCleanIdleTimer = null; }
     }
+
+    /* ============================================================
+       ★ ИСПРАВЛЕННЫЙ startAutoClean: после завершения гарантированно
+       выставляет progress = 1.0 и сбрасывает флаг, чтобы finishCarpet
+       смог принять ковёр
+       ============================================================ */
     startAutoClean() {
         if (this.autoCleanStarted) return;
         this.autoCleanStarted = true;
@@ -2036,7 +2027,11 @@ class MainScene extends Phaser.Scene {
         const soap = this.cleaning.soap;
         const dirtyIndices = [];
         for (let i = 0; i < dirt.length; i++) if (dirt[i] > 0.01) dirtyIndices.push(i);
-        if (dirtyIndices.length === 0) { this.cleaning.recalcProgress(); return; }
+        if (dirtyIndices.length === 0) {
+            this.cleaning.progress = 1.0;
+            this.cleaning.recalcProgress();
+            return;
+        }
         const tickDelay = 50;
         const totalTicks = BALANCE.autoCleanDuration / tickDelay;
         const cellsPerTick = Math.max(1, Math.ceil(dirtyIndices.length / totalTicks));
@@ -2054,6 +2049,11 @@ class MainScene extends Phaser.Scene {
                 this.cleaning.recalcProgress();
                 if (index >= dirtyIndices.length) {
                     if (this.autoCleanTweenTimer) { this.autoCleanTweenTimer.remove(); this.autoCleanTweenTimer = null; }
+                    // Принудительно доводим до 100%, чтобы снять возможные хвосты
+                    if (this.cleaning.progress >= 0.9999) {
+                        this.cleaning.progress = 1.0;
+                        this.cleaning.recalcProgress();
+                    }
                 }
             }
         });
