@@ -851,8 +851,10 @@ class CleaningSystem {
                     }
                 } else {
                     if (this.soap[i] < BALANCE.soapThreshold) continue;
-                    if (this.dirt[i] > 0.01) {
+                    if (this.dirt[i] > 0.001) {
                         this.dirt[i] = Math.max(0, this.dirt[i] - washStrength * falloff);
+                        // Округляем очень маленькие значения к нулю, чтобы не застрять
+                        if (this.dirt[i] < 0.01) this.dirt[i] = 0;
                         this.soap[i] = Math.max(0, this.soap[i] - 0.05);
                         dirtChanged = true; soapChanged = true; erased = true;
                     }
@@ -871,12 +873,19 @@ class CleaningSystem {
     recalcProgress() {
         let total = 0;
         const cells = this.dirt.length;
-        for (let i = 0; i < cells; i++) total += 1 - this.dirt[i];
+        let allClean = true;
+        for (let i = 0; i < cells; i++) {
+            total += 1 - this.dirt[i];
+            if (this.dirt[i] > 0.05) allClean = false;
+        }
         this.progress = total / cells;
-        if (this.progress >= 0.9999) {
-            let allClean = true;
-            for (let i = 0; i < cells; i++) if (this.dirt[i] > 0.05) { allClean = false; break; }
-            this.progress = allClean ? 1.0 : 0.99;
+        // Если визуально всё чисто — фиксируем 100%
+        if (this.progress >= 0.9999 && allClean) {
+            this.progress = 1.0;
+        }
+        // Не позволяем прогрессу показывать 99.9%+, если ещё есть грязь
+        if (this.progress >= 0.9999 && !allClean) {
+            this.progress = 0.9999;
         }
         this.onProgress?.(this.progress);
         if (this.progress >= 1.0 && !this.celebrationFired) {
@@ -2026,7 +2035,7 @@ class LeaderboardUI {
 </script>
 <script>
 /* ============================================================
-   TUTORIAL — обновлена под новые механики
+   TUTORIAL
    ============================================================ */
 class Tutorial {
     constructor(scene) {
@@ -2052,23 +2061,23 @@ class Tutorial {
             },
             {
                 title: '💰 Шаг 3. Получи деньги',
-                text: 'Когда ковёр чист на 100% —\nжми «ПОЛУЧИТЬ ДЕНЬГИ»\nвнизу экрана.',
+                text: 'Когда ковёр чист на 100% —\nжми «ПОЛУЧИТЬ ДЕНЬГИ»\nвнизу экрана.\n\nЕсли чуть-чуть не добил —\nковёр дочистится сам!',
                 target: { x: 360, y: 1050, w: 320, h: 60 }
             },
             {
                 title: '🛒 Магазин',
                 text: 'Здесь: щётка, мыло, смыв,\nдвойная награда за жуков,\nа также питомцы и скины.',
-                target: { x: 520, y: 112, w: 60, h: 60 }
+                target: { x: 550, y: 130, w: 100, h: 100 }
             },
             {
                 title: '🏆 Прогресс',
                 text: 'Трекеры:\n🏆 достижения · 📅 задания\n🏛️ музей · 📊 рекорды',
-                target: { x: 520, y: 42, w: 60, h: 60 }
+                target: { x: 445, y: 45, w: 100, h: 100 }
             },
             {
                 title: '🎁 Дейли и ⚙️',
                 text: '🎁 Ежедневный бонус — заходи\nкаждый день за наградой!\n\n⚙️ Настройки — вибрация,\nэкспорт/импорт сейва.',
-                target: { x: 640, y: 112, w: 60, h: 60 }
+                target: { x: 655, y: 130, w: 100, h: 100 }
             },
             {
                 title: '🌗 День и ночь',
@@ -2166,8 +2175,6 @@ class Tutorial {
         this.scene.state.tutorialDone = true;
         try { await this.scene.saveSystem.save(); } catch {}
         this.scene.showMessage('🧼 Удачи!');
-
-        // После обучалки показать дейли-бонус, если он был отложен
         if (this.scene.pendingDailyBonus) {
             this.scene.pendingDailyBonus = false;
             this.scene.time.delayedCall(900, () => this.scene.dailyUI.open());
@@ -2279,6 +2286,7 @@ class MainScene extends Phaser.Scene {
         this.lastLocalX = -9999;
         this.lastLocalY = -9999;
         this.inputLocked = false;
+        this.pendingDailyBonus = false;
 
         this.noFoodText = null; this.noFoodTween = null; this.noFoodCooldown = false;
         this.bugWarningText = null; this.bugWarningTween = null; this.bugWarningCooldown = false;
@@ -2307,12 +2315,13 @@ class MainScene extends Phaser.Scene {
             this.time.delayedCall(800, () => this.showMessage('📅 Новые задания!'));
         }
 
-                // Порядок: сначала обучалка (если не пройдена), потом дейли-бонус
+        // Сначала обучалка (если не пройдена), потом дейли-бонус
+        const dailyCanClaim = this.state.getDailyStatus().canClaim;
         if (!this.state.tutorialDone) {
+            this.pendingDailyBonus = dailyCanClaim;
             this.tutorial = new Tutorial(this);
-            this.pendingDailyBonus = this.state.getDailyStatus().canClaim;
             this.time.delayedCall(400, () => this.tutorial.start());
-        } else if (this.state.getDailyStatus().canClaim) {
+        } else if (dailyCanClaim) {
             this.time.delayedCall(600, () => this.dailyUI.open());
         }
 
@@ -2331,11 +2340,8 @@ class MainScene extends Phaser.Scene {
         });
     }
 
-    /* ============================================================
-       HUD — увеличенные значки с фоном
-       ============================================================ */
-        buildHUD(W, H) {
-        // ========== ЛЕВАЯ ПАНЕЛЬ — СТАТЫ ==========
+    buildHUD(W, H) {
+        // Левая панель
         this.add.rectangle(0, 0, 340, 195, 0x000000, 0.78).setOrigin(0, 0).setDepth(9);
         this.add.rectangle(0, 195, 340, 3, 0x4A90D9, 0.7).setOrigin(0, 0).setDepth(9);
 
@@ -2345,49 +2351,41 @@ class MainScene extends Phaser.Scene {
         this.carpetText = this.add.text(145, 92, '🧽 ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
         this.soapLvlText = this.add.text(20, 120, `🧼${this.state.soapLevel}  💤${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
 
-        // День/ночь (слева)
         this.dayNightText = this.add.text(20, 150, '', {
             fontSize: '14px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial',
             stroke: '#000000', strokeThickness: 3
         }).setDepth(10);
         this.updateDayNightText();
 
-        // Таймер (справа в панели)
         this.timerText = this.add.text(325, 150, '⏱ 0:00', {
             fontSize: '14px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: 'Arial',
             stroke: '#000000', strokeThickness: 3
         }).setOrigin(1, 0).setDepth(10);
 
-        // Престиж (в углу)
         if (this.state.prestigeLevel > 0) {
             this.prestigeText = this.add.text(325, 16, '👑' + this.state.prestigeLevel,
                 TEXT_STYLES.stat('#FFD700', 20)).setOrigin(1, 0).setDepth(10);
         }
 
-        // ========== ПРАВАЯ ПАНЕЛЬ — 6 КНОПОК 2×3 ==========
+        // Правая панель
         this.add.rectangle(380, 0, 340, 195, 0x000000, 0.78).setOrigin(0, 0).setDepth(9);
         this.add.rectangle(380, 195, 340, 3, 0x4A90D9, 0.7).setOrigin(0, 0).setDepth(9);
 
         const makeBtn = (x, y, icon, label, onClick, color = '#FFFFFF') => {
             const r = 26;
-            // Круг-подложка
             this.add.circle(x, y, r, 0x1e1e28, 0.95).setDepth(10)
                 .setStrokeStyle(2, 0x4A90D9, 0.7);
-            // Иконка
             this.add.text(x, y, icon, { fontSize: '32px' })
                 .setOrigin(0.5).setDepth(11);
-            // Подпись
             this.add.text(x, y + r + 12, label, {
                 fontSize: '11px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
                 stroke: '#000000', strokeThickness: 4
             }).setOrigin(0.5).setDepth(11);
-            // Хитбокс — вся ячейка
             const hit = this.add.rectangle(x, y + 5, 100, 100, 0x000000, 0.001).setDepth(12);
             hit.setInteractive({ useHandCursor: true });
             hit.on('pointerdown', onClick);
         };
 
-        // Координаты столбцов и строк
         const c1 = 445, c2 = 550, c3 = 655;
         const r1 = 45, r2 = 130;
 
@@ -2399,7 +2397,6 @@ class MainScene extends Phaser.Scene {
         makeBtn(c2, r2, '🛒', 'Магазин',   () => this.shop.open(), '#00FF88');
         makeBtn(c3, r2, '⚙️', 'Настройки', () => this.settingsUI.open(), '#CCCCCC');
 
-        // Красная точка на "Задания" когда есть награды
         this.questBadge = this.add.text(c3 + 22, r1 - 22, '●', { fontSize: '20px', fill: '#FF4444' })
             .setOrigin(0.5).setDepth(13).setVisible(false);
         this.tweens.add({
@@ -2408,7 +2405,7 @@ class MainScene extends Phaser.Scene {
         });
         this.updateQuestBadge();
 
-        // ========== ДЕЙЛИ-БОНУС (между панелями) ==========
+        // Дейли-бонус между панелями
         const ds = this.state.getDailyStatus();
         if (ds.canClaim) {
             const dailyBg = this.add.circle(360, 100, 24, 0xFFD700, 1).setDepth(14)
@@ -2425,13 +2422,13 @@ class MainScene extends Phaser.Scene {
             hit.on('pointerdown', () => this.dailyUI.open());
         }
 
-        // ========== ПРОГРЕСС-БАР ==========
+        // Прогресс
         this.add.rectangle(W / 2, 230, 400, 30, 0x000000, 0.7).setDepth(10);
         this.add.rectangle(W / 2, 230, 400, 30, 0x333333).setDepth(10);
         this.progressBar = this.add.rectangle(W / 2 - 200, 230, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
         this.progressText = this.add.text(W / 2, 230, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
 
-        // ========== КНОПКА ПОЛУЧИТЬ ДЕНЬГИ ==========
+        // Кнопка сдачи
         this.add.text(W / 2, 1050, 'ПОЛУЧИТЬ ДЕНЬГИ', {
             ...TEXT_STYLES.button('#00FF00', 30),
             backgroundColor: '#000000', padding: { x: 30, y: 15 }
@@ -2451,9 +2448,9 @@ class MainScene extends Phaser.Scene {
     refreshHUD() {
         this.moneyText.setText('💰 ' + this.state.money);
         this.foodText.setText('🍞 ' + this.state.food);
-        this.toolText.setText('🧹 Радиус: ' + this.state.getCurrentRadius());
-        this.carpetText.setText('🧽 Почищено: ' + this.state.carpetsCleaned);
-        this.soapLvlText.setText(`🧼${this.state.soapLevel} 💤${this.state.washLevel} 🪰${this.state.swatterLevel}`);
+        this.toolText.setText('🧹 ' + this.state.getCurrentRadius());
+        this.carpetText.setText('🧽 ' + this.state.carpetsCleaned);
+        this.soapLvlText.setText(`🧼${this.state.soapLevel}  💤${this.state.washLevel}  🪰${this.state.swatterLevel}`);
         this.updateQuestBadge();
         this.updateDayNightText();
     }
@@ -2579,6 +2576,9 @@ class MainScene extends Phaser.Scene {
         document.addEventListener('mouseup', () => { this.effects.hideSwatterCursor(); });
     }
 
+    /* ============================================================
+       АВТООЧИСТКА — срабатывает от 99%
+       ============================================================ */
     applyTool(localX, localY) {
         if (this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen) return;
@@ -2596,47 +2596,79 @@ class MainScene extends Phaser.Scene {
 
         const radius = this.state.getCurrentRadius();
         this.cleaning.applyStroke(localX, localY, radius, this.currentTool);
-        if (this.cleaning.progress >= BALANCE.autoCleanThreshold && this.cleaning.progress < 1.0) {
-            this.resetAutoCleanTimer();
+
+        // После каждого мазка проверяем порог и планируем автоочистку
+        const p = this.cleaning.progress;
+        if (p >= BALANCE.autoCleanThreshold && p < 1.0) {
+            this.scheduleAutoClean();
         }
     }
 
     scheduleAutoClean() {
-        if (this.autoCleanStarted || this.autoCleanPending) return;
-        if (this.cleaning.progress < BALANCE.autoCleanThreshold) return;
+        if (this.autoCleanStarted) return;
+        const p = this.cleaning.progress;
+        // Автоочистка работает ТОЛЬКО при 99% и выше (но не 100%)
+        if (p < BALANCE.autoCleanThreshold || p >= 1.0) {
+            this.cancelAutoClean();
+            return;
+        }
+        // Перезапускаем таймер бездействия
+        if (this.autoCleanIdleTimer) {
+            this.autoCleanIdleTimer.remove();
+            this.autoCleanIdleTimer = null;
+        }
         this.autoCleanPending = true;
         this.autoCleanIdleTimer = this.time.delayedCall(BALANCE.autoCleanIdleDelay, () => {
             this.autoCleanPending = false;
             this.autoCleanIdleTimer = null;
-            if (this.cleaning.progress >= BALANCE.autoCleanThreshold && this.cleaning.progress < 1.0) {
+            const cur = this.cleaning.progress;
+            // Проверяем снова — игрок не должен быть в процессе чистки
+            if (cur >= BALANCE.autoCleanThreshold && cur < 1.0 && !this.isPointerDown) {
                 this.startAutoClean();
             }
         });
     }
+
     cancelAutoClean() {
-        if (!this.autoCleanPending) return;
         this.autoCleanPending = false;
-        if (this.autoCleanIdleTimer) { this.autoCleanIdleTimer.remove(); this.autoCleanIdleTimer = null; }
+        if (this.autoCleanIdleTimer) {
+            this.autoCleanIdleTimer.remove();
+            this.autoCleanIdleTimer = null;
+        }
     }
+
     startAutoClean() {
         if (this.autoCleanStarted) return;
         this.autoCleanStarted = true;
         this.showMessage('✨ Ковёр сам очищается...');
+
         const dirt = this.cleaning.dirt;
         const soap = this.cleaning.soap;
+        const totalCells = dirt.length;
         const dirtyIndices = [];
-        for (let i = 0; i < dirt.length; i++) if (dirt[i] > 0.01) dirtyIndices.push(i);
+        for (let i = 0; i < totalCells; i++) {
+            if (dirt[i] > 0.001) dirtyIndices.push(i);
+        }
+
         if (dirtyIndices.length === 0) {
+            // Всё уже чисто — доводим до 100%
+            for (let i = 0; i < totalCells; i++) { dirt[i] = 0; soap[i] = 0; }
+            this.cleaning.needRedrawDirt = true;
+            this.cleaning.needRedrawSoap = true;
             this.cleaning.progress = 1.0;
             this.cleaning.recalcProgress();
+            this.autoCleanStarted = false;
             return;
         }
-        const tickDelay = 50;
-        const totalTicks = BALANCE.autoCleanDuration / tickDelay;
+
+        const tickDelay = 40;
+        const totalTicks = Math.max(1, Math.ceil(BALANCE.autoCleanDuration / tickDelay));
         const cellsPerTick = Math.max(1, Math.ceil(dirtyIndices.length / totalTicks));
         let index = 0;
+
         this.autoCleanTweenTimer = this.time.addEvent({
-            delay: tickDelay, repeat: totalTicks,
+            delay: tickDelay,
+            repeat: totalTicks,
             callback: () => {
                 for (let i = 0; i < cellsPerTick && index < dirtyIndices.length; i++) {
                     dirt[dirtyIndices[index]] = 0;
@@ -2646,18 +2678,27 @@ class MainScene extends Phaser.Scene {
                 this.cleaning.needRedrawDirt = true;
                 this.cleaning.needRedrawSoap = true;
                 this.cleaning.recalcProgress();
+
                 if (index >= dirtyIndices.length) {
-                    if (this.autoCleanTweenTimer) { this.autoCleanTweenTimer.remove(); this.autoCleanTweenTimer = null; }
-                    if (this.cleaning.progress >= 0.9999) {
-                        this.cleaning.progress = 1.0;
-                        this.cleaning.recalcProgress();
+                    if (this.autoCleanTweenTimer) {
+                        this.autoCleanTweenTimer.remove();
+                        this.autoCleanTweenTimer = null;
                     }
+                    // Финальный проход: очищаем все оставшиеся клетки
+                    for (let i = 0; i < totalCells; i++) {
+                        if (dirt[i] > 0) { dirt[i] = 0; soap[i] = 0; }
+                    }
+                    this.cleaning.needRedrawDirt = true;
+                    this.cleaning.needRedrawSoap = true;
+                    this.cleaning.progress = 1.0;
+                    this.cleaning.recalcProgress();
+                    this.autoCleanStarted = false;
                 }
             }
         });
     }
+
     resetAutoCleanTimer() {
-        this.cancelAutoClean();
         if (this.autoCleanStarted) return;
         this.scheduleAutoClean();
     }
@@ -2665,7 +2706,10 @@ class MainScene extends Phaser.Scene {
     async finishCarpet() {
         if (this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen) return;
-        if (this.cleaning.progress < 1.0) { this.showMessage('Ковёр ещё грязный! Нужно 100%.'); return; }
+        if (this.cleaning.progress < 1.0) {
+            this.showMessage('Ковёр ещё грязный! Нужно 100%.');
+            return;
+        }
         if (this.bugs.count > 0) { this.showBugWarning(); return; }
 
         this.unlockInput();
@@ -2759,8 +2803,8 @@ class MainScene extends Phaser.Scene {
         this.washBtnBg.setX(480);  this.washBtnText.setX(480);
         if (this.prestigeText) this.prestigeText.destroy();
         if (this.state.prestigeLevel > 0) {
-            this.prestigeText = this.add.text(280, 22, '👑' + this.state.prestigeLevel,
-                TEXT_STYLES.stat('#FFD700', 22)).setDepth(10);
+            this.prestigeText = this.add.text(325, 16, '👑' + this.state.prestigeLevel,
+                TEXT_STYLES.stat('#FFD700', 20)).setOrigin(1, 0).setDepth(10);
         }
         await this.saveSystem.save();
         this.checkAndNotifyAchievements();
@@ -2888,6 +2932,14 @@ class MainScene extends Phaser.Scene {
         this.carpetElapsed += delta;
         const elapsedSec = Math.floor(this.carpetElapsed / 1000);
         this.timerText.setText('⏱ ' + formatTime(elapsedSec));
+
+        // Если игрок НЕ трогает экран и прогресс >= 99% — планируем автоочистку
+        if (!this.isPointerDown && !this.autoCleanStarted && !this.autoCleanPending) {
+            const p = this.cleaning.progress;
+            if (p >= BALANCE.autoCleanThreshold && p < 1.0) {
+                this.scheduleAutoClean();
+            }
+        }
     }
 }
 
