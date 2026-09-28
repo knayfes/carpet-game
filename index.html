@@ -50,18 +50,19 @@ const BALANCE = {
     starChance: 0.2, starLifetime: 700,
     finishStarCount: 25, finishStarDuration: 1800,
 
-    // ======== ИЗМЕНЕНО: скорость жуков и мухобойка ========
     bugCountBase: 4,
-    bugSpeed: 180,                      // было 135
+    bugSpeed: 180,
     bugFadeDuration: 400,
-    swatterRadius: 50,                  // база
-    swatterCooldown: 350,               // было 200
+    swatterRadius: 50,
+    swatterCooldown: 350,
     swatterCooldownMin: 100,
-    swatterCooldownStep: 30,            // было 20
-    swatterRadiusStep: 5,               // было 3
-    swatterBonusPerLevel: 1,            // +1💰 за жука за каждый уровень
+    swatterCooldownStep: 30,
+    swatterRadiusStep: 5,
+    swatterBonusPerLevel: 1,
 
-    splashChance: 0.5, bubbleChance: 0.4,
+    // ↓↓ СНИЖЕНО: меньше эффектов → меньше вылетов
+    splashChance: 0.25,
+    bubbleChance: 0.20,
     gridCellSize: 20,
     adRewardMoney: 200, adCooldownMs: 60000,
 
@@ -75,7 +76,7 @@ const BALANCE = {
     petParrotBonus: 0.10,
 
     dayNightBonus: 0.5,
-    vibrationMs: 30
+    vibrationMs: 20
 };
 
 const SAVE_KEY = 'carpetGameStats_v11';
@@ -260,8 +261,6 @@ class GameState {
     getSwatterUpgradePrice() { return BALANCE.swatterBasePrice + this.swatterLevel * BALANCE.swatterBasePrice; }
     getSoapPower() { return BALANCE.soapPower * (1 + (this.soapLevel - 1) * 0.40); }
     getWashStrength() { return BALANCE.washStrength * (1 + (this.washLevel - 1) * 0.35); }
-
-    // ======== Мухобойка — осмысленная прокачка ========
     getSwatterCooldown() {
         return Math.max(
             BALANCE.swatterCooldownMin,
@@ -274,7 +273,6 @@ class GameState {
     getSwatterRewardBonus() {
         return this.swatterLevel * BALANCE.swatterBonusPerLevel;
     }
-
     getPrestigeMultiplier() { return Math.pow(BALANCE.prestigeMultiplier, this.prestigeLevel); }
     getPrestigeTitle() {
         const titles = ['Новичок', 'Профи', 'Мастер', 'Гуру ковров', 'Легенда'];
@@ -310,6 +308,10 @@ class GameState {
         if (timeSec > 0 && (st.bestTime === 0 || timeSec < st.bestTime)) st.bestTime = timeSec;
     }
 
+    /* ============================================================
+       ИСПРАВЛЕНО: автоеда больше НЕ списывает деньги каждый раз,
+       а просто отменяет расход еды
+       ============================================================ */
     addReward(timeSec = 0) {
         const base = Math.floor(BALANCE.rewardMin + Math.random() * (BALANCE.rewardMax - BALANCE.rewardMin));
         const dayNight = 1 + this.getDayNightBonus();
@@ -317,16 +319,17 @@ class GameState {
         this.money += reward;
         if (this.money > this.maxMoney) this.maxMoney = this.money;
         if (this.maxMoney > this.leaderboardBestMoney) this.leaderboardBestMoney = this.maxMoney;
-        this.food -= 1;
+
+        // Еда тратится ТОЛЬКО без автоеды
+        if (!this.autoFoodEnabled) {
+            this.food -= 1;
+        }
+
         this.carpetsCleaned += 1;
         this.questCounters.cleanToday += 1;
         this.questCounters.moneyEarnedToday += reward;
         if (timeSec > 0 && timeSec < 50) this.questCounters.fastCleanToday += 1;
         this.recordCarpetFinish(this.carpetIndex, timeSec);
-        if (this.autoFoodEnabled && this.money >= this.getAutoFoodPrice()) {
-            this.money -= this.getAutoFoodPrice();
-            this.food += 1;
-        }
         return reward;
     }
 
@@ -583,7 +586,7 @@ class GameState {
    SAVE / ADS / LEADERBOARD
    ============================================================ */
 class SaveSystem {
-    constructor(state) { this.state = state; this.ysdk = null; this.useLocal = false; }
+    constructor(state) { this.state = state; this.ysdk = null; this.useLocal = false; this._saving = false; }
     async init() {
         try {
             if (typeof YaGames === 'undefined') throw new Error('no SDK');
@@ -601,13 +604,29 @@ class SaveSystem {
         return this;
     }
     ready() { try { this.ysdk?.features?.LoadingAPI?.ready(); } catch {} }
+
     async save() {
-        const data = this.state.toSaveObject();
-        if (!this.useLocal && this.ysdk) {
-            try { await this.ysdk.player.setStats(data); } catch {}
+        if (this._saving) return;
+        this._saving = true;
+        try {
+            const data = this.state.toSaveObject();
+            if (!this.useLocal && this.ysdk) {
+                try { await this.ysdk.player.setStats(data); } catch {}
+            }
+            try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
+        } finally {
+            this._saving = false;
         }
-        try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
     }
+
+    // Синхронное сохранение — для вызовов при выгрузке вкладки
+    saveSync() {
+        try {
+            const data = this.state.toSaveObject();
+            try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
+        } catch {}
+    }
+
     async fullReset() {
         try {
             const fresh = new GameState();
@@ -710,16 +729,20 @@ class LeaderboardSystem {
 </script>
 <script>
 /* ============================================================
-   EFFECTS
+   EFFECTS — с лимитом одновременных эффектов
    ============================================================ */
 class Effects {
     constructor(scene) {
         this.scene = scene;
         this.gfxSwatter = scene.add.graphics().setDepth(6);
         this.gfxSwatter.setVisible(false);
+        this._fxCount = 0;
+        this._fxMax = 40;
     }
     bubbles(x, y) {
+        if (this._fxCount >= this._fxMax) return;
         if (Math.random() > BALANCE.bubbleChance) return;
+        this._fxCount++;
         const s = ['🫧','💭','⭕'][Math.floor(Math.random() * 3)];
         const t = this.scene.add.text(x, y, s, { fontSize: (25 + Math.random() * 20) + 'px' })
             .setOrigin(0.5).setDepth(8).setAlpha(0.85);
@@ -729,13 +752,16 @@ class Effects {
             targets: t, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d - 50,
             alpha: { from: 0.85, to: 0 }, scale: { from: 1, to: 1.6 },
             duration: 700 + Math.random() * 300, ease: 'Cubic.easeOut',
-            onComplete: () => t.destroy()
+            onComplete: () => { this._fxCount--; t.destroy(); }
         });
     }
     splash(x, y) {
+        if (this._fxCount >= this._fxMax) return;
         if (Math.random() > BALANCE.splashChance) return;
         const n = 1 + Math.floor(Math.random() * 2);
         for (let i = 0; i < n; i++) {
+            if (this._fxCount >= this._fxMax) return;
+            this._fxCount++;
             const s = ['💧','💦','·','°'][Math.floor(Math.random() * 4)];
             const t = this.scene.add.text(x, y, s, { fontSize: (20 + Math.random() * 25) + 'px' })
                 .setOrigin(0.5).setDepth(8).setAlpha(0.9);
@@ -746,12 +772,14 @@ class Effects {
                 alpha: { from: 0.9, to: 0 }, scale: { from: 1, to: 0.3 },
                 angle: { from: 0, to: (Math.random() - 0.5) * 360 },
                 duration: 500 + Math.random() * 300, ease: 'Cubic.easeOut',
-                onComplete: () => t.destroy()
+                onComplete: () => { this._fxCount--; t.destroy(); }
             });
         }
     }
     star(x, y) {
+        if (this._fxCount >= this._fxMax) return;
         if (Math.random() > BALANCE.starChance) return;
+        this._fxCount++;
         const s = Math.random() > 0.5 ? '⭐' : '✨';
         const t = this.scene.add.text(x, y, s, { fontSize: (20 + Math.random() * 15) + 'px' })
             .setOrigin(0.5).setDepth(5);
@@ -761,32 +789,45 @@ class Effects {
             targets: t, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d - 40,
             alpha: { from: 1, to: 0 }, scale: { from: 1, to: 0.3 },
             duration: BALANCE.starLifetime, ease: 'Cubic.easeOut',
-            onComplete: () => t.destroy()
+            onComplete: () => { this._fxCount--; t.destroy(); }
         });
     }
-    starBurst(x, y, count = 3) { for (let i = 0; i < count; i++) this.star(x, y); }
+    starBurst(x, y, count = 3) {
+        for (let i = 0; i < count; i++) {
+            if (this._fxCount >= this._fxMax) return;
+            this.star(x, y);
+        }
+    }
     moneyPopup(x, y, amount, color = '#FFD700') {
+        if (this._fxCount >= this._fxMax) return;
+        this._fxCount++;
         const t = this.scene.add.text(x, y, `+${amount}💰`, {
             fontSize: '28px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
             stroke: '#000000', strokeThickness: 5
         }).setOrigin(0.5).setDepth(30);
         this.scene.tweens.add({
             targets: t, y: y - 70, alpha: { from: 1, to: 0 }, scale: { from: 1, to: 1.4 },
-            duration: 900, ease: 'Cubic.easeOut', onComplete: () => t.destroy()
+            duration: 900, ease: 'Cubic.easeOut',
+            onComplete: () => { this._fxCount--; t.destroy(); }
         });
     }
     petAction(x, y, icon) {
+        if (this._fxCount >= this._fxMax) return;
+        this._fxCount++;
         const t = this.scene.add.text(x, y, icon, { fontSize: '42px' }).setOrigin(0.5).setDepth(21);
         this.scene.tweens.add({
             targets: t, y: y - 60, alpha: { from: 1, to: 0 }, scale: { from: 0.8, to: 1.3 },
-            duration: 800, ease: 'Back.easeOut', onComplete: () => t.destroy()
+            duration: 800, ease: 'Back.easeOut',
+            onComplete: () => { this._fxCount--; t.destroy(); }
         });
     }
     swatEffect(x, y) {
+        if (this._fxCount >= this._fxMax) return;
+        this._fxCount++;
         const t = this.scene.add.text(x, y, '💥', { fontSize: '60px' }).setOrigin(0.5).setDepth(20);
         this.scene.tweens.add({
             targets: t, alpha: 0, scale: 1.8, duration: 400, ease: 'Cubic.easeOut',
-            onComplete: () => t.destroy()
+            onComplete: () => { this._fxCount--; t.destroy(); }
         });
     }
     drawSwatterCursor(x, y) {
@@ -902,7 +943,7 @@ class FinishStarsSystem {
         this.state.addMoney(reward);
         this.state.registerStarPopped(1);
         this.effects.moneyPopup(cluster.x, cluster.y, reward, '#FFD700');
-        this.effects.starBurst(cluster.x, cluster.y, 6);
+        this.effects.starBurst(cluster.x, cluster.y, 4);
         entry.star.disableInteractive();
         entry.hit.disableInteractive();
         this.scene.tweens.add({
@@ -1132,22 +1173,17 @@ class BugSystem {
         bug.isDead = true;
         if (!fromPet) this.state.registerBugKill();
         this.onKill?.(bug.x, bug.y, fromPet);
-
-        // Награда за убийство (только для игрока, не для питомца)
         if (!fromPet) {
-            // Бонус от прокачки мухобойки — всегда
             const lvlBonus = this.state.getSwatterRewardBonus();
             if (lvlBonus > 0) {
                 this.state.addMoney(lvlBonus);
                 this.onReward?.(bug.x, bug.y, lvlBonus);
             }
-            // Двойная награда (разовая покупка)
             if (this.state.doubleBugReward) {
                 this.state.addMoney(BALANCE.bugRewardPerKill);
                 this.onReward?.(bug.x, bug.y, BALANCE.bugRewardPerKill);
             }
         }
-
         this.scene.tweens.add({
             targets: bug, alpha: 0, scale: 1.5,
             duration: BALANCE.bugFadeDuration, ease: 'Cubic.easeOut',
@@ -1561,8 +1597,15 @@ class ShopUI {
         const bulkPrice = Math.floor(BALANCE.foodPrice * BALANCE.foodBulkCount * BALANCE.foodBulkDiscount);
         item(y, `🍞 Купить ${BALANCE.foodBulkCount} еды (-15%)`, bulkPrice, async () => { st.buyFoodBulk(); await this._afterBuy(); });
         y += 62;
-        item(y, st.autoFoodEnabled ? '✅ АВТОЕДА ВКЛ' : '🍞➡️ Автоеда (навсегда)', st.getAutoFoodPrice(),
-            async () => { st.buyAutoFood(); await this._afterBuy(); }, { disabled: st.autoFoodEnabled });
+
+        // ====== Автоеда — теперь честное описание ======
+        item(y,
+            st.autoFoodEnabled
+                ? '✅ ЕДА НЕ ТРАТИТСЯ (ВКЛ)'
+                : `🍞 Автоеда — еда больше не тратится (${st.getAutoFoodPrice()}💰)`,
+            st.getAutoFoodPrice(),
+            async () => { st.buyAutoFood(); await this._afterBuy(); },
+            { disabled: st.autoFoodEnabled });
         y += 62;
 
         const curR = st.getCurrentRadius();
@@ -1585,7 +1628,6 @@ class ShopUI {
             st.getWashUpgradePrice(), async () => { st.upgradeWash(); await this._afterBuy(); });
         y += 62;
 
-        // ======== МУХОБОЙКА — обновлённое описание ========
         const curCd = st.getSwatterCooldown();
         const nextCd = Math.max(
             BALANCE.swatterCooldownMin,
@@ -2519,6 +2561,21 @@ class MainScene extends Phaser.Scene {
                 }
             }
         });
+
+        /* ============================================================
+           ИСПРАВЛЕНО: сохраняем прогресс при сворачивании браузера
+           и при выгрузке страницы (фикс #3)
+           ============================================================ */
+        this._onVisibilityChange = () => {
+            if (document.hidden) {
+                try { this.saveSystem.saveSync(); } catch {}
+            }
+        };
+        this._onPageHide = () => {
+            try { this.saveSystem.saveSync(); } catch {}
+        };
+        document.addEventListener('visibilitychange', this._onVisibilityChange);
+        window.addEventListener('pagehide', this._onPageHide);
     }
 
     buildHUD(W, H) {
