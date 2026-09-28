@@ -42,16 +42,25 @@ const BALANCE = {
 
     soapThreshold: 0.01, eraseStrength: 0.30,
 
-    // Финальные звёзды
     finishThreshold: 0.99,
-    finishStarReward: 10,
-    finishStarMinDist: 100,
+    finishStarReward: 5,
+    finishStarMinDist: 70,
 
     inputLockDuration: 300,
     starChance: 0.2, starLifetime: 700,
     finishStarCount: 25, finishStarDuration: 1800,
-    bugCountBase: 4, bugSpeed: 200, bugFadeDuration: 400,
-    swatterRadius: 50, swatterCooldown: 2000,
+
+    // ======== ИЗМЕНЕНО: скорость жуков и мухобойка ========
+    bugCountBase: 4,
+    bugSpeed: 180,                      // было 135
+    bugFadeDuration: 400,
+    swatterRadius: 50,                  // база
+    swatterCooldown: 350,               // было 200
+    swatterCooldownMin: 100,
+    swatterCooldownStep: 30,            // было 20
+    swatterRadiusStep: 5,               // было 3
+    swatterBonusPerLevel: 1,            // +1💰 за жука за каждый уровень
+
     splashChance: 0.5, bubbleChance: 0.4,
     gridCellSize: 20,
     adRewardMoney: 200, adCooldownMs: 60000,
@@ -84,6 +93,7 @@ const ACHIEVEMENTS = [
     { id: 'prestige_3',   icon: '👑', name: 'Трижды престиж',   desc: 'Престиж 3 раза',        type: 'prestigeLevel',  target: 3,    reward: 5000 },
     { id: 'soap_master',  icon: '🧼', name: 'Мастер мыла',      desc: 'Прокачай мыло до 5 ур.', type: 'soapLevel',     target: 5,    reward: 600 },
     { id: 'wash_master',  icon: '💧', name: 'Мастер смыва',     desc: 'Прокачай смыв до 5 ур.', type: 'washLevel',     target: 5,    reward: 800 },
+    { id: 'swatter_master', icon: '🪰', name: 'Мастер мухобойки', desc: 'Прокачай мухобойку до 5 ур.', type: 'swatterLevel', target: 5, reward: 1000 },
     { id: 'decorator',    icon: '🎨', name: 'Декоратор',        desc: 'Открой все комнаты',    type: 'roomsUnlocked',  target: 5,    reward: 3000 },
     { id: 'collector',    icon: '🌟', name: 'Коллекционер',     desc: 'Открой все щётки',      type: 'brushesUnlocked', target: 5,   reward: 3000 },
     { id: 'pet_owner',    icon: '🐾', name: 'Хозяин',           desc: 'Купи любого питомца',   type: 'petsOwned',      target: 1,    reward: 500 },
@@ -250,8 +260,21 @@ class GameState {
     getSwatterUpgradePrice() { return BALANCE.swatterBasePrice + this.swatterLevel * BALANCE.swatterBasePrice; }
     getSoapPower() { return BALANCE.soapPower * (1 + (this.soapLevel - 1) * 0.40); }
     getWashStrength() { return BALANCE.washStrength * (1 + (this.washLevel - 1) * 0.35); }
-    getSwatterCooldown() { return Math.max(80, BALANCE.swatterCooldown - this.swatterLevel * 20); }
-    getSwatterRadius() { return BALANCE.swatterRadius + this.swatterLevel * 3; }
+
+    // ======== Мухобойка — осмысленная прокачка ========
+    getSwatterCooldown() {
+        return Math.max(
+            BALANCE.swatterCooldownMin,
+            BALANCE.swatterCooldown - this.swatterLevel * BALANCE.swatterCooldownStep
+        );
+    }
+    getSwatterRadius() {
+        return BALANCE.swatterRadius + this.swatterLevel * BALANCE.swatterRadiusStep;
+    }
+    getSwatterRewardBonus() {
+        return this.swatterLevel * BALANCE.swatterBonusPerLevel;
+    }
+
     getPrestigeMultiplier() { return Math.pow(BALANCE.prestigeMultiplier, this.prestigeLevel); }
     getPrestigeTitle() {
         const titles = ['Новичок', 'Профи', 'Мастер', 'Гуру ковров', 'Легенда'];
@@ -402,6 +425,7 @@ class GameState {
             case 'prestigeLevel': return this.prestigeLevel;
             case 'soapLevel': return this.soapLevel;
             case 'washLevel': return this.washLevel;
+            case 'swatterLevel': return this.swatterLevel;
             case 'roomsUnlocked': return this.unlockedRooms.length;
             case 'brushesUnlocked': return this.unlockedBrushes.length;
             case 'petsOwned': return this.getPetsOwned();
@@ -802,7 +826,7 @@ class Effects {
 }
 
 /* ============================================================
-   FINISH STARS — финальные звёзды
+   FINISH STARS
    ============================================================ */
 class FinishStarsSystem {
     constructor(scene, cleaning, state, effects) {
@@ -810,13 +834,11 @@ class FinishStarsSystem {
         this.cleaning = cleaning;
         this.state = state;
         this.effects = effects;
-        this.stars = [];       // { icon, hit, cells: [] }
+        this.stars = [];
         this.active = false;
         this.onAllPopped = null;
         this.onStarPopped = null;
     }
-
-    /* Активация: превращаем оставшуюся грязь в кликабельные звёзды */
     activate() {
         if (this.active) return;
         const cs = this.cleaning.cellSize;
@@ -825,17 +847,14 @@ class FinishStarsSystem {
         const originX = this.cleaning.originX;
         const originY = this.cleaning.originY;
         const dirt = this.cleaning.dirt;
-
         const minDist = BALANCE.finishStarMinDist;
         const clusters = [];
-
         for (let row = 0; row < rows; row++) {
             for (let col = 0; col < cols; col++) {
                 const i = row * cols + col;
                 if (dirt[i] < 0.01) continue;
                 const cx = originX + col * cs + cs / 2;
                 const cy = originY + row * cs + cs / 2;
-
                 let found = null;
                 for (const c of clusters) {
                     const dx = c.x - cx;
@@ -851,81 +870,56 @@ class FinishStarsSystem {
                 }
             }
         }
-
-        if (clusters.length === 0) {
-            // Уже всё чисто — на всякий случай
-            this.forceComplete();
-            return;
-        }
-
+        if (clusters.length === 0) { this.forceComplete(); return; }
         this.active = true;
-
         for (const c of clusters) {
             const star = this.scene.add.text(c.x, c.y, '⭐', {
                 fontSize: '44px', fontFamily: 'Arial'
             }).setOrigin(0.5).setDepth(24);
             star.setScale(0);
-            this.scene.tweens.add({
-                targets: star, scale: 1, duration: 350, ease: 'Back.easeOut'
-            });
+            this.scene.tweens.add({ targets: star, scale: 1, duration: 350, ease: 'Back.easeOut' });
             this.scene.tweens.add({
                 targets: star, scaleX: 1.15, scaleY: 1.15,
                 duration: 700, yoyo: true, repeat: -1, delay: 350, ease: 'Sine.easeInOut'
             });
-
             const hit = this.scene.add.circle(c.x, c.y, 45, 0x000000, 0.001)
                 .setDepth(25).setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.popStar(c));
-
             this.stars.push({ star, hit, cells: c.cells });
         }
-
         this.scene.showMessage(`⭐ Собери все звёзды! (+${BALANCE.finishStarReward}💰 за каждую)`);
     }
-
-    /* Тап по звезде: обнуляем клетки, даём деньги */
     popStar(cluster) {
         const entry = this.stars.find(s => s.cells === cluster.cells);
         if (!entry) return;
-
         const dirt = this.cleaning.dirt;
         const soap = this.cleaning.soap;
         for (const i of cluster.cells) { dirt[i] = 0; soap[i] = 0; }
         this.cleaning.needRedrawDirt = true;
         this.cleaning.needRedrawSoap = true;
         this.cleaning.recalcProgress();
-
-        // Награда
         const reward = BALANCE.finishStarReward;
         this.state.addMoney(reward);
         this.state.registerStarPopped(1);
         this.effects.moneyPopup(cluster.x, cluster.y, reward, '#FFD700');
         this.effects.starBurst(cluster.x, cluster.y, 6);
-
-        // Убираем звезду
         entry.star.disableInteractive();
         entry.hit.disableInteractive();
         this.scene.tweens.add({
-            targets: entry.star,
-            scale: 2, alpha: 0, angle: 180,
+            targets: entry.star, scale: 2, alpha: 0, angle: 180,
             duration: 350, ease: 'Cubic.easeOut',
             onComplete: () => entry.star.destroy()
         });
         entry.hit.destroy();
-
         const idx = this.stars.indexOf(entry);
         if (idx > -1) this.stars.splice(idx, 1);
-
         this.onStarPopped?.(cluster.cells.length);
-
         if (this.stars.length === 0) {
             this.active = false;
             this.forceComplete();
             this.onAllPopped?.();
         }
     }
-
-    /* Форсированно очищаем всё и ставим 100% */
     forceComplete() {
         const dirt = this.cleaning.dirt;
         const soap = this.cleaning.soap;
@@ -936,8 +930,6 @@ class FinishStarsSystem {
         this.cleaning.progress = 1.0;
         this.cleaning.recalcProgress();
     }
-
-    /* Полная очистка при смене ковра / престиже */
     clear() {
         for (const s of this.stars) {
             if (s.star && s.star.active) s.star.destroy();
@@ -946,7 +938,6 @@ class FinishStarsSystem {
         this.stars = [];
         this.active = false;
     }
-
     get count() { return this.stars.length; }
 }
 
@@ -1141,10 +1132,22 @@ class BugSystem {
         bug.isDead = true;
         if (!fromPet) this.state.registerBugKill();
         this.onKill?.(bug.x, bug.y, fromPet);
-        if (!fromPet && this.state.doubleBugReward) {
-            this.state.addMoney(BALANCE.bugRewardPerKill);
-            this.onReward?.(bug.x, bug.y, BALANCE.bugRewardPerKill);
+
+        // Награда за убийство (только для игрока, не для питомца)
+        if (!fromPet) {
+            // Бонус от прокачки мухобойки — всегда
+            const lvlBonus = this.state.getSwatterRewardBonus();
+            if (lvlBonus > 0) {
+                this.state.addMoney(lvlBonus);
+                this.onReward?.(bug.x, bug.y, lvlBonus);
+            }
+            // Двойная награда (разовая покупка)
+            if (this.state.doubleBugReward) {
+                this.state.addMoney(BALANCE.bugRewardPerKill);
+                this.onReward?.(bug.x, bug.y, BALANCE.bugRewardPerKill);
+            }
         }
+
         this.scene.tweens.add({
             targets: bug, alpha: 0, scale: 1.5,
             duration: BALANCE.bugFadeDuration, ease: 'Cubic.easeOut',
@@ -1378,7 +1381,7 @@ class AchievementsUI {
         push(s.add.text(W/2, 170, `Открыто: ${done} / ${total}`, {
             ...TEXT_STYLES.shopInfo('#FFFFFF', 22)
         }).setOrigin(0.5).setDepth(42));
-        const startY = 210, itemH = 50, gap = 5;
+        const startY = 205, itemH = 48, gap = 4;
         ACHIEVEMENTS.forEach((a, i) => {
             const y = startY + i * (itemH + gap) + itemH / 2;
             const unlocked = !!st.achievements[a.id];
@@ -1386,9 +1389,9 @@ class AchievementsUI {
             const current = a.type === 'bestTime' ? (val > 0 ? formatTime(val) : '—') : Math.min(val, a.target);
             push(s.add.rectangle(W/2, y, 620, itemH, unlocked ? 0x2a4020 : 0x252525)
                 .setDepth(41).setStrokeStyle(2, unlocked ? 0x00FF00 : 0x555555, unlocked ? 0.7 : 0.4));
-            push(s.add.text(W/2 - 285, y, a.icon, { fontSize: '30px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(W/2 - 250, y - 9, a.name, {
-                fontSize: '15px', fill: unlocked ? '#00FF00' : '#FFFFFF',
+            push(s.add.text(W/2 - 285, y, a.icon, { fontSize: '28px' }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(W/2 - 250, y - 8, a.name, {
+                fontSize: '14px', fill: unlocked ? '#00FF00' : '#FFFFFF',
                 fontStyle: 'bold', fontFamily: 'Arial'
             }).setOrigin(0, 0.5).setDepth(42));
             push(s.add.text(W/2 - 250, y + 10,
@@ -1536,7 +1539,7 @@ class ShopUI {
             const borderColor = opts.disabled ? 0x555555 : (canBuy ? 0x00FF00 : 0x666666);
             push(s.add.rectangle(360, y, 620, 56, color).setDepth(41).setStrokeStyle(2, borderColor, 0.6));
             push(s.add.text(70, y, sublabel, {
-                fontSize: '15px', fill: opts.disabled ? '#888888' : '#FFFFFF',
+                fontSize: '14px', fill: opts.disabled ? '#888888' : '#FFFFFF',
                 fontStyle: 'bold', fontFamily: 'Arial'
             }).setOrigin(0, 0.5).setDepth(42));
             const priceStr = opts.priceLabel || `${price}💰`;
@@ -1561,28 +1564,41 @@ class ShopUI {
         item(y, st.autoFoodEnabled ? '✅ АВТОЕДА ВКЛ' : '🍞➡️ Автоеда (навсегда)', st.getAutoFoodPrice(),
             async () => { st.buyAutoFood(); await this._afterBuy(); }, { disabled: st.autoFoodEnabled });
         y += 62;
+
         const curR = st.getCurrentRadius();
         const nextR = Math.floor(BALANCE.brushRadius * (1 + st.toolLevel * BALANCE.toolRadiusBonus));
         const curM = Math.round(st.getToolMoneyMultiplier() * 100);
         const nextM = Math.round((1 + st.toolLevel * BALANCE.toolMoneyBonus) * 100);
-        item(y, `🧹 Щётка ур.${st.toolLevel}  радиус ${curR}→${nextR}  доход ${curM}%→${nextM}%`,
+        item(y, `🧹 Щётка ур.${st.toolLevel}  ${curR}→${nextR}р  ${curM}%→${nextM}%💰`,
             st.getToolUpgradePrice(), async () => { st.upgradeTool(); await this._afterBuy(); });
         y += 62;
+
         const curSoap = (st.getSoapPower() * 100).toFixed(0);
         const nextSoap = ((st.getSoapPower() + BALANCE.soapPower * 0.40) * 100).toFixed(0);
-        item(y, `🧼 Мыло ур.${st.soapLevel}  сила ${curSoap}%→${nextSoap}%`,
+        item(y, `🧼 Мыло ур.${st.soapLevel}  ${curSoap}%→${nextSoap}%`,
             st.getSoapUpgradePrice(), async () => { st.upgradeSoap(); await this._afterBuy(); });
         y += 62;
+
         const curWash = (st.getWashStrength() * 100).toFixed(0);
         const nextWash = ((st.getWashStrength() + BALANCE.washStrength * 0.35) * 100).toFixed(0);
-        item(y, `💧 Смыв ур.${st.washLevel}  сила ${curWash}%→${nextWash}%`,
+        item(y, `💧 Смыв ур.${st.washLevel}  ${curWash}%→${nextWash}%`,
             st.getWashUpgradePrice(), async () => { st.upgradeWash(); await this._afterBuy(); });
         y += 62;
+
+        // ======== МУХОБОЙКА — обновлённое описание ========
         const curCd = st.getSwatterCooldown();
-        const nextCd = Math.max(80, curCd - 20);
-        item(y, `🪰 Мухобойка ур.${st.swatterLevel}  перезаряд ${curCd}→${nextCd}мс`,
+        const nextCd = Math.max(
+            BALANCE.swatterCooldownMin,
+            BALANCE.swatterCooldown - (st.swatterLevel + 1) * BALANCE.swatterCooldownStep
+        );
+        const curRad = st.getSwatterRadius();
+        const nextRad = BALANCE.swatterRadius + (st.swatterLevel + 1) * BALANCE.swatterRadiusStep;
+        const curBonus = st.getSwatterRewardBonus();
+        const nextBonus = curBonus + BALANCE.swatterBonusPerLevel;
+        item(y, `🪰 Мухобойка ур.${st.swatterLevel}  ${curCd}→${nextCd}мс  ${curRad}→${nextRad}р  +${curBonus}→+${nextBonus}💰`,
             st.getSwatterUpgradePrice(), async () => { st.upgradeSwatter(); await this._afterBuy(); });
         y += 62;
+
         if (st.doubleBugReward) {
             item(y, `💰 Двойная награда за жука — ✅ ВКЛ`, 0, () => {}, { disabled: true, priceLabel: 'КУПЛЕНО' });
         } else {
@@ -2208,7 +2224,7 @@ class Tutorial {
             },
             {
                 title: '🧼 Шаг 1. Намыль',
-                text: 'Кнопка «МЫЛО» уже активна.\nВеди пальцем по ковру,\nчтобы нанести мыло.',
+                text: 'Кнопка «МЫЛО» уже активна.\nВеди пальцем по ковру.',
                 target: { x: 240, y: 1200, w: 200, h: 80 }
             },
             {
@@ -2218,17 +2234,22 @@ class Tutorial {
             },
             {
                 title: '⭐ Шаг 3. Собери звёзды!',
-                text: 'Когда ковёр почти чист —\nоставшаяся грязь превращается\nв звёзды ⭐.\n\nТапай по ним → +5💰 за каждую!',
+                text: 'На 99% грязь превращается\nв звёзды ⭐.\n\nТапай по ним → +5💰 за каждую!',
                 target: null
             },
             {
                 title: '💰 Шаг 4. Получи деньги',
-                text: 'Когда ковёр чист на 100% —\nжми «ПОЛУЧИТЬ ДЕНЬГИ»\nвнизу экрана.',
+                text: 'Когда ковёр чист на 100% —\nжми «ПОЛУЧИТЬ ДЕНЬГИ» внизу.',
                 target: { x: 360, y: 1050, w: 320, h: 60 }
             },
             {
+                title: '🪰 Мухобойка',
+                text: 'Со 2-го ковра появляются жуки.\nПрокачивай мухобойку:\n• быстрее перезаряд\n• больше радиус\n• +монеты за жука',
+                target: { x: 480, y: 1200, w: 200, h: 80 }
+            },
+            {
                 title: '🛒 Магазин',
-                text: 'Здесь: щётка, мыло, смыв,\nдвойная награда за жуков,\nпитомцы и скины.',
+                text: 'Здесь: щётка, мыло, смыв,\nмухобойка, питомцы, скины.',
                 target: { x: 550, y: 130, w: 100, h: 100 }
             },
             {
@@ -2243,7 +2264,7 @@ class Tutorial {
             },
             {
                 title: '🌗 День и ночь',
-                text: 'Игра меняется по времени суток:\n🌅 утро · ☀️ день\n🌇 вечер · 🌙 ночь — за ночь ×1.75💰',
+                text: 'Игра меняется по времени суток.\n🌙 Ночью доход ×1.75!',
                 target: null
             }
         ];
@@ -2414,16 +2435,9 @@ class MainScene extends Phaser.Scene {
         this.cleaning.onErase = (x, y) => { this.effects.splash(x, y); this.effects.star(x, y); };
         this.cleaning.onCelebrate = () => { this.effects.celebration(W, H); this.showMessage('Ковёр чистый! ✨'); };
 
-        // Финальные звёзды
         this.stars = new FinishStarsSystem(this, this.cleaning, this.state, this.effects);
-        this.stars.onStarPopped = () => {
-            this.refreshHUD();
-            this.vibrate();
-        };
-        this.stars.onAllPopped = () => {
-            this.showMessage('⭐ Все звёзды собраны!');
-            this.refreshHUD();
-        };
+        this.stars.onStarPopped = () => { this.refreshHUD(); this.vibrate(); };
+        this.stars.onAllPopped = () => { this.showMessage('⭐ Все звёзды собраны!'); this.refreshHUD(); };
 
         this.bugs = new BugSystem(this, this.carpetBounds, this.state, {
             onKill: (x, y) => this.effects.starBurst(x, y, 3),
@@ -2533,7 +2547,6 @@ class MainScene extends Phaser.Scene {
                 TEXT_STYLES.stat('#FFD700', 20)).setOrigin(1, 0).setDepth(10);
         }
 
-        // Правая панель
         this.add.rectangle(380, 0, 340, 195, 0x000000, 0.78).setOrigin(0, 0).setDepth(9);
         this.add.rectangle(380, 195, 340, 3, 0x4A90D9, 0.7).setOrigin(0, 0).setDepth(9);
 
@@ -2591,7 +2604,6 @@ class MainScene extends Phaser.Scene {
         this.progressBar = this.add.rectangle(W / 2 - 200, 230, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
         this.progressText = this.add.text(W / 2, 230, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
 
-        // Счётчик звёзд (появится позже)
         this.starsCounter = this.add.text(W / 2, 275, '', {
             fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial',
             stroke: '#000000', strokeThickness: 5
@@ -2693,7 +2705,7 @@ class MainScene extends Phaser.Scene {
 
         const handlePointer = (pointer) => {
             if (this.inputLocked || uiOpen()) return;
-            if (this.stars.active) return; // звёзды сами обрабатывают тап
+            if (this.stars.active) return;
             if (this.currentTool === 'swatter') {
                 this.effects.drawSwatterCursor(pointer.x, pointer.y);
                 this.brush.setVisible(false);
@@ -2777,7 +2789,6 @@ class MainScene extends Phaser.Scene {
         const radius = this.state.getCurrentRadius();
         this.cleaning.applyStroke(localX, localY, radius, this.currentTool);
 
-        // Проверяем порог финальных звёзд
         const p = this.cleaning.progress;
         if (!this.stars.active && p >= BALANCE.finishThreshold && p < 1.0) {
             this.stars.activate();
@@ -3018,7 +3029,6 @@ class MainScene extends Phaser.Scene {
         const elapsedSec = Math.floor(this.carpetElapsed / 1000);
         this.timerText.setText('⏱ ' + formatTime(elapsedSec));
 
-        // Автоактивация звёзд при 97%+
         if (!this.stars.active) {
             const p = this.cleaning.progress;
             if (p >= BALANCE.finishThreshold && p < 1.0) {
