@@ -74,7 +74,6 @@ const BALANCE = {
     petHamsterIntervalMs: 30000,
     petParrotBonus: 0.10,
 
-    // Прокачка питомцев
     petMaxLevel: 10,
     petUpgradeCostStep: 15,
     petCatSpeedStep: 0.10, petCatCountBase: 1, petCatCountPerLevel: 0.78,
@@ -82,7 +81,6 @@ const BALANCE = {
     petHamsterSpeedStep: 0.10, petHamsterCountBase: 1, petHamsterCountPerLevel: 0.78,
     petParrotBonusPerLevel: 0.055,
 
-    // Новые инструменты
     scraperBasePower: 2.0,
     steamMaxFuel: 100,
     steamFuelCost: 1.0,
@@ -91,10 +89,8 @@ const BALANCE = {
     stainRemoverPower: 2.0,
     moldSpreadMs: 10000,
 
-    // Обучалка по коврам
     tutorialPerCarpet: true,
 
-    // Престиж-дерево
     legacyPerPrestige1: 2,
     legacyPerPrestigeN: 3,
 
@@ -102,11 +98,11 @@ const BALANCE = {
     vibrationMs: 20
 };
 
+// ============================================================
+// КЛЮЧ СОХРАНЕНИЯ — ЗАФИКСИРОВАН. НЕ МЕНЯТЬ!
+// ============================================================
 const SAVE_KEY = 'carpetGameStats_v11';
 
-/* ============================================================
-   ПРЕСТИЖ-ДЕРЕВО
-   ============================================================ */
 const LEGACY_UPGRADES = [
     { id: 'money_flow',  icon: '💰', name: 'Денежный поток',   desc: '+15% к деньгам навсегда',              cost: 1,  maxLevel: 5 },
     { id: 'brush_master', icon: '🧹', name: 'Мастер щётки',     desc: '+5 к стартовому радиусу',             cost: 2,  maxLevel: 5 },
@@ -190,9 +186,6 @@ const DAILY_REWARDS = [
     { money: 5000, food: 1, icon: '👑' }
 ];
 
-/* ============================================================
-   ОБУЧАЛКИ ПО КОВРАМ
-   ============================================================ */
 const CARPET_TUTORIALS = {
     1: [
         { text: 'Веди пальцем по ковру с 🧼 МЫЛОМ,\nчтобы нанести пену.', check: 'soap', need: 3 },
@@ -272,8 +265,7 @@ function getTimeOfDay() {
     if (h >= 17 && h < 22) return 'evening';
     return 'night';
 }
-</script>
-<script>
+
 /* ============================================================
    GAMESTATE
    ============================================================ */
@@ -439,7 +431,6 @@ class GameState {
         return true;
     }
 
-    // ======== ПРЕСТИЖ-ДЕРЕВО ========
     getLegacyUpgradeLevel(id) { return this.legacyUpgrades[id] || 0; }
     getLegacyUpgradeCost(id) {
         const def = LEGACY_UPGRADES.find(u => u.id === id);
@@ -478,7 +469,6 @@ class GameState {
         this.food = BALANCE.startFood;
         this.toolLevel = BALANCE.startToolLevel;
 
-        // Прыжок через ковры
         if (this.legacyUpgrades.jump_start) {
             this.carpetIndex = 3;
             this.carpetLevel = 2;
@@ -492,7 +482,6 @@ class GameState {
 
         this.autoFoodEnabled = false;
 
-        // Питомцы: остаются если куплено улучшение
         if (!this.legacyUpgrades.pet_friends) {
             this.pets = {
                 cat:     { owned: false, level: 1 },
@@ -809,8 +798,7 @@ class GameState {
         }
     }
 }
-</script>
-<script>
+
 /* ============================================================
    SAVE / ADS / LEADERBOARD
    ============================================================ */
@@ -1216,8 +1204,7 @@ class FinishStarsSystem {
     }
     get count() { return this.stars.length; }
 }
-</script>
-<script>
+
 /* ============================================================
    CLEANING SYSTEM — с корками, паром, пятнами
    ============================================================ */
@@ -1234,8 +1221,8 @@ class CleaningSystem {
         const total = this.cols * this.rows;
         this.dirt = new Float32Array(total);
         this.soap = new Float32Array(total);
-        this.crust = new Float32Array(total);   // корка (3-й ковёр)
-        this.stainType = new Uint8Array(total); // тип пятна (5-й ковёр): 0=нет, 1=вино, 2=кофе, 3=кровь, 4=плесень
+        this.crust = new Float32Array(total);
+        this.stainType = new Uint8Array(total);
         this.moldTimer = new Float32Array(total);
         this.dirt.fill(1.0);
         this.dirtGfx = scene.add.graphics().setDepth(1);
@@ -1264,7 +1251,6 @@ class CleaningSystem {
         this.stainType.fill(0);
         this.moldTimer.fill(0);
 
-        // Генерируем корки на 3+ коврах
         if (carpetIndex >= 3) {
             const crustChance = carpetIndex === 3 ? 0.40 : 0.25;
             for (let i = 0; i < this.crust.length; i++) {
@@ -1272,12 +1258,11 @@ class CleaningSystem {
             }
         }
 
-        // Генерируем цветные пятна на 5-м ковре
         if (carpetIndex >= 5) {
             const stainChance = 0.15;
             for (let i = 0; i < this.stainType.length; i++) {
                 if (Math.random() < stainChance) {
-                    this.stainType[i] = 1 + Math.floor(Math.random() * 4); // 1..4
+                    this.stainType[i] = 1 + Math.floor(Math.random() * 4);
                 }
             }
         }
@@ -1317,14 +1302,12 @@ class CleaningSystem {
                 const i = rowOff + col;
 
                 if (tool === 'scraper') {
-                    // Скребок снимает корку
                     if (this.crust[i] > 0) {
                         this.crust[i] = Math.max(0, this.crust[i] - BALANCE.scraperBasePower * falloff);
                         crustChanged = true;
                         this.onCrustRemove?.(localX + this.originX, localY + this.originY);
                     }
                 } else if (tool === 'steam') {
-                    // Пар растворяет грязь на 50% + работает по всем типам
                     if (this.crust[i] > 0) {
                         this.crust[i] = Math.max(0, this.crust[i] - 1.0 * falloff);
                         crustChanged = true;
@@ -1341,7 +1324,6 @@ class CleaningSystem {
                         this.onStainRemove?.(localX + this.originX, localY + this.originY);
                     }
                 } else if (tool === 'remover') {
-                    // Пятновыводитель работает по цветным пятнам
                     if (this.stainType[i] > 0) {
                         this.stainType[i] = 0;
                         stainChanged = true;
@@ -1351,24 +1333,21 @@ class CleaningSystem {
                         erased = true;
                         this.onStainRemove?.(localX + this.originX, localY + this.originY);
                     } else if (this.dirt[i] > 0.01) {
-                        // Работает и как слабый смыв
                         this.dirt[i] = Math.max(0, this.dirt[i] - 0.15 * falloff);
                         if (this.dirt[i] < 0.01) this.dirt[i] = 0;
                         dirtChanged = true;
                     }
                 } else if (tool === 'soap') {
-                    // Мыло НЕ работает по корке, но можно намыливать под ней
                     if (this.soap[i] < 1.0 && this.crust[i] < 0.5) {
                         this.soap[i] = Math.min(1.0, this.soap[i] + soapPower * falloff);
                         soapChanged = true; soapCells++;
                     }
                 } else {
-                    // Смыв: работает только если нет корки
                     if (this.crust[i] > 0.5) continue;
                     if (this.soap[i] < BALANCE.soapThreshold) continue;
                     if (this.dirt[i] > 0.001) {
                         let strength = washStrength;
-                        if (this.stainType[i] > 0) strength *= 0.2; // пятна плохо смываются
+                        if (this.stainType[i] > 0) strength *= 0.2;
                         this.dirt[i] = Math.max(0, this.dirt[i] - strength * falloff);
                         if (this.dirt[i] < 0.01) this.dirt[i] = 0;
                         this.soap[i] = Math.max(0, this.soap[i] - 0.05);
@@ -1395,7 +1374,6 @@ class CleaningSystem {
     }
 
     updateMold(delta) {
-        // Плесень распространяется
         let changed = false;
         const total = this.stainType.length;
         for (let i = 0; i < total; i++) {
@@ -1403,7 +1381,6 @@ class CleaningSystem {
                 this.moldTimer[i] += delta;
                 if (this.moldTimer[i] >= BALANCE.moldSpreadMs) {
                     this.moldTimer[i] = 0;
-                    // Заражаем соседнюю клетку
                     const col = i % this.cols;
                     const row = Math.floor(i / this.cols);
                     const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
@@ -1498,10 +1475,10 @@ class CleaningSystem {
         const g = this.stainGfx, cs = this.cellSize;
         g.clear();
         const colors = {
-            1: 0x8B0000, // вино
-            2: 0x6B3410, // кофе
-            3: 0x660011, // кровь
-            4: 0x2A6A2A  // плесень
+            1: 0x8B0000,
+            2: 0x6B3410,
+            3: 0x660011,
+            4: 0x2A6A2A
         };
         for (let row = 0; row < this.rows; row++) {
             const rowOff = row * this.cols;
@@ -1512,7 +1489,6 @@ class CleaningSystem {
                 g.fillStyle(colors[t] || 0x884400, 0.75);
                 g.fillRect(this.originX + col * cs, py, cs, cs);
                 if (t === 4) {
-                    // Плесень — пунктир
                     g.lineStyle(1, 0x88FF88, 0.6);
                     g.strokeRect(this.originX + col * cs, py, cs, cs);
                 }
@@ -1656,11 +1632,7 @@ class BugSystem {
         }
     }
 }
-</script>
-<script>
-/* ============================================================
-   ROOM RENDERER / PET SYSTEM
-   ============================================================ */
+
 class RoomRenderer {
     constructor(scene) {
         this.scene = scene;
@@ -1852,7 +1824,7 @@ class PetSystem {
 </script>
 <script>
 /* ============================================================
-   ОБУЧАЛКА ПО КОВРАМ — интерактивная
+   ОБУЧАЛКА ПО КОВРАМ — интерактивная с пропуском
    ============================================================ */
 class CarpetTutorial {
     constructor(scene, carpetIndex) {
@@ -1865,6 +1837,10 @@ class CarpetTutorial {
         this.isOpen = false;
         this.done = false;
         this.overlay = null;
+        this.progressText = null;
+        this._autoBtn = null;
+        this._forceSkipBtn = null;
+        this._stepStartTime = 0;
     }
 
     start() {
@@ -1878,25 +1854,32 @@ class CarpetTutorial {
         if (this.stepIndex >= this.steps.length) { this.finish(); return; }
         const s = this.scene, W = 720, H = 1280;
         const step = this.steps[this.stepIndex];
+        this._stepStartTime = this.scene.time.now;
 
-        // Верхняя плашка
-        const bg = s.add.rectangle(W/2, 200, W, 200, 0x000000, 0.85).setDepth(150);
+        const bg = s.add.rectangle(W/2, 200, W, 220, 0x000000, 0.88).setDepth(150);
         this.elements.push(bg);
-        const border = s.add.rectangle(W/2, 300, W, 6, 0xFFD700, 1).setDepth(151);
+        const border = s.add.rectangle(W/2, 310, W, 6, 0xFFD700, 1).setDepth(151);
         this.elements.push(border);
 
-        const stepNum = s.add.text(W/2, 130, `Ковёр ${this.carpetIndex} — Шаг ${this.stepIndex + 1}/${this.steps.length}`, {
-            fontSize: '18px', fill: '#AAAAAA', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(152);
+        const stepNum = s.add.text(20, 105, `Ковёр ${this.carpetIndex} — Шаг ${this.stepIndex + 1}/${this.steps.length}`, {
+            fontSize: '16px', fill: '#AAAAAA', fontStyle: 'bold', fontFamily: 'Arial'
+        }).setOrigin(0, 0.5).setDepth(152);
         this.elements.push(stepNum);
 
+        // Кнопка "Пропустить всё"
+        const skipBtn = s.add.text(W - 15, 105, '⏭ Пропустить', {
+            fontSize: '16px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
+            backgroundColor: '#660000', padding: { x: 12, y: 8 }
+        }).setOrigin(1, 0.5).setDepth(153).setInteractive({ useHandCursor: true });
+        skipBtn.on('pointerdown', () => this.skip());
+        this.elements.push(skipBtn);
+
         const text = s.add.text(W/2, 200, step.text, {
-            fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
+            fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
             align: 'center', lineSpacing: 6, wordWrap: { width: 660 }
         }).setOrigin(0.5).setDepth(152);
         this.elements.push(text);
 
-        // Прогресс задания
         if (step.check !== 'auto' && step.need > 0) {
             const progress = s.add.text(W/2, 270,
                 `Прогресс: 0 / ${step.need}`, {
@@ -1909,12 +1892,53 @@ class CarpetTutorial {
     }
 
     clearStep() {
-        this.elements.forEach(el => el.destroy());
+        this.elements.forEach(el => { try { el.destroy(); } catch {} });
         this.elements = [];
         this.progressText = null;
+        this._autoBtn = null;
+        this._forceSkipBtn = null;
     }
 
-    // Вызывается из MainScene при действиях игрока
+    tick(delta) {
+        if (!this.isOpen || this.done) return;
+        const step = this.steps[this.stepIndex];
+        if (!step) return;
+
+        if (step.check === 'auto') {
+            if (!this._autoBtn || !this._autoBtn.active) {
+                this.showAutoButton();
+            }
+            return;
+        }
+
+        // Если игрок 15 секунд не может выполнить шаг — предложить пропустить
+        if (this._stepStartTime && (this.scene.time.now - this._stepStartTime) > 15000) {
+            if (!this._forceSkipBtn || !this._forceSkipBtn.active) {
+                const s = this.scene;
+                this._forceSkipBtn = s.add.text(360, 340, '⏭ Пропустить шаг (сложно)', {
+                    fontSize: '16px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
+                    backgroundColor: '#660000', padding: { x: 14, y: 10 }
+                }).setOrigin(0.5).setDepth(154).setInteractive({ useHandCursor: true });
+                this._forceSkipBtn.on('pointerdown', () => {
+                    if (this._forceSkipBtn) { this._forceSkipBtn.destroy(); this._forceSkipBtn = null; }
+                    this.stepComplete();
+                });
+                this.elements.push(this._forceSkipBtn);
+            }
+        }
+    }
+
+    skip() {
+        if (this.scene.state.carpetStats[this.carpetIndex]) {
+            this.scene.state.carpetStats[this.carpetIndex].tutorialDone = true;
+        }
+        this.scene.saveSystem.save();
+        this.scene.showMessage(`⏭ Обучалка ковра ${this.carpetIndex} пропущена`);
+        this.isOpen = false;
+        this.done = true;
+        this.clearStep();
+    }
+
     reportAction(type) {
         if (!this.isOpen || this.done) return;
         const step = this.steps[this.stepIndex];
@@ -1928,13 +1952,12 @@ class CarpetTutorial {
         }
     }
 
-    // Для авто-шагов — показываем кнопку "Далее"
     showAutoButton() {
         const s = this.scene, W = 720;
         const step = this.steps[this.stepIndex];
         if (!step || step.check !== 'auto') return;
-        if (this._autoBtn) this._autoBtn.destroy();
-        this._autoBtn = s.add.text(W/2, 260, '👆 Понятно, дальше', {
+        if (this._autoBtn && this._autoBtn.active) return;
+        this._autoBtn = s.add.text(W/2, 265, '👆 Понятно, дальше', {
             fontSize: '20px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial',
             backgroundColor: '#FFD700', padding: { x: 30, y: 12 }
         }).setOrigin(0.5).setDepth(153).setInteractive({ useHandCursor: true });
@@ -1946,8 +1969,10 @@ class CarpetTutorial {
     }
 
     stepComplete() {
-        // Галочка
         const s = this.scene;
+        if (this._autoBtn && this._autoBtn.active) { this._autoBtn.destroy(); this._autoBtn = null; }
+        if (this._forceSkipBtn && this._forceSkipBtn.active) { this._forceSkipBtn.destroy(); this._forceSkipBtn = null; }
+
         const check = s.add.text(360, 200, '✅', { fontSize: '60px' })
             .setOrigin(0.5).setDepth(160);
         this.scene.tweens.add({
@@ -1966,7 +1991,6 @@ class CarpetTutorial {
         this.isOpen = false;
         this.done = true;
         this.clearStep();
-        // Помечаем что обучалка пройдена
         if (this.scene.state.carpetStats[this.carpetIndex]) {
             this.scene.state.carpetStats[this.carpetIndex].tutorialDone = true;
         }
@@ -1977,7 +2001,7 @@ class CarpetTutorial {
 </script>
 <script>
 /* ============================================================
-   UI — Магазин (с престиж-деревом, питомцами за еду)
+   UI — Магазин
    ============================================================ */
 class ShopUI {
     constructor(scene, state, ads) {
@@ -2089,25 +2113,29 @@ class ShopUI {
         item(y, `💧 Смыв ур.${st.washLevel}  ${curWash}%→${nextWash}%`,
             st.getWashUpgradePrice(), async () => { st.upgradeWash(); await this._afterBuy(); });
         y += 62;
-        const curCd = st.getSwatterCooldown();
-        const nextCd = Math.max(
-            BALANCE.swatterCooldownMin,
-            BALANCE.swatterCooldown - (st.swatterLevel + 1) * BALANCE.swatterCooldownStep
-        );
-        const curRad = st.getSwatterRadius();
-        const nextRad = BALANCE.swatterRadius + (st.swatterLevel + 1) * BALANCE.swatterRadiusStep;
-        const curBonus = st.getSwatterRewardBonus();
-        const nextBonus = curBonus + BALANCE.swatterBonusPerLevel;
-        item(y, `🪰 Мухобойка ур.${st.swatterLevel}  ${curCd}→${nextCd}мс  ${curRad}→${nextRad}р  +${curBonus}→+${nextBonus}💰`,
-            st.getSwatterUpgradePrice(), async () => { st.upgradeSwatter(); await this._afterBuy(); });
-        y += 62;
-        if (st.doubleBugReward) {
-            item(y, `💰 Двойная награда за жука — ✅ ВКЛ`, 0, () => {}, { disabled: true, priceLabel: 'КУПЛЕНО' });
-        } else {
-            item(y, `💰 Двойная награда за жука (+${BALANCE.bugRewardPerKill}💰 за каждого)`,
-                BALANCE.doubleBugPrice, async () => { st.buyDoubleBug(); await this._afterBuy(); });
+
+        // Мухобойка и двойная награда — только со 2-го ковра
+        if (st.carpetIndex >= 2) {
+            const curCd = st.getSwatterCooldown();
+            const nextCd = Math.max(
+                BALANCE.swatterCooldownMin,
+                BALANCE.swatterCooldown - (st.swatterLevel + 1) * BALANCE.swatterCooldownStep
+            );
+            const curRad = st.getSwatterRadius();
+            const nextRad = BALANCE.swatterRadius + (st.swatterLevel + 1) * BALANCE.swatterRadiusStep;
+            const curBonus = st.getSwatterRewardBonus();
+            const nextBonus = curBonus + BALANCE.swatterBonusPerLevel;
+            item(y, `🪰 Мухобойка ур.${st.swatterLevel}  ${curCd}→${nextCd}мс  ${curRad}→${nextRad}р  +${curBonus}→+${nextBonus}💰`,
+                st.getSwatterUpgradePrice(), async () => { st.upgradeSwatter(); await this._afterBuy(); });
+            y += 62;
+            if (st.doubleBugReward) {
+                item(y, `💰 Двойная награда за жука — ✅ ВКЛ`, 0, () => {}, { disabled: true, priceLabel: 'КУПЛЕНО' });
+            } else {
+                item(y, `💰 Двойная награда за жука (+${BALANCE.bugRewardPerKill}💰 за каждого)`,
+                    BALANCE.doubleBugPrice, async () => { st.buyDoubleBug(); await this._afterBuy(); });
+            }
+            y += 62;
         }
-        y += 62;
         this._renderAdBlock(push, y);
         y += 90;
         this._renderNewCarpetSection(push, y);
@@ -2473,7 +2501,7 @@ class ShopUI {
 </script>
 <script>
 /* ============================================================
-   ОСТАЛЬНЫЕ UI (Achievements, Quests, Museum, DailyBonus, Settings, Leaderboard)
+   Остальные UI
    ============================================================ */
 class AchievementsUI {
     constructor(scene, state) { this.scene = scene; this.state = state; this.elements = []; this.isOpen = false; }
@@ -3077,7 +3105,6 @@ class MainScene extends Phaser.Scene {
             this.time.delayedCall(800, () => this.showMessage('📅 Новые задания!'));
         }
 
-        // Запускаем обучалку для этого ковра
         this.time.delayedCall(400, () => this.startCarpetTutorial());
 
         this.leaderboard.submitScores();
@@ -3108,7 +3135,6 @@ class MainScene extends Phaser.Scene {
         const idx = this.state.carpetIndex;
         const stat = this.state.carpetStats[idx];
         if (!stat || stat.tutorialDone) {
-            // Базовые дейли — только если не первый запуск
             if (this.state.tutorialDone && this.state.getDailyStatus().canClaim) {
                 this.time.delayedCall(600, () => this.dailyUI.open());
             }
@@ -3116,13 +3142,6 @@ class MainScene extends Phaser.Scene {
         }
         this.tutorial = new CarpetTutorial(this, idx);
         this.tutorial.start();
-        // Для авто-шагов сразу показываем кнопку
-        this.time.delayedCall(100, () => {
-            if (this.tutorial && this.tutorial.isOpen) {
-                const step = this.tutorial.steps[this.tutorial.stepIndex];
-                if (step && step.check === 'auto') this.tutorial.showAutoButton();
-            }
-        });
     }
 
     buildHUD(W, H) {
@@ -3205,13 +3224,11 @@ class MainScene extends Phaser.Scene {
             hit.on('pointerdown', () => this.dailyUI.open());
         }
 
-        // Прогресс
         this.add.rectangle(W / 2, 230, 400, 30, 0x000000, 0.7).setDepth(10);
         this.add.rectangle(W / 2, 230, 400, 30, 0x333333).setDepth(10);
         this.progressBar = this.add.rectangle(W / 2 - 200, 230, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
         this.progressText = this.add.text(W / 2, 230, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
 
-        // Пар
         this.steamBg = this.add.rectangle(W / 2, 265, 200, 14, 0x111111).setDepth(10).setVisible(false);
         this.steamBar = this.add.rectangle(W / 2 - 100, 265, 200, 14, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
         this.steamText = this.add.text(W / 2, 282, '🔥 ПАР', {
@@ -3273,40 +3290,46 @@ class MainScene extends Phaser.Scene {
     }
 
     buildToolButtons(W, H) {
-        const btnY = 1200;
+        const btnY = 1195;
         const hasSwatter = this.state.carpetIndex >= 2;
         const hasScraper = this.state.carpetIndex >= 3;
         const hasSteam = this.state.carpetIndex >= 4;
         const hasRemover = this.state.carpetIndex >= 5;
 
-        // Собираем активные инструменты
         const tools = [];
-        tools.push({ id: 'soap', icon: '🧼', label: 'МЫЛО' });
-        tools.push({ id: 'wash', icon: '💧', label: 'СМЫТЬ' });
-        if (hasSwatter) tools.push({ id: 'swatter', icon: '🪰', label: 'МУХОБОЙКА' });
-        if (hasScraper) tools.push({ id: 'scraper', icon: '🧽', label: 'СКРЕБОК' });
-        if (hasSteam) tools.push({ id: 'steam', icon: '🔥', label: 'ПАР' });
-        if (hasRemover) tools.push({ id: 'remover', icon: '🧴', label: 'ПЯТНОВЫВ' });
+        tools.push({ id: 'soap', icon: '🧼', label: 'МЫЛО', color: 0x4A90D9 });
+        tools.push({ id: 'wash', icon: '💧', label: 'СМЫТЬ', color: 0x4A90D9 });
+        if (hasSwatter) tools.push({ id: 'swatter', icon: '🪰', label: 'МУХОБ.', color: 0xFF4444 });
+        if (hasScraper) tools.push({ id: 'scraper', icon: '🧽', label: 'СКРЕБ.', color: 0x8B6A2A });
+        if (hasSteam) tools.push({ id: 'steam', icon: '🔥', label: 'ПАР', color: 0xFF8844 });
+        if (hasRemover) tools.push({ id: 'remover', icon: '🧴', label: 'ПЯТНОВ.', color: 0xAA44AA });
 
         const count = tools.length;
-        const btnW = Math.min(140, Math.floor(700 / count));
-        const gap = 6;
-        const totalW = count * btnW + (count - 1) * gap;
-        const startX = W / 2 - totalW / 2 + btnW / 2;
+        const gap = 8;
+        const totalW = 700 - (count - 1) * gap;
+        const btnW = Math.floor(totalW / count);
+        const btnH = 100;
+        const startX = W / 2 - (count * btnW + (count - 1) * gap) / 2 + btnW / 2;
 
         this.toolBtns = {};
 
         tools.forEach((tool, i) => {
             const x = startX + i * (btnW + gap);
-            const bg = this.add.rectangle(x, btnY, btnW, 80, 0x555555).setDepth(10)
+            const bg = this.add.rectangle(x, btnY, btnW, btnH, 0x444444).setDepth(10)
                 .setStrokeStyle(4, 0x888888);
-            const txt = this.add.text(x, btnY, `${tool.icon} ${tool.label}`, {
-                fontSize: '14px', fill: '#AAAAAA', fontStyle: 'bold', fontFamily: 'Arial',
-                stroke: '#000000', strokeThickness: 3, align: 'center'
+            const accent = this.add.rectangle(x, btnY + btnH / 2 - 6, btnW - 8, 4, tool.color, 0.9)
+                .setDepth(11);
+            const icon = this.add.text(x, btnY - 14, tool.icon, {
+                fontSize: '38px', fontFamily: 'Arial'
             }).setOrigin(0.5).setDepth(11);
+            const label = this.add.text(x, btnY + 22, tool.label, {
+                fontSize: '13px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
+                stroke: '#000000', strokeThickness: 4
+            }).setOrigin(0.5).setDepth(11);
+
             bg.setInteractive({ useHandCursor: true })
               .on('pointerdown', () => this.selectTool(tool.id));
-            this.toolBtns[tool.id] = { bg, txt, icon: tool.icon, label: tool.label };
+            this.toolBtns[tool.id] = { bg, txt: label, icon, accent, color: tool.color };
         });
 
         this.updateSteamUI();
@@ -3325,21 +3348,16 @@ class MainScene extends Phaser.Scene {
         for (const id in this.toolBtns) {
             const b = this.toolBtns[id];
             const active = id === tool;
-            let activeColor = 0x4A90D9;
-            if (id === 'wash') activeColor = 0x4A90D9;
-            else if (id === 'swatter') activeColor = 0xFF4444;
-            else if (id === 'scraper') activeColor = 0x8B6A2A;
-            else if (id === 'steam') activeColor = 0xFF8844;
-            else if (id === 'remover') activeColor = 0xAA44AA;
-
             if (active) {
-                b.bg.setFillStyle(activeColor);
-                b.bg.setStrokeStyle(5, 0xFFFFFF);
+                b.bg.setFillStyle(b.color);
+                b.bg.setStrokeStyle(6, 0xFFFFFF);
                 b.txt.setColor('#FFFFFF');
+                if (b.icon) b.icon.setScale(1.15);
             } else {
-                b.bg.setFillStyle(0x555555);
+                b.bg.setFillStyle(0x444444);
                 b.bg.setStrokeStyle(4, 0x888888);
-                b.txt.setColor('#AAAAAA');
+                b.txt.setColor('#FFFFFF');
+                if (b.icon) b.icon.setScale(1);
             }
         }
 
@@ -3358,8 +3376,6 @@ class MainScene extends Phaser.Scene {
         this.game.canvas.addEventListener('touchmove',  (e) => e.preventDefault(), { passive: false });
         const uiOpen = () => this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen;
-
-        const tutorialBlocks = () => this.tutorial && this.tutorial.isOpen;
 
         const handlePointer = (pointer) => {
             if (this.inputLocked || uiOpen()) return;
@@ -3434,7 +3450,6 @@ class MainScene extends Phaser.Scene {
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen) return;
         if (this.stars.active) return;
 
-        // Расход пара
         if (this.currentTool === 'steam') {
             if (this.steamFuel <= 0) return;
             this.steamFuel = Math.max(0, this.steamFuel - BALANCE.steamFuelCost);
@@ -3452,7 +3467,6 @@ class MainScene extends Phaser.Scene {
             }
         }
         if (this.bugs.count > 0 && this.currentTool !== 'scraper' && this.currentTool !== 'steam') {
-            // Скребок и пар можно использовать, даже когда есть жуки
             this.showBugWarning();
             return;
         }
@@ -3549,18 +3563,21 @@ class MainScene extends Phaser.Scene {
         this.bugs.clear();
         this.updateStarsCounter();
 
-        // Перестроить панель инструментов
         if (this.toolBtns) {
             for (const id in this.toolBtns) {
-                this.toolBtns[id].bg.destroy();
-                this.toolBtns[id].txt.destroy();
+                const b = this.toolBtns[id];
+                if (b.bg) b.bg.destroy();
+                if (b.txt) b.txt.destroy();
+                if (b.icon) b.icon.destroy();
+                if (b.accent) b.accent.destroy();
             }
+            this.toolBtns = null;
         }
         this.buildToolButtons(720, 1280);
         this.updateSteamUI();
         this.selectTool('soap');
 
-        if (this.tutorial) this.tutorial.destroy();
+        if (this.tutorial) { this.tutorial.isOpen = false; this.tutorial.clearStep(); }
         this.tutorial = null;
 
         await this.saveSystem.save();
@@ -3570,7 +3587,6 @@ class MainScene extends Phaser.Scene {
             this.bugs.spawnForLevel(this.state.carpetIndex);
         });
 
-        // Запустить обучалку для нового ковра
         this.time.delayedCall(600, () => this.startCarpetTutorial());
     }
 
@@ -3594,9 +3610,13 @@ class MainScene extends Phaser.Scene {
 
         if (this.toolBtns) {
             for (const id in this.toolBtns) {
-                this.toolBtns[id].bg.destroy();
-                this.toolBtns[id].txt.destroy();
+                const b = this.toolBtns[id];
+                if (b.bg) b.bg.destroy();
+                if (b.txt) b.txt.destroy();
+                if (b.icon) b.icon.destroy();
+                if (b.accent) b.accent.destroy();
             }
+            this.toolBtns = null;
         }
         this.buildToolButtons(720, 1280);
         this.updateSteamUI();
@@ -3608,7 +3628,7 @@ class MainScene extends Phaser.Scene {
             stroke: '#000000', strokeThickness: 4
         }).setOrigin(1, 0).setDepth(10);
 
-        if (this.tutorial) this.tutorial.destroy();
+        if (this.tutorial) { this.tutorial.isOpen = false; this.tutorial.clearStep(); }
         this.tutorial = null;
 
         await this.saveSystem.save();
@@ -3743,7 +3763,6 @@ class MainScene extends Phaser.Scene {
         this.cleaning.updateMold(delta);
         this.carpetElapsed += delta;
 
-        // Пар восстанавливается
         if (this.state.carpetIndex >= 4) {
             if (this.steamFuel < BALANCE.steamMaxFuel) {
                 this.steamFuel = Math.min(BALANCE.steamMaxFuel, this.steamFuel + BALANCE.steamFuelRegen);
@@ -3762,12 +3781,8 @@ class MainScene extends Phaser.Scene {
             }
         }
 
-        // Для обучалки — обновляем видимость кнопки "Далее" для авто-шагов
         if (this.tutorial && this.tutorial.isOpen) {
-            const step = this.tutorial.steps[this.tutorial.stepIndex];
-            if (step && step.check === 'auto' && !this.tutorial._autoBtn) {
-                this.tutorial.showAutoButton();
-            }
+            this.tutorial.tick(delta);
         }
     }
 }
