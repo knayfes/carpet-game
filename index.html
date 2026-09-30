@@ -60,7 +60,6 @@ const BALANCE = {
     swatterRadiusStep: 5,
     swatterBonusPerLevel: 1,
 
-    // ↓↓ СНИЖЕНО: меньше эффектов → меньше вылетов
     splashChance: 0.25,
     bubbleChance: 0.20,
     gridCellSize: 20,
@@ -75,11 +74,51 @@ const BALANCE = {
     petHamsterIntervalMs: 30000,
     petParrotBonus: 0.10,
 
+    // Прокачка питомцев
+    petMaxLevel: 10,
+    petUpgradeCostStep: 15,
+    petCatSpeedStep: 0.10, petCatCountBase: 1, petCatCountPerLevel: 0.78,
+    petDogSpeedStep: 0.10, petDogCountBase: 1, petDogCountPerLevel: 0.45,
+    petHamsterSpeedStep: 0.10, petHamsterCountBase: 1, petHamsterCountPerLevel: 0.78,
+    petParrotBonusPerLevel: 0.055,
+
+    // Новые инструменты
+    scraperBasePower: 2.0,
+    steamMaxFuel: 100,
+    steamFuelCost: 1.0,
+    steamFuelRegen: 0.4,
+    steamPower: 0.5,
+    stainRemoverPower: 2.0,
+    moldSpreadMs: 10000,
+
+    // Обучалка по коврам
+    tutorialPerCarpet: true,
+
+    // Престиж-дерево
+    legacyPerPrestige1: 2,
+    legacyPerPrestigeN: 3,
+
     dayNightBonus: 0.5,
     vibrationMs: 20
 };
 
 const SAVE_KEY = 'carpetGameStats_v11';
+
+/* ============================================================
+   ПРЕСТИЖ-ДЕРЕВО
+   ============================================================ */
+const LEGACY_UPGRADES = [
+    { id: 'money_flow',  icon: '💰', name: 'Денежный поток',   desc: '+15% к деньгам навсегда',              cost: 1,  maxLevel: 5 },
+    { id: 'brush_master', icon: '🧹', name: 'Мастер щётки',     desc: '+5 к стартовому радиусу',             cost: 2,  maxLevel: 5 },
+    { id: 'soap_master', icon: '🧼', name: 'Мастер мыла',       desc: '+25% к силе мыла',                     cost: 2,  maxLevel: 5 },
+    { id: 'wash_master', icon: '💧', name: 'Мастер смыва',      desc: '+25% к силе смыва',                    cost: 2,  maxLevel: 5 },
+    { id: 'pet_friends', icon: '🐾', name: 'Друзья навек',      desc: 'Питомцы остаются после престижа',     cost: 3,  maxLevel: 1 },
+    { id: 'fast_start',  icon: '⚡', name: 'Быстрый старт',     desc: 'Престиж начинается со 2-го ковра',    cost: 4,  maxLevel: 1 },
+    { id: 'jump_start',  icon: '⏩', name: 'Прыжок',            desc: 'Престиж начинается с 3-го ковра',     cost: 6,  maxLevel: 1 },
+    { id: 'double_income', icon: '🌟', name: 'Двойной доход',   desc: 'Множитель престижа ×2.0',             cost: 8,  maxLevel: 1 },
+    { id: 'crystal_rain', icon: '💎', name: 'Кристальный дождь', desc: '+1💎 за каждый новый престиж',          cost: 10, maxLevel: 1 },
+    { id: 'gods_legacy', icon: '👑', name: 'Наследие Богов',    desc: 'Множитель престижа ×3.0',             cost: 15, maxLevel: 1 }
+];
 
 const ACHIEVEMENTS = [
     { id: 'first_clean',  icon: '🥇', name: 'Первая чистка',   desc: 'Почисти 1 ковёр',       type: 'carpetsCleaned', target: 1,    reward: 100 },
@@ -99,8 +138,10 @@ const ACHIEVEMENTS = [
     { id: 'collector',    icon: '🌟', name: 'Коллекционер',     desc: 'Открой все щётки',      type: 'brushesUnlocked', target: 5,   reward: 3000 },
     { id: 'pet_owner',    icon: '🐾', name: 'Хозяин',           desc: 'Купи любого питомца',   type: 'petsOwned',      target: 1,    reward: 500 },
     { id: 'zoo',          icon: '🏡', name: 'Зоопарк',          desc: 'Все 4 питомца',         type: 'petsOwned',      target: 4,    reward: 3000 },
+    { id: 'pet_max',      icon: '👑', name: 'Любимец',          desc: 'Прокачай любого питомца до 10 ур.', type: 'maxPetLevel', target: 10, reward: 3000 },
     { id: 'streak7',      icon: '📅', name: 'Неделя подряд',    desc: '7 дней бонуса подряд',  type: 'dailyStreak',    target: 7,    reward: 2000 },
-    { id: 'star_hunter',  icon: '⭐', name: 'Ловец звёзд',      desc: 'Собери 50 звёзд',       type: 'starsPopped',    target: 50,   reward: 1000 }
+    { id: 'star_hunter',  icon: '⭐', name: 'Ловец звёзд',      desc: 'Собери 50 звёзд',       type: 'starsPopped',    target: 50,   reward: 1000 },
+    { id: 'legacy_1',     icon: '👑', name: 'Наследник',        desc: 'Купи любое улучшение наследия', type: 'legacyUpgradesBought', target: 1, reward: 1500 }
 ];
 
 const QUEST_POOL = [
@@ -133,10 +174,10 @@ const BRUSH_SKINS = [
 ];
 
 const PETS = [
-    { id: 'cat',     icon: '🐈', name: 'Кот',      desc: 'Смывает 1 клетку/5с',    price: BALANCE.petCatPrice },
-    { id: 'dog',     icon: '🐕', name: 'Пёс',      desc: 'Отгоняет 1 жука/10с',    price: BALANCE.petDogPrice },
-    { id: 'hamster', icon: '🐹', name: 'Хомяк',    desc: '+1 еда каждые 30с',      price: BALANCE.petHamsterPrice },
-    { id: 'parrot',  icon: '🦜', name: 'Попугай',  desc: '+10% к деньгам навсегда', price: BALANCE.petParrotPrice }
+    { id: 'cat',     icon: '🐈', name: 'Кот',      desc: 'Смывает клетки',         price: BALANCE.petCatPrice,     foodBase: 15 },
+    { id: 'dog',     icon: '🐕', name: 'Пёс',      desc: 'Отгоняет жуков',         price: BALANCE.petDogPrice,     foodBase: 25 },
+    { id: 'hamster', icon: '🐹', name: 'Хомяк',    desc: 'Приносит еду',           price: BALANCE.petHamsterPrice, foodBase: 35 },
+    { id: 'parrot',  icon: '🦜', name: 'Попугай',  desc: '+% к деньгам навсегда',  price: BALANCE.petParrotPrice,  foodBase: 50 }
 ];
 
 const DAILY_REWARDS = [
@@ -148,6 +189,39 @@ const DAILY_REWARDS = [
     { money: 1000, food: 0, icon: '💰' },
     { money: 5000, food: 1, icon: '👑' }
 ];
+
+/* ============================================================
+   ОБУЧАЛКИ ПО КОВРАМ
+   ============================================================ */
+const CARPET_TUTORIALS = {
+    1: [
+        { text: 'Веди пальцем по ковру с 🧼 МЫЛОМ,\nчтобы нанести пену.', check: 'soap', need: 3 },
+        { text: 'Переключись на 💧 СМЫТЬ\nи смывай пену.', check: 'wash', need: 3 },
+        { text: 'Когда грязь почти уйдёт —\nсобирай ⭐ звёзды тапом!', check: 'auto', need: 0 },
+        { text: 'Ковёр чист на 100%?\nЖми «ПОЛУЧИТЬ ДЕНЬГИ».', check: 'finish', need: 1 }
+    ],
+    2: [
+        { text: '🐛 Жуки на ковре!\nВозьми 🪰 МУХОБОЙКУ.', check: 'auto', need: 0 },
+        { text: 'Тапни по жукам — пока все не убиты,\nчистить нельзя.', check: 'killBugs', need: 3 },
+        { text: 'Прокачивай мухобойку:\nбыстрее, шире, +💰 за жука.', check: 'auto', need: 0 }
+    ],
+    3: [
+        { text: '🧽 Новый инструмент — СКРЕБОК.\nИм снимаются засохшие корки.', check: 'auto', need: 0 },
+        { text: 'Проведи 🧽 скребком по корке —\nона превратится в пыль.', check: 'scrape', need: 2 },
+        { text: 'После скребка смывай пыль 💧.\nКомбинируй все 3 инструмента!', check: 'auto', need: 0 }
+    ],
+    4: [
+        { text: '🔥 Новый инструмент — ПАР.\nОн растворяет старую грязь.', check: 'auto', need: 0 },
+        { text: 'Проведи паром по ковру.\nСледи за полоской топлива!', check: 'steam', need: 2 },
+        { text: 'Топливо кончилось —\nподожди, оно восстановится.', check: 'auto', need: 0 }
+    ],
+    5: [
+        { text: '🧴 Новый инструмент — ПЯТНОВЫВОДИТЕЛЬ.\nУбирает цветные пятна.', check: 'auto', need: 0 },
+        { text: 'Проведи пятновыводителем\nпо цветному пятну.', check: 'stain', need: 2 },
+        { text: '⚠️ Плесень распространяется!\nУбирай её быстро.', check: 'auto', need: 0 },
+        { text: 'На 5-м ковре — все 6 инструментов.\nКомбинируй их как хочешь!', check: 'auto', need: 0 }
+    ]
+};
 
 const TEXT_STYLES = {
     title: (color = '#FFD700') => ({
@@ -198,7 +272,8 @@ function getTimeOfDay() {
     if (h >= 17 && h < 22) return 'evening';
     return 'night';
 }
-
+</script>
+<script>
 /* ============================================================
    GAMESTATE
    ============================================================ */
@@ -218,9 +293,11 @@ class GameState {
         this.maxMoney = 0;
         this.autoFoodEnabled = false;
         this.prestigeLevel = 0;
+        this.legacyPoints = 0;
+        this.legacyUpgrades = {};
         this.carpetStats = {};
         for (let i = 1; i <= BALANCE.totalCarpets; i++) {
-            this.carpetStats[i] = { cleanings: 0, bestTime: 0 };
+            this.carpetStats[i] = { cleanings: 0, bestTime: 0, tutorialDone: false };
         }
         this.doubleBugReward = false;
         this.selectedRoom = 'classic';
@@ -238,17 +315,25 @@ class GameState {
         };
         this.lastAdTime = 0;
         this.tutorialDone = false;
-        this.pets = { cat: false, dog: false, hamster: false, parrot: false };
+        this.pets = {
+            cat:     { owned: false, level: 1 },
+            dog:     { owned: false, level: 1 },
+            hamster: { owned: false, level: 1 },
+            parrot:  { owned: false, level: 1 }
+        };
         this.settings = { vibration: true };
         this.dailyBonus = { lastClaimDate: '', streakDay: 0 };
         this.leaderboardBestMoney = 0;
         this.leaderboardBestPrestige = 0;
     }
 
-    getCurrentRadius() { return Math.floor(BALANCE.brushRadius * (1 + (this.toolLevel - 1) * BALANCE.toolRadiusBonus)); }
+    getCurrentRadius() {
+        const legacyBonus = (this.legacyUpgrades.brush_master || 0) * 5;
+        return Math.floor(BALANCE.brushRadius * (1 + (this.toolLevel - 1) * BALANCE.toolRadiusBonus)) + legacyBonus;
+    }
     getRewardMultiplier() {
         let m = Math.pow(BALANCE.rewardMultiplierPerCarpet, this.carpetLevel);
-        if (this.pets.parrot) m *= (1 + BALANCE.petParrotBonus);
+        if (this.pets.parrot.owned) m *= (1 + this.getParrotBonus());
         return m;
     }
     getToolMoneyMultiplier() { return 1 + (this.toolLevel - 1) * BALANCE.toolMoneyBonus; }
@@ -259,8 +344,16 @@ class GameState {
     getSoapUpgradePrice() { return this.soapLevel * BALANCE.soapBasePrice; }
     getWashUpgradePrice() { return this.washLevel * BALANCE.washBasePrice; }
     getSwatterUpgradePrice() { return BALANCE.swatterBasePrice + this.swatterLevel * BALANCE.swatterBasePrice; }
-    getSoapPower() { return BALANCE.soapPower * (1 + (this.soapLevel - 1) * 0.40); }
-    getWashStrength() { return BALANCE.washStrength * (1 + (this.washLevel - 1) * 0.35); }
+    getSoapPower() {
+        const base = BALANCE.soapPower * (1 + (this.soapLevel - 1) * 0.40);
+        const legacyBonus = (this.legacyUpgrades.soap_master || 0) * 0.25;
+        return base * (1 + legacyBonus);
+    }
+    getWashStrength() {
+        const base = BALANCE.washStrength * (1 + (this.washLevel - 1) * 0.35);
+        const legacyBonus = (this.legacyUpgrades.wash_master || 0) * 0.25;
+        return base * (1 + legacyBonus);
+    }
     getSwatterCooldown() {
         return Math.max(
             BALANCE.swatterCooldownMin,
@@ -273,12 +366,17 @@ class GameState {
     getSwatterRewardBonus() {
         return this.swatterLevel * BALANCE.swatterBonusPerLevel;
     }
-    getPrestigeMultiplier() { return Math.pow(BALANCE.prestigeMultiplier, this.prestigeLevel); }
+    getPrestigeMultiplier() {
+        let mult = BALANCE.prestigeMultiplier;
+        if (this.legacyUpgrades.double_income) mult = 2.0;
+        if (this.legacyUpgrades.gods_legacy) mult = 3.0;
+        return Math.pow(mult, this.prestigeLevel);
+    }
     getPrestigeTitle() {
         const titles = ['Новичок', 'Профи', 'Мастер', 'Гуру ковров', 'Легенда'];
         return titles[Math.min(this.prestigeLevel, titles.length - 1)];
     }
-    getPetsOwned() { return Object.values(this.pets).filter(Boolean).length; }
+    getPetsOwned() { return Object.values(this.pets).filter(p => p.owned).length; }
     getDayNightBonus() {
         const t = getTimeOfDay();
         if (t === 'night') return BALANCE.dayNightBonus * 1.5;
@@ -287,43 +385,144 @@ class GameState {
         return 0;
     }
 
+    getCatInterval() {
+        const lvl = this.pets.cat.level;
+        const mult = Math.max(0.15, 1 - (lvl - 1) * BALANCE.petCatSpeedStep);
+        return BALANCE.petCatIntervalMs * mult;
+    }
+    getCatCellsPerAction() {
+        const lvl = this.pets.cat.level;
+        return BALANCE.petCatCountBase + (lvl - 1) * BALANCE.petCatCountPerLevel;
+    }
+    getDogInterval() {
+        const lvl = this.pets.dog.level;
+        const mult = Math.max(0.15, 1 - (lvl - 1) * BALANCE.petDogSpeedStep);
+        return BALANCE.petDogIntervalMs * mult;
+    }
+    getDogBugsPerAction() {
+        const lvl = this.pets.dog.level;
+        return BALANCE.petDogCountBase + (lvl - 1) * BALANCE.petDogCountPerLevel;
+    }
+    getHamsterInterval() {
+        const lvl = this.pets.hamster.level;
+        const mult = Math.max(0.15, 1 - (lvl - 1) * BALANCE.petHamsterSpeedStep);
+        return BALANCE.petHamsterIntervalMs * mult;
+    }
+    getHamsterFoodPerAction() {
+        const lvl = this.pets.hamster.level;
+        return BALANCE.petHamsterCountBase + (lvl - 1) * BALANCE.petHamsterCountPerLevel;
+    }
+    getParrotBonus() {
+        const lvl = this.pets.parrot.level;
+        return BALANCE.petParrotBonus + (lvl - 1) * BALANCE.petParrotBonusPerLevel;
+    }
+
+    getPetUpgradeCost(id) {
+        const pet = this.pets[id];
+        if (!pet || !pet.owned) return 0;
+        if (pet.level >= BALANCE.petMaxLevel) return Infinity;
+        const def = PETS.find(p => p.id === id);
+        const base = def ? def.foodBase : BALANCE.petUpgradeCostStep;
+        return base + (pet.level - 1) * BALANCE.petUpgradeCostStep;
+    }
+    canUpgradePet(id) {
+        const pet = this.pets[id];
+        if (!pet || !pet.owned) return false;
+        if (pet.level >= BALANCE.petMaxLevel) return false;
+        return this.food >= this.getPetUpgradeCost(id);
+    }
+    upgradePet(id) {
+        if (!this.canUpgradePet(id)) return false;
+        const cost = this.getPetUpgradeCost(id);
+        this.food -= cost;
+        this.pets[id].level += 1;
+        return true;
+    }
+
+    // ======== ПРЕСТИЖ-ДЕРЕВО ========
+    getLegacyUpgradeLevel(id) { return this.legacyUpgrades[id] || 0; }
+    getLegacyUpgradeCost(id) {
+        const def = LEGACY_UPGRADES.find(u => u.id === id);
+        if (!def) return Infinity;
+        const lvl = this.getLegacyUpgradeLevel(id);
+        if (lvl >= def.maxLevel) return Infinity;
+        return def.cost * (lvl + 1);
+    }
+    canBuyLegacy(id) {
+        const def = LEGACY_UPGRADES.find(u => u.id === id);
+        if (!def) return false;
+        if (this.getLegacyUpgradeLevel(id) >= def.maxLevel) return false;
+        return this.legacyPoints >= this.getLegacyUpgradeCost(id);
+    }
+    buyLegacy(id) {
+        if (!this.canBuyLegacy(id)) return false;
+        const cost = this.getLegacyUpgradeCost(id);
+        this.legacyPoints -= cost;
+        this.legacyUpgrades[id] = (this.legacyUpgrades[id] || 0) + 1;
+        return true;
+    }
+    getLegacyUpgradesBought() {
+        let count = 0;
+        for (const id in this.legacyUpgrades) count += this.legacyUpgrades[id];
+        return count;
+    }
+
     canPrestige() { return this.carpetIndex >= BALANCE.totalCarpets; }
     prestige() {
         if (!this.canPrestige()) return false;
         this.prestigeLevel += 1;
+        const legacyGain = this.prestigeLevel === 1 ? BALANCE.legacyPerPrestige1 : BALANCE.legacyPerPrestigeN;
+        this.legacyPoints += legacyGain;
+
         this.money = 0;
         this.food = BALANCE.startFood;
         this.toolLevel = BALANCE.startToolLevel;
-        this.carpetIndex = 1;
-        this.carpetLevel = 0;
+
+        // Прыжок через ковры
+        if (this.legacyUpgrades.jump_start) {
+            this.carpetIndex = 3;
+            this.carpetLevel = 2;
+        } else if (this.legacyUpgrades.fast_start) {
+            this.carpetIndex = 2;
+            this.carpetLevel = 1;
+        } else {
+            this.carpetIndex = 1;
+            this.carpetLevel = 0;
+        }
+
         this.autoFoodEnabled = false;
+
+        // Питомцы: остаются если куплено улучшение
+        if (!this.legacyUpgrades.pet_friends) {
+            this.pets = {
+                cat:     { owned: false, level: 1 },
+                dog:     { owned: false, level: 1 },
+                hamster: { owned: false, level: 1 },
+                parrot:  { owned: false, level: 1 }
+            };
+        }
+
         if (this.prestigeLevel > this.leaderboardBestPrestige) this.leaderboardBestPrestige = this.prestigeLevel;
-        return true;
+        return legacyGain;
     }
 
     recordCarpetFinish(carpetIndex, timeSec) {
-        if (!this.carpetStats[carpetIndex]) this.carpetStats[carpetIndex] = { cleanings: 0, bestTime: 0 };
+        if (!this.carpetStats[carpetIndex]) this.carpetStats[carpetIndex] = { cleanings: 0, bestTime: 0, tutorialDone: false };
         const st = this.carpetStats[carpetIndex];
         st.cleanings += 1;
         if (timeSec > 0 && (st.bestTime === 0 || timeSec < st.bestTime)) st.bestTime = timeSec;
     }
 
-    /* ============================================================
-       ИСПРАВЛЕНО: автоеда больше НЕ списывает деньги каждый раз,
-       а просто отменяет расход еды
-       ============================================================ */
     addReward(timeSec = 0) {
         const base = Math.floor(BALANCE.rewardMin + Math.random() * (BALANCE.rewardMax - BALANCE.rewardMin));
         const dayNight = 1 + this.getDayNightBonus();
-        const reward = Math.floor(base * this.getRewardMultiplier() * this.getToolMoneyMultiplier() * this.getPrestigeMultiplier() * dayNight);
+        let legacyMoneyMult = 1 + (this.legacyUpgrades.money_flow || 0) * 0.15;
+        const reward = Math.floor(base * this.getRewardMultiplier() * this.getToolMoneyMultiplier() * this.getPrestigeMultiplier() * dayNight * legacyMoneyMult);
         this.money += reward;
         if (this.money > this.maxMoney) this.maxMoney = this.money;
         if (this.maxMoney > this.leaderboardBestMoney) this.leaderboardBestMoney = this.maxMoney;
 
-        // Еда тратится ТОЛЬКО без автоеды
-        if (!this.autoFoodEnabled) {
-            this.food -= 1;
-        }
+        if (!this.autoFoodEnabled) this.food -= 1;
 
         this.carpetsCleaned += 1;
         this.questCounters.cleanToday += 1;
@@ -386,12 +585,12 @@ class GameState {
         this.money -= p; this.autoFoodEnabled = true; return true;
     }
     buyPet(id) {
-        if (this.pets[id]) return false;
+        if (!this.pets[id] || this.pets[id].owned) return false;
         const pet = PETS.find(p => p.id === id);
         if (!pet) return false;
         if (this.money < pet.price) return false;
         this.money -= pet.price;
-        this.pets[id] = true;
+        this.pets[id].owned = true;
         return true;
     }
 
@@ -432,7 +631,15 @@ class GameState {
             case 'roomsUnlocked': return this.unlockedRooms.length;
             case 'brushesUnlocked': return this.unlockedBrushes.length;
             case 'petsOwned': return this.getPetsOwned();
+            case 'maxPetLevel': {
+                let maxLvl = 0;
+                for (const id of ['cat','dog','hamster','parrot']) {
+                    if (this.pets[id] && this.pets[id].level > maxLvl) maxLvl = this.pets[id].level;
+                }
+                return maxLvl;
+            }
             case 'dailyStreak': return this.dailyBonus.streakDay;
+            case 'legacyUpgradesBought': return this.getLegacyUpgradesBought();
             default: return 0;
         }
     }
@@ -511,6 +718,8 @@ class GameState {
             maxMoney: this.maxMoney,
             autoFoodEnabled: this.autoFoodEnabled ? 1 : 0,
             prestigeLevel: this.prestigeLevel,
+            legacyPoints: this.legacyPoints,
+            legacyUpgrades: JSON.stringify(this.legacyUpgrades),
             doubleBugReward: this.doubleBugReward ? 1 : 0,
             selectedRoom: this.selectedRoom, selectedBrush: this.selectedBrush,
             unlockedRooms: this.unlockedRooms.join(','),
@@ -530,9 +739,10 @@ class GameState {
             leaderboardBestPrestige: this.leaderboardBestPrestige
         };
         for (let i = 1; i <= BALANCE.totalCarpets; i++) {
-            const st = this.carpetStats[i] || { cleanings: 0, bestTime: 0 };
+            const st = this.carpetStats[i] || { cleanings: 0, bestTime: 0, tutorialDone: false };
             obj['carpet' + i + '_cleanings'] = st.cleanings;
             obj['carpet' + i + '_best'] = st.bestTime;
+            obj['carpet' + i + '_tut'] = st.tutorialDone ? 1 : 0;
         }
         return obj;
     }
@@ -554,6 +764,8 @@ class GameState {
         this.maxMoney = n(d.maxMoney, this.money);
         this.autoFoodEnabled = Number(d.autoFoodEnabled) === 1;
         this.prestigeLevel = n(d.prestigeLevel, 0);
+        this.legacyPoints = n(d.legacyPoints, 0);
+        try { this.legacyUpgrades = d.legacyUpgrades ? JSON.parse(d.legacyUpgrades) : {}; } catch { this.legacyUpgrades = {}; }
         this.doubleBugReward = Number(d.doubleBugReward) === 1;
         this.selectedRoom = s(d.selectedRoom, 'classic');
         this.selectedBrush = s(d.selectedBrush, 'classic');
@@ -568,7 +780,22 @@ class GameState {
         try { this.questCounters = d.questCounters ? JSON.parse(d.questCounters) : this.questCounters; } catch {}
         this.lastAdTime = n(d.lastAdTime, 0);
         this.tutorialDone = Number(d.tutorialDone) === 1;
-        try { this.pets = d.pets ? JSON.parse(d.pets) : this.pets; } catch {}
+        try {
+            const raw = d.pets ? JSON.parse(d.pets) : null;
+            if (raw && typeof raw === 'object') {
+                for (const id of ['cat', 'dog', 'hamster', 'parrot']) {
+                    const v = raw[id];
+                    if (typeof v === 'boolean') {
+                        this.pets[id] = { owned: v, level: 1 };
+                    } else if (v && typeof v === 'object') {
+                        this.pets[id] = {
+                            owned: !!v.owned,
+                            level: Math.max(1, Math.min(BALANCE.petMaxLevel, Number(v.level) || 1))
+                        };
+                    }
+                }
+            }
+        } catch {}
         try { this.settings = d.settings ? Object.assign(this.settings, JSON.parse(d.settings)) : this.settings; } catch {}
         try { this.dailyBonus = d.dailyBonus ? Object.assign(this.dailyBonus, JSON.parse(d.dailyBonus)) : this.dailyBonus; } catch {}
         this.leaderboardBestMoney = n(d.leaderboardBestMoney, 0);
@@ -576,12 +803,14 @@ class GameState {
         for (let i = 1; i <= BALANCE.totalCarpets; i++) {
             this.carpetStats[i] = {
                 cleanings: n(d['carpet' + i + '_cleanings'], 0),
-                bestTime: n(d['carpet' + i + '_best'], 0)
+                bestTime: n(d['carpet' + i + '_best'], 0),
+                tutorialDone: Number(d['carpet' + i + '_tut']) === 1
             };
         }
     }
 }
-
+</script>
+<script>
 /* ============================================================
    SAVE / ADS / LEADERBOARD
    ============================================================ */
@@ -604,7 +833,6 @@ class SaveSystem {
         return this;
     }
     ready() { try { this.ysdk?.features?.LoadingAPI?.ready(); } catch {} }
-
     async save() {
         if (this._saving) return;
         this._saving = true;
@@ -618,15 +846,12 @@ class SaveSystem {
             this._saving = false;
         }
     }
-
-    // Синхронное сохранение — для вызовов при выгрузке вкладки
     saveSync() {
         try {
             const data = this.state.toSaveObject();
             try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
         } catch {}
     }
-
     async fullReset() {
         try {
             const fresh = new GameState();
@@ -729,7 +954,7 @@ class LeaderboardSystem {
 </script>
 <script>
 /* ============================================================
-   EFFECTS — с лимитом одновременных эффектов
+   EFFECTS
    ============================================================ */
 class Effects {
     constructor(scene) {
@@ -827,6 +1052,17 @@ class Effects {
         const t = this.scene.add.text(x, y, '💥', { fontSize: '60px' }).setOrigin(0.5).setDepth(20);
         this.scene.tweens.add({
             targets: t, alpha: 0, scale: 1.8, duration: 400, ease: 'Cubic.easeOut',
+            onComplete: () => { this._fxCount--; t.destroy(); }
+        });
+    }
+    steamEffect(x, y) {
+        if (this._fxCount >= this._fxMax) return;
+        this._fxCount++;
+        const s = ['☁️','💨','🌫️'][Math.floor(Math.random() * 3)];
+        const t = this.scene.add.text(x, y, s, { fontSize: '40px' }).setOrigin(0.5).setDepth(9).setAlpha(0.7);
+        this.scene.tweens.add({
+            targets: t, y: y - 40, alpha: { from: 0.7, to: 0 }, scale: { from: 1, to: 1.4 },
+            duration: 500, ease: 'Cubic.easeOut',
             onComplete: () => { this._fxCount--; t.destroy(); }
         });
     }
@@ -928,7 +1164,6 @@ class FinishStarsSystem {
             hit.on('pointerdown', () => this.popStar(c));
             this.stars.push({ star, hit, cells: c.cells });
         }
-        this.scene.showMessage(`⭐ Собери все звёзды! (+${BALANCE.finishStarReward}💰 за каждую)`);
     }
     popStar(cluster) {
         const entry = this.stars.find(s => s.cells === cluster.cells);
@@ -981,9 +1216,10 @@ class FinishStarsSystem {
     }
     get count() { return this.stars.length; }
 }
-
+</script>
+<script>
 /* ============================================================
-   CLEANING / BUGS / ROOM / PETS
+   CLEANING SYSTEM — с корками, паром, пятнами
    ============================================================ */
 class CleaningSystem {
     constructor(scene, bounds, state) {
@@ -995,29 +1231,67 @@ class CleaningSystem {
         this.rows = Math.ceil(bounds.height / this.cellSize);
         this.originX = bounds.x;
         this.originY = bounds.y;
-        this.dirt = new Float32Array(this.cols * this.rows);
-        this.soap = new Float32Array(this.cols * this.rows);
+        const total = this.cols * this.rows;
+        this.dirt = new Float32Array(total);
+        this.soap = new Float32Array(total);
+        this.crust = new Float32Array(total);   // корка (3-й ковёр)
+        this.stainType = new Uint8Array(total); // тип пятна (5-й ковёр): 0=нет, 1=вино, 2=кофе, 3=кровь, 4=плесень
+        this.moldTimer = new Float32Array(total);
         this.dirt.fill(1.0);
         this.dirtGfx = scene.add.graphics().setDepth(1);
         this.soapGfx = scene.add.graphics().setDepth(2);
+        this.crustGfx = scene.add.graphics().setDepth(2.5);
+        this.stainGfx = scene.add.graphics().setDepth(2.7);
         this.needRedrawDirt = true;
         this.needRedrawSoap = true;
+        this.needRedrawCrust = true;
+        this.needRedrawStain = true;
         this.progress = 0;
         this.onProgress = null;
         this.onErase = null;
         this.onSoap = null;
+        this.onSteam = null;
+        this.onCrustRemove = null;
+        this.onStainRemove = null;
         this.onCelebrate = null;
         this.celebrationFired = false;
     }
-    reset() {
+
+    reset(carpetIndex) {
         this.dirt.fill(1.0);
         this.soap.fill(0.0);
+        this.crust.fill(0.0);
+        this.stainType.fill(0);
+        this.moldTimer.fill(0);
+
+        // Генерируем корки на 3+ коврах
+        if (carpetIndex >= 3) {
+            const crustChance = carpetIndex === 3 ? 0.40 : 0.25;
+            for (let i = 0; i < this.crust.length; i++) {
+                if (Math.random() < crustChance) this.crust[i] = 1.0;
+            }
+        }
+
+        // Генерируем цветные пятна на 5-м ковре
+        if (carpetIndex >= 5) {
+            const stainChance = 0.15;
+            for (let i = 0; i < this.stainType.length; i++) {
+                if (Math.random() < stainChance) {
+                    this.stainType[i] = 1 + Math.floor(Math.random() * 4); // 1..4
+                }
+            }
+        }
+
         this.needRedrawDirt = true;
         this.needRedrawSoap = true;
+        this.needRedrawCrust = true;
+        this.needRedrawStain = true;
         this.progress = 0;
         this.celebrationFired = false;
+        this.recalcProgress();
         this.onProgress?.(this.progress);
     }
+
     applyStroke(localX, localY, radius, tool) {
         const cs = this.cellSize, cols = this.cols, rows = this.rows;
         const r2 = radius * radius;
@@ -1025,10 +1299,11 @@ class CleaningSystem {
         const maxCol = Math.min(cols - 1, Math.floor((localX + radius) / cs));
         const minRow = Math.max(0, Math.floor((localY - radius) / cs));
         const maxRow = Math.min(rows - 1, Math.floor((localY + radius) / cs));
-        const isSoap = tool === 'soap';
         const soapPower = this.state.getSoapPower();
         const washStrength = this.state.getWashStrength();
-        let dirtChanged = false, soapChanged = false, erased = false, soapCells = 0;
+
+        let dirtChanged = false, soapChanged = false, crustChanged = false, stainChanged = false, erased = false, soapCells = 0;
+
         for (let row = minRow; row <= maxRow; row++) {
             const rowOff = row * cols;
             const dy = row * cs + cs / 2 - localY;
@@ -1040,15 +1315,61 @@ class CleaningSystem {
                 if (d2 > r2) continue;
                 const falloff = Math.max(0.5, 1 - Math.sqrt(d2) / radius);
                 const i = rowOff + col;
-                if (isSoap) {
-                    if (this.soap[i] < 1.0) {
+
+                if (tool === 'scraper') {
+                    // Скребок снимает корку
+                    if (this.crust[i] > 0) {
+                        this.crust[i] = Math.max(0, this.crust[i] - BALANCE.scraperBasePower * falloff);
+                        crustChanged = true;
+                        this.onCrustRemove?.(localX + this.originX, localY + this.originY);
+                    }
+                } else if (tool === 'steam') {
+                    // Пар растворяет грязь на 50% + работает по всем типам
+                    if (this.crust[i] > 0) {
+                        this.crust[i] = Math.max(0, this.crust[i] - 1.0 * falloff);
+                        crustChanged = true;
+                    }
+                    if (this.dirt[i] > 0.01) {
+                        this.dirt[i] = Math.max(0, this.dirt[i] - BALANCE.steamPower * falloff);
+                        if (this.dirt[i] < 0.01) this.dirt[i] = 0;
+                        dirtChanged = true;
+                        erased = true;
+                    }
+                    if (this.stainType[i] > 0) {
+                        this.stainType[i] = 0;
+                        stainChanged = true;
+                        this.onStainRemove?.(localX + this.originX, localY + this.originY);
+                    }
+                } else if (tool === 'remover') {
+                    // Пятновыводитель работает по цветным пятнам
+                    if (this.stainType[i] > 0) {
+                        this.stainType[i] = 0;
+                        stainChanged = true;
+                        this.dirt[i] = Math.max(0, this.dirt[i] - BALANCE.stainRemoverPower * falloff);
+                        if (this.dirt[i] < 0.01) this.dirt[i] = 0;
+                        dirtChanged = true;
+                        erased = true;
+                        this.onStainRemove?.(localX + this.originX, localY + this.originY);
+                    } else if (this.dirt[i] > 0.01) {
+                        // Работает и как слабый смыв
+                        this.dirt[i] = Math.max(0, this.dirt[i] - 0.15 * falloff);
+                        if (this.dirt[i] < 0.01) this.dirt[i] = 0;
+                        dirtChanged = true;
+                    }
+                } else if (tool === 'soap') {
+                    // Мыло НЕ работает по корке, но можно намыливать под ней
+                    if (this.soap[i] < 1.0 && this.crust[i] < 0.5) {
                         this.soap[i] = Math.min(1.0, this.soap[i] + soapPower * falloff);
                         soapChanged = true; soapCells++;
                     }
                 } else {
+                    // Смыв: работает только если нет корки
+                    if (this.crust[i] > 0.5) continue;
                     if (this.soap[i] < BALANCE.soapThreshold) continue;
                     if (this.dirt[i] > 0.001) {
-                        this.dirt[i] = Math.max(0, this.dirt[i] - washStrength * falloff);
+                        let strength = washStrength;
+                        if (this.stainType[i] > 0) strength *= 0.2; // пятна плохо смываются
+                        this.dirt[i] = Math.max(0, this.dirt[i] - strength * falloff);
                         if (this.dirt[i] < 0.01) this.dirt[i] = 0;
                         this.soap[i] = Math.max(0, this.soap[i] - 0.05);
                         dirtChanged = true; soapChanged = true; erased = true;
@@ -1056,15 +1377,52 @@ class CleaningSystem {
                 }
             }
         }
-        if (isSoap && soapCells > 0) this.state.registerSoapUse(soapCells);
+
+        if (tool === 'soap' && soapCells > 0) this.state.registerSoapUse(soapCells);
+
         const screenX = localX + this.originX;
         const screenY = localY + this.originY;
-        if (isSoap && soapChanged) this.onSoap?.(screenX, screenY);
-        if (!isSoap && erased) this.onErase?.(screenX, screenY);
+        if (tool === 'soap' && soapChanged) this.onSoap?.(screenX, screenY);
+        if (tool === 'wash' && erased) this.onErase?.(screenX, screenY);
+        if (tool === 'steam') this.onSteam?.(screenX, screenY);
+
         if (dirtChanged) { this.needRedrawDirt = true; this.recalcProgress(); }
         if (soapChanged) this.needRedrawSoap = true;
-        return { dirtChanged, soapChanged, erased };
+        if (crustChanged) this.needRedrawCrust = true;
+        if (stainChanged) this.needRedrawStain = true;
+
+        return { dirtChanged, soapChanged, erased, crustChanged, stainChanged };
     }
+
+    updateMold(delta) {
+        // Плесень распространяется
+        let changed = false;
+        const total = this.stainType.length;
+        for (let i = 0; i < total; i++) {
+            if (this.stainType[i] === 4) {
+                this.moldTimer[i] += delta;
+                if (this.moldTimer[i] >= BALANCE.moldSpreadMs) {
+                    this.moldTimer[i] = 0;
+                    // Заражаем соседнюю клетку
+                    const col = i % this.cols;
+                    const row = Math.floor(i / this.cols);
+                    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+                    const [dc, dr] = dirs[Math.floor(Math.random() * 4)];
+                    const nc = col + dc, nr = row + dr;
+                    if (nc >= 0 && nc < this.cols && nr >= 0 && nr < this.rows) {
+                        const ni = nr * this.cols + nc;
+                        if (this.stainType[ni] === 0) {
+                            this.stainType[ni] = 4;
+                            this.moldTimer[ni] = 0;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+        }
+        if (changed) this.needRedrawStain = true;
+    }
+
     recalcProgress() {
         let total = 0;
         const cells = this.dirt.length;
@@ -1072,6 +1430,8 @@ class CleaningSystem {
         for (let i = 0; i < cells; i++) {
             total += 1 - this.dirt[i];
             if (this.dirt[i] > 0.05) allClean = false;
+            if (this.crust[i] > 0.05) allClean = false;
+            if (this.stainType[i] > 0) allClean = false;
         }
         this.progress = total / cells;
         if (this.progress >= 0.9999 && allClean) this.progress = 1.0;
@@ -1082,10 +1442,24 @@ class CleaningSystem {
             this.onCelebrate?.();
         }
     }
+
+    isFullyClean() {
+        const cells = this.dirt.length;
+        for (let i = 0; i < cells; i++) {
+            if (this.dirt[i] > 0.05) return false;
+            if (this.crust[i] > 0.05) return false;
+            if (this.stainType[i] > 0) return false;
+        }
+        return true;
+    }
+
     draw() {
         if (this.needRedrawDirt) this.drawDirt();
+        if (this.needRedrawCrust) this.drawCrust();
+        if (this.needRedrawStain) this.drawStain();
         if (this.needRedrawSoap) this.drawSoap();
     }
+
     drawDirt() {
         const g = this.dirtGfx, cs = this.cellSize;
         g.clear();
@@ -1101,6 +1475,52 @@ class CleaningSystem {
         }
         this.needRedrawDirt = false;
     }
+
+    drawCrust() {
+        const g = this.crustGfx, cs = this.cellSize;
+        g.clear();
+        for (let row = 0; row < this.rows; row++) {
+            const rowOff = row * this.cols;
+            const py = this.originY + row * cs;
+            for (let col = 0; col < this.cols; col++) {
+                const c = this.crust[rowOff + col];
+                if (c <= 0.05) continue;
+                g.fillStyle(0x5a3a1a, c * 0.85);
+                g.fillRect(this.originX + col * cs, py, cs, cs);
+                g.lineStyle(1, 0x2a1a0a, c * 0.8);
+                g.strokeRect(this.originX + col * cs, py, cs, cs);
+            }
+        }
+        this.needRedrawCrust = false;
+    }
+
+    drawStain() {
+        const g = this.stainGfx, cs = this.cellSize;
+        g.clear();
+        const colors = {
+            1: 0x8B0000, // вино
+            2: 0x6B3410, // кофе
+            3: 0x660011, // кровь
+            4: 0x2A6A2A  // плесень
+        };
+        for (let row = 0; row < this.rows; row++) {
+            const rowOff = row * this.cols;
+            const py = this.originY + row * cs;
+            for (let col = 0; col < this.cols; col++) {
+                const t = this.stainType[rowOff + col];
+                if (t === 0) continue;
+                g.fillStyle(colors[t] || 0x884400, 0.75);
+                g.fillRect(this.originX + col * cs, py, cs, cs);
+                if (t === 4) {
+                    // Плесень — пунктир
+                    g.lineStyle(1, 0x88FF88, 0.6);
+                    g.strokeRect(this.originX + col * cs, py, cs, cs);
+                }
+            }
+        }
+        this.needRedrawStain = false;
+    }
+
     drawSoap() {
         const g = this.soapGfx, cs = this.cellSize;
         g.clear();
@@ -1118,6 +1538,9 @@ class CleaningSystem {
     }
 }
 
+/* ============================================================
+   BUG SYSTEM
+   ============================================================ */
 class BugSystem {
     constructor(scene, bounds, state, opts = {}) {
         this.scene = scene;
@@ -1233,7 +1656,11 @@ class BugSystem {
         }
     }
 }
-
+</script>
+<script>
+/* ============================================================
+   ROOM RENDERER / PET SYSTEM
+   ============================================================ */
 class RoomRenderer {
     constructor(scene) {
         this.scene = scene;
@@ -1337,9 +1764,10 @@ class PetSystem {
     createIndicators() {
         const order = ['cat', 'dog', 'hamster', 'parrot'];
         order.forEach((id, i) => {
-            if (!this.state.pets[id]) return;
+            if (!this.state.pets[id].owned) return;
             const pet = PETS.find(p => p.id === id);
-            const icon = this.scene.add.text(670, 240 + i * 55, pet.icon, { fontSize: '34px' })
+            const lvl = this.state.pets[id].level;
+            const icon = this.scene.add.text(670, 240 + i * 55, pet.icon + ` ${lvl}`, { fontSize: '24px' })
                 .setOrigin(0.5).setDepth(10).setAlpha(0.85);
             this.icons.push({ id, icon });
         });
@@ -1350,177 +1778,214 @@ class PetSystem {
         this.createIndicators();
     }
     update(delta) {
-        if (this.state.pets.cat) {
+        if (this.state.pets.cat.owned) {
             this.timers.cat += delta;
-            if (this.timers.cat >= BALANCE.petCatIntervalMs) { this.timers.cat = 0; this.catAction(); }
+            if (this.timers.cat >= this.state.getCatInterval()) { this.timers.cat = 0; this.catAction(); }
         }
-        if (this.state.pets.dog) {
+        if (this.state.pets.dog.owned) {
             this.timers.dog += delta;
-            if (this.timers.dog >= BALANCE.petDogIntervalMs) { this.timers.dog = 0; this.dogAction(); }
+            if (this.timers.dog >= this.state.getDogInterval()) { this.timers.dog = 0; this.dogAction(); }
         }
-        if (this.state.pets.hamster) {
+        if (this.state.pets.hamster.owned) {
             this.timers.hamster += delta;
-            if (this.timers.hamster >= BALANCE.petHamsterIntervalMs) { this.timers.hamster = 0; this.hamsterAction(); }
+            if (this.timers.hamster >= this.state.getHamsterInterval()) { this.timers.hamster = 0; this.hamsterAction(); }
         }
     }
     catAction() {
         const dirt = this.cleaning.dirt;
         const cells = dirt.length;
+        const count = Math.max(1, Math.round(this.state.getCatCellsPerAction()));
+        let cleaned = 0;
+        let lastPos = null;
         let tries = 0;
-        while (tries++ < 30) {
+        while (cleaned < count && tries++ < 60) {
             const i = Math.floor(Math.random() * cells);
             if (dirt[i] > 0.05) {
                 dirt[i] = 0;
-                this.cleaning.needRedrawDirt = true;
-                this.cleaning.recalcProgress();
-                this.state.registerPetAction();
+                cleaned++;
                 const col = i % this.cleaning.cols;
                 const row = Math.floor(i / this.cleaning.cols);
-                const px = this.cleaning.originX + col * this.cleaning.cellSize + this.cleaning.cellSize / 2;
-                const py = this.cleaning.originY + row * this.cleaning.cellSize + this.cleaning.cellSize / 2;
-                this.effects.petAction(px, py, '🐈');
-                return;
+                lastPos = {
+                    x: this.cleaning.originX + col * this.cleaning.cellSize + this.cleaning.cellSize / 2,
+                    y: this.cleaning.originY + row * this.cleaning.cellSize + this.cleaning.cellSize / 2
+                };
+            }
+        }
+        if (cleaned > 0) {
+            this.cleaning.needRedrawDirt = true;
+            this.cleaning.recalcProgress();
+            this.state.registerPetAction();
+            if (lastPos) {
+                this.effects.petAction(lastPos.x, lastPos.y, '🐈');
+                if (cleaned > 1) this.effects.petAction(lastPos.x, lastPos.y - 30, `×${cleaned}`);
             }
         }
     }
     dogAction() {
-        const bug = this.bugs.scareOne();
-        if (bug) {
-            this.effects.petAction(bug.x, bug.y, '🐕');
+        const count = Math.max(1, Math.round(this.state.getDogBugsPerAction()));
+        let killed = 0;
+        let lastPos = null;
+        while (killed < count && this.bugs.bugs.length > 0) {
+            const bug = this.bugs.bugs[0];
+            if (!bug || bug.isDead) { this.bugs.bugs.shift(); continue; }
+            lastPos = { x: bug.x, y: bug.y };
+            this.bugs.scareOne();
+            killed++;
+        }
+        if (killed > 0) {
             this.state.registerPetAction();
+            if (lastPos) {
+                this.effects.petAction(lastPos.x, lastPos.y, '🐕');
+                if (killed > 1) this.effects.petAction(lastPos.x, lastPos.y - 30, `×${killed}`);
+            }
         }
     }
     hamsterAction() {
-        this.state.food += 1;
+        const food = Math.max(1, Math.round(this.state.getHamsterFoodPerAction()));
+        this.state.food += food;
         this.state.registerPetAction();
         this.effects.petAction(670, 320, '🐹');
+        if (food > 1) this.effects.petAction(670, 290, `+${food}🍞`);
         if (this.scene.refreshHUD) this.scene.refreshHUD();
     }
 }
 </script>
 <script>
 /* ============================================================
-   UI
+   ОБУЧАЛКА ПО КОВРАМ — интерактивная
    ============================================================ */
-class AchievementsUI {
-    constructor(scene, state) { this.scene = scene; this.state = state; this.elements = []; this.isOpen = false; }
-    open() { if (this.isOpen) return; this.isOpen = true; this.render(); }
-    close() { this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; }
-    render() {
-        const s = this.scene, W = 720, H = 1280, st = this.state;
-        const push = (el) => { this.elements.push(el); return el; };
-        const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(40)); ov.setInteractive();
-        push(s.add.rectangle(W/2, H/2, 660, 1140, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0xFFD700));
-        push(s.add.text(W/2, 110, '🏆 ДОСТИЖЕНИЯ', TEXT_STYLES.title('#FFD700')).setOrigin(0.5).setDepth(42));
-        const total = ACHIEVEMENTS.length;
-        const done = Object.keys(st.achievements).length;
-        push(s.add.text(W/2, 170, `Открыто: ${done} / ${total}`, {
-            ...TEXT_STYLES.shopInfo('#FFFFFF', 22)
-        }).setOrigin(0.5).setDepth(42));
-        const startY = 205, itemH = 48, gap = 4;
-        ACHIEVEMENTS.forEach((a, i) => {
-            const y = startY + i * (itemH + gap) + itemH / 2;
-            const unlocked = !!st.achievements[a.id];
-            const val = st.getAchievementValue(a.type);
-            const current = a.type === 'bestTime' ? (val > 0 ? formatTime(val) : '—') : Math.min(val, a.target);
-            push(s.add.rectangle(W/2, y, 620, itemH, unlocked ? 0x2a4020 : 0x252525)
-                .setDepth(41).setStrokeStyle(2, unlocked ? 0x00FF00 : 0x555555, unlocked ? 0.7 : 0.4));
-            push(s.add.text(W/2 - 285, y, a.icon, { fontSize: '28px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(W/2 - 250, y - 8, a.name, {
-                fontSize: '14px', fill: unlocked ? '#00FF00' : '#FFFFFF',
-                fontStyle: 'bold', fontFamily: 'Arial'
-            }).setOrigin(0, 0.5).setDepth(42));
-            push(s.add.text(W/2 - 250, y + 10,
-                unlocked ? `✅ +${a.reward}💰` : a.desc, {
-                fontSize: '11px', fill: unlocked ? '#88FF88' : '#AAAAAA', fontFamily: 'Arial'
-            }).setOrigin(0, 0.5).setDepth(42));
-            if (!unlocked && a.type !== 'bestTime') {
-                push(s.add.text(W/2 + 285, y, `${current}/${a.target}`, {
-                    fontSize: '13px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
-                }).setOrigin(1, 0.5).setDepth(42));
-            }
-        });
-        push(s.add.text(620, 110, '✖', {
-            fontSize: '52px', fill: '#FF4444', fontStyle: 'bold',
-            stroke: '#000000', strokeThickness: 6
-        }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => this.close()));
+class CarpetTutorial {
+    constructor(scene, carpetIndex) {
+        this.scene = scene;
+        this.carpetIndex = carpetIndex;
+        this.steps = CARPET_TUTORIALS[carpetIndex] || [];
+        this.stepIndex = 0;
+        this.counters = {};
+        this.elements = [];
+        this.isOpen = false;
+        this.done = false;
+        this.overlay = null;
     }
-}
 
-class QuestsUI {
-    constructor(scene, state) { this.scene = scene; this.state = state; this.elements = []; this.isOpen = false; this.onClaim = null; }
-    open() { if (this.isOpen) return; this.isOpen = true; this.render(); }
-    close() { this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; }
-    refresh() { if (!this.isOpen) return; this.close(); this.open(); }
-    render() {
-        const s = this.scene, W = 720, H = 1280, st = this.state;
-        const push = (el) => { this.elements.push(el); return el; };
-        const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(40)); ov.setInteractive();
-        push(s.add.rectangle(W/2, H/2, 660, 1140, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0x00E5FF));
-        push(s.add.text(W/2, 130, '📅 ЗАДАНИЯ', TEXT_STYLES.title('#00E5FF')).setOrigin(0.5).setDepth(42));
-        push(s.add.text(W/2, 190, 'Обновление: каждый день (UTC)', {
-            ...TEXT_STYLES.shopInfo('#AAAAAA', 16)
-        }).setOrigin(0.5).setDepth(42));
-        if (st.quests.length === 0) {
-            push(s.add.text(W/2, 640, 'Задания загрузятся при следующем входе', {
-                ...TEXT_STYLES.shopInfo('#FFFFFF', 22)
-            }).setOrigin(0.5).setDepth(42));
-        } else {
-            st.quests.forEach((q, i) => {
-                const y = 320 + i * 260;
-                const val = st.getQuestValue(q);
-                const done = val >= q.target;
-                const claimed = st.questClaimed[q.id];
-                const progress = Math.min(1, val / q.target);
-                push(s.add.rectangle(W/2, y, 600, 220, 0x252525)
-                    .setDepth(41).setStrokeStyle(3, claimed ? 0x555555 : (done ? 0x00FF00 : 0x00E5FF), 0.6));
-                push(s.add.text(W/2 - 260, y - 70, q.icon, { fontSize: '50px' }).setOrigin(0.5).setDepth(42));
-                push(s.add.text(W/2 - 200, y - 70, q.text, {
-                    fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
-                    wordWrap: { width: 400 }
-                }).setOrigin(0, 0.5).setDepth(42));
-                push(s.add.rectangle(W/2, y + 10, 500, 30, 0x111111).setDepth(41));
-                push(s.add.rectangle(W/2 - 250, y + 10, 500 * progress, 30, done ? 0x00FF00 : 0x00E5FF)
-                    .setOrigin(0, 0.5).setDepth(42));
-                push(s.add.text(W/2, y + 10, `${Math.min(val, q.target)} / ${q.target}`, {
-                    fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
-                    stroke: '#000000', strokeThickness: 3
-                }).setOrigin(0.5).setDepth(43));
-                const btnY = y + 70;
-                if (claimed) {
-                    push(s.add.text(W/2, btnY, '✅ ПОЛУЧЕНО', {
-                        fontSize: '20px', fill: '#00AA00', fontStyle: 'bold', fontFamily: 'Arial'
-                    }).setOrigin(0.5).setDepth(42));
-                } else if (done) {
-                    push(s.add.text(W/2, btnY, `🎁 ЗАБРАТЬ +${q.reward}💰`, {
-                        fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial',
-                        backgroundColor: '#FFD700', padding: { x: 30, y: 12 }
-                    }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true })
-                      .on('pointerdown', async () => {
-                        if (st.claimQuest(q)) { await this.onClaim?.(); this.refresh(); }
-                      }));
-                } else {
-                    push(s.add.text(W/2, btnY, `Награда: +${q.reward}💰`, {
-                        fontSize: '18px', fill: '#FFD700', fontFamily: 'Arial'
-                    }).setOrigin(0.5).setDepth(42));
-                }
-            });
+    start() {
+        if (!this.steps.length) { this.done = true; return; }
+        this.isOpen = true;
+        this.showStep();
+    }
+
+    showStep() {
+        this.clearStep();
+        if (this.stepIndex >= this.steps.length) { this.finish(); return; }
+        const s = this.scene, W = 720, H = 1280;
+        const step = this.steps[this.stepIndex];
+
+        // Верхняя плашка
+        const bg = s.add.rectangle(W/2, 200, W, 200, 0x000000, 0.85).setDepth(150);
+        this.elements.push(bg);
+        const border = s.add.rectangle(W/2, 300, W, 6, 0xFFD700, 1).setDepth(151);
+        this.elements.push(border);
+
+        const stepNum = s.add.text(W/2, 130, `Ковёр ${this.carpetIndex} — Шаг ${this.stepIndex + 1}/${this.steps.length}`, {
+            fontSize: '18px', fill: '#AAAAAA', fontStyle: 'bold', fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(152);
+        this.elements.push(stepNum);
+
+        const text = s.add.text(W/2, 200, step.text, {
+            fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
+            align: 'center', lineSpacing: 6, wordWrap: { width: 660 }
+        }).setOrigin(0.5).setDepth(152);
+        this.elements.push(text);
+
+        // Прогресс задания
+        if (step.check !== 'auto' && step.need > 0) {
+            const progress = s.add.text(W/2, 270,
+                `Прогресс: 0 / ${step.need}`, {
+                fontSize: '20px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial',
+                stroke: '#000000', strokeThickness: 4
+            }).setOrigin(0.5).setDepth(152);
+            this.elements.push(progress);
+            this.progressText = progress;
         }
-        push(s.add.text(620, 130, '✖', {
-            fontSize: '52px', fill: '#FF4444', fontStyle: 'bold',
-            stroke: '#000000', strokeThickness: 6
-        }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true })
-          .on('pointerdown', () => this.close()));
+    }
+
+    clearStep() {
+        this.elements.forEach(el => el.destroy());
+        this.elements = [];
+        this.progressText = null;
+    }
+
+    // Вызывается из MainScene при действиях игрока
+    reportAction(type) {
+        if (!this.isOpen || this.done) return;
+        const step = this.steps[this.stepIndex];
+        if (!step || step.check !== type) return;
+        this.counters[type] = (this.counters[type] || 0) + 1;
+        if (this.progressText) {
+            this.progressText.setText(`Прогресс: ${Math.min(this.counters[type], step.need)} / ${step.need}`);
+        }
+        if (this.counters[type] >= step.need) {
+            this.stepComplete();
+        }
+    }
+
+    // Для авто-шагов — показываем кнопку "Далее"
+    showAutoButton() {
+        const s = this.scene, W = 720;
+        const step = this.steps[this.stepIndex];
+        if (!step || step.check !== 'auto') return;
+        if (this._autoBtn) this._autoBtn.destroy();
+        this._autoBtn = s.add.text(W/2, 260, '👆 Понятно, дальше', {
+            fontSize: '20px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial',
+            backgroundColor: '#FFD700', padding: { x: 30, y: 12 }
+        }).setOrigin(0.5).setDepth(153).setInteractive({ useHandCursor: true });
+        this._autoBtn.on('pointerdown', () => {
+            if (this._autoBtn) { this._autoBtn.destroy(); this._autoBtn = null; }
+            this.stepComplete();
+        });
+        this.elements.push(this._autoBtn);
+    }
+
+    stepComplete() {
+        // Галочка
+        const s = this.scene;
+        const check = s.add.text(360, 200, '✅', { fontSize: '60px' })
+            .setOrigin(0.5).setDepth(160);
+        this.scene.tweens.add({
+            targets: check, scale: { from: 0, to: 1.5 }, alpha: { from: 1, to: 0 },
+            duration: 700, ease: 'Back.easeOut',
+            onComplete: () => check.destroy()
+        });
+        this.scene.time.delayedCall(400, () => {
+            this.stepIndex++;
+            if (this.stepIndex >= this.steps.length) this.finish();
+            else this.showStep();
+        });
+    }
+
+    finish() {
+        this.isOpen = false;
+        this.done = true;
+        this.clearStep();
+        // Помечаем что обучалка пройдена
+        if (this.scene.state.carpetStats[this.carpetIndex]) {
+            this.scene.state.carpetStats[this.carpetIndex].tutorialDone = true;
+        }
+        this.scene.saveSystem.save();
+        this.scene.showMessage(`✅ Ковёр ${this.carpetIndex} — обучение пройдено!`);
     }
 }
-
+</script>
+<script>
+/* ============================================================
+   UI — Магазин (с престиж-деревом, питомцами за еду)
+   ============================================================ */
 class ShopUI {
     constructor(scene, state, ads) {
         this.scene = scene; this.state = state; this.ads = ads;
         this.elements = []; this.isOpen = false; this.activeTab = 'upgrades';
         this.onBuyCarpet = null; this.onChanged = null; this.onMessage = null;
         this.onPrestige = null; this.onSkinChange = null; this.onPetBought = null;
+        this.onLegacyBuy = null;
     }
     open() { if (this.isOpen) return; this.isOpen = true; this.render(); }
     close() { this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; }
@@ -1535,6 +2000,7 @@ class ShopUI {
         if (this.activeTab === 'upgrades') this._renderUpgrades(push);
         else if (this.activeTab === 'skins') this._renderSkins(push);
         else if (this.activeTab === 'pets') this._renderPets(push);
+        else if (this.activeTab === 'legacy') this._renderLegacy(push);
         else if (this.activeTab === 'prestige') this._renderPrestige(push);
         push(s.add.text(630, 100, '✖', {
             fontSize: '52px', fill: '#FF4444', fontStyle: 'bold',
@@ -1548,13 +2014,14 @@ class ShopUI {
             { id: 'upgrades', label: '⚙️' },
             { id: 'skins', label: '🎨' },
             { id: 'pets', label: '🐾' },
-            { id: 'prestige', label: '👑' + (st.canPrestige() ? '⚡' : '') }
+            { id: 'legacy', label: '👑' + (st.legacyPoints > 0 ? st.legacyPoints : '') },
+            { id: 'prestige', label: '🔥' }
         ];
-        const tabW = 150, tabH = 55;
-        const totalW = tabs.length * tabW + (tabs.length - 1) * 8;
+        const tabW = 120, tabH = 55;
+        const totalW = tabs.length * tabW + (tabs.length - 1) * 6;
         const startX = 360 - totalW / 2 + tabW / 2;
         tabs.forEach((tab, i) => {
-            const x = startX + i * (tabW + 8);
+            const x = startX + i * (tabW + 6);
             const y = 175;
             const active = this.activeTab === tab.id;
             push(s.add.rectangle(x, y, tabW, tabH, active ? 0xFFD700 : 0x444444)
@@ -1562,7 +2029,7 @@ class ShopUI {
                 .setInteractive({ useHandCursor: true })
                 .on('pointerdown', () => { this.activeTab = tab.id; this.refresh(); }));
             push(s.add.text(x, y, tab.label, {
-                fontSize: '26px', fill: active ? '#000000' : '#CCCCCC',
+                fontSize: '24px', fill: active ? '#000000' : '#CCCCCC',
                 fontStyle: 'bold', fontFamily: 'Arial'
             }).setOrigin(0.5).setDepth(42));
         });
@@ -1597,8 +2064,6 @@ class ShopUI {
         const bulkPrice = Math.floor(BALANCE.foodPrice * BALANCE.foodBulkCount * BALANCE.foodBulkDiscount);
         item(y, `🍞 Купить ${BALANCE.foodBulkCount} еды (-15%)`, bulkPrice, async () => { st.buyFoodBulk(); await this._afterBuy(); });
         y += 62;
-
-        // ====== Автоеда — теперь честное описание ======
         item(y,
             st.autoFoodEnabled
                 ? '✅ ЕДА НЕ ТРАТИТСЯ (ВКЛ)'
@@ -1607,27 +2072,23 @@ class ShopUI {
             async () => { st.buyAutoFood(); await this._afterBuy(); },
             { disabled: st.autoFoodEnabled });
         y += 62;
-
         const curR = st.getCurrentRadius();
-        const nextR = Math.floor(BALANCE.brushRadius * (1 + st.toolLevel * BALANCE.toolRadiusBonus));
+        const nextR = Math.floor(BALANCE.brushRadius * (1 + st.toolLevel * BALANCE.toolRadiusBonus)) + (st.legacyUpgrades.brush_master || 0) * 5;
         const curM = Math.round(st.getToolMoneyMultiplier() * 100);
         const nextM = Math.round((1 + st.toolLevel * BALANCE.toolMoneyBonus) * 100);
         item(y, `🧹 Щётка ур.${st.toolLevel}  ${curR}→${nextR}р  ${curM}%→${nextM}%💰`,
             st.getToolUpgradePrice(), async () => { st.upgradeTool(); await this._afterBuy(); });
         y += 62;
-
         const curSoap = (st.getSoapPower() * 100).toFixed(0);
         const nextSoap = ((st.getSoapPower() + BALANCE.soapPower * 0.40) * 100).toFixed(0);
         item(y, `🧼 Мыло ур.${st.soapLevel}  ${curSoap}%→${nextSoap}%`,
             st.getSoapUpgradePrice(), async () => { st.upgradeSoap(); await this._afterBuy(); });
         y += 62;
-
         const curWash = (st.getWashStrength() * 100).toFixed(0);
         const nextWash = ((st.getWashStrength() + BALANCE.washStrength * 0.35) * 100).toFixed(0);
         item(y, `💧 Смыв ур.${st.washLevel}  ${curWash}%→${nextWash}%`,
             st.getWashUpgradePrice(), async () => { st.upgradeWash(); await this._afterBuy(); });
         y += 62;
-
         const curCd = st.getSwatterCooldown();
         const nextCd = Math.max(
             BALANCE.swatterCooldownMin,
@@ -1640,7 +2101,6 @@ class ShopUI {
         item(y, `🪰 Мухобойка ур.${st.swatterLevel}  ${curCd}→${nextCd}мс  ${curRad}→${nextRad}р  +${curBonus}→+${nextBonus}💰`,
             st.getSwatterUpgradePrice(), async () => { st.upgradeSwatter(); await this._afterBuy(); });
         y += 62;
-
         if (st.doubleBugReward) {
             item(y, `💰 Двойная награда за жука — ✅ ВКЛ`, 0, () => {}, { disabled: true, priceLabel: 'КУПЛЕНО' });
         } else {
@@ -1699,7 +2159,7 @@ class ShopUI {
         } else {
             bg = 0x2a2010; border = 0xFFD700; textColor = '#FFD700';
             label = `🆕 Ковёр №${st.carpetIndex + 1} — нужно ${price}💰 (есть ${st.money}💰)`;
-            hint = '💰 Не хватает денег — чисти или смотри рекламу';
+            hint = '💰 Не хватает денег';
         }
         push(s.add.rectangle(360, y, 620, 80, bg).setDepth(41).setStrokeStyle(3, border, 0.8));
         push(s.add.text(360, y - 14, label, {
@@ -1813,35 +2273,64 @@ class ShopUI {
     }
     _renderPets(push) {
         const s = this.scene, st = this.state;
-        push(s.add.text(360, 230, '🐾 ПИТОМЦЫ', {
+        push(s.add.text(360, 220, '🐾 ПИТОМЦЫ', {
             ...TEXT_STYLES.shop('#FFD700', 26)
         }).setOrigin(0.5).setDepth(42));
-        push(s.add.text(360, 265, 'Помогают автоматически', {
-            ...TEXT_STYLES.shopInfo('#AAAAAA', 15)
+        push(s.add.text(360, 252, 'Покупай за 💰 и прокачивай за 🍞', {
+            ...TEXT_STYLES.shopInfo('#AAAAAA', 14)
         }).setOrigin(0.5).setDepth(42));
+
         PETS.forEach((pet, i) => {
-            const y = 340 + i * 130;
-            const owned = st.pets[pet.id];
+            const y = 305 + i * 115;
+            const pdata = st.pets[pet.id];
+            const owned = pdata.owned;
+            const level = pdata.level;
+            const maxed = level >= BALANCE.petMaxLevel;
+            const upgradeCost = st.getPetUpgradeCost(pet.id);
+            const canUpgrade = st.canUpgradePet(pet.id);
             const canBuy = st.money >= pet.price;
-            push(s.add.rectangle(360, y, 620, 110, owned ? 0x2a4020 : 0x252525)
+
+            push(s.add.rectangle(360, y, 620, 105, owned ? 0x2a4020 : 0x252525)
                 .setDepth(41).setStrokeStyle(3, owned ? 0x00FF00 : 0x666666, 0.7));
-            push(s.add.text(80, y, pet.icon, { fontSize: '56px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(130, y - 25, pet.name, {
-                fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial'
+            push(s.add.text(75, y, pet.icon, { fontSize: '50px' }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(120, y - 30, pet.name + (owned ? `  ур.${level}` : ''), {
+                fontSize: '20px', fill: owned ? '#00FF00' : '#FFFFFF',
+                fontStyle: 'bold', fontFamily: 'Arial'
             }).setOrigin(0, 0.5).setDepth(42));
-            push(s.add.text(130, y + 8, pet.desc, {
-                fontSize: '15px', fill: '#AAAAAA', fontFamily: 'Arial'
+
+            let desc = '';
+            if (!owned) desc = pet.desc;
+            else if (maxed) desc = '⭐ МАКСИМУМ';
+            else if (pet.id === 'cat') {
+                const cells = Math.round(st.getCatCellsPerAction());
+                const nextCells = Math.round(BALANCE.petCatCountBase + level * BALANCE.petCatCountPerLevel);
+                const interval = (st.getCatInterval() / 1000).toFixed(1);
+                desc = `${cells} клеток / ${interval}с  →  ${nextCells}`;
+            } else if (pet.id === 'dog') {
+                const bugs = Math.round(st.getDogBugsPerAction());
+                const nextBugs = Math.round(BALANCE.petDogCountBase + level * BALANCE.petDogCountPerLevel);
+                const interval = (st.getDogInterval() / 1000).toFixed(1);
+                desc = `${bugs} жуков / ${interval}с  →  ${nextBugs}`;
+            } else if (pet.id === 'hamster') {
+                const food = Math.round(st.getHamsterFoodPerAction());
+                const nextFood = Math.round(BALANCE.petHamsterCountBase + level * BALANCE.petHamsterCountPerLevel);
+                const interval = (st.getHamsterInterval() / 1000).toFixed(1);
+                desc = `+${food}🍞 / ${interval}с  →  +${nextFood}`;
+            } else if (pet.id === 'parrot') {
+                const cur = Math.round(st.getParrotBonus() * 100);
+                const next = Math.round((st.getParrotBonus() + BALANCE.petParrotBonusPerLevel) * 100);
+                desc = `+${cur}%💰  →  +${next}%💰`;
+            }
+            push(s.add.text(120, y + 8, desc, {
+                fontSize: '12px', fill: '#AAAAAA', fontFamily: 'Arial'
             }).setOrigin(0, 0.5).setDepth(42));
-            if (owned) {
-                push(s.add.text(600, y, '✅ ЕСТЬ', {
-                    fontSize: '22px', fill: '#00FF00', fontStyle: 'bold', fontFamily: 'Arial'
-                }).setOrigin(1, 0.5).setDepth(42));
-            } else {
+
+            if (!owned) {
                 push(s.add.text(600, y, `${pet.price}💰`, {
                     fontSize: '22px', fill: canBuy ? '#FFD700' : '#FF6666',
                     fontStyle: 'bold', fontFamily: 'Arial'
                 }).setOrigin(1, 0.5).setDepth(42));
-                const hit = push(s.add.rectangle(360, y, 620, 110, 0x000000, 0.001).setDepth(43));
+                const hit = push(s.add.rectangle(360, y, 620, 105, 0x000000, 0.001).setDepth(43));
                 hit.setInteractive({ useHandCursor: true });
                 hit.on('pointerdown', async () => {
                     if (canBuy) {
@@ -1854,6 +2343,78 @@ class ShopUI {
                         await this._offerAd(push, pet.price - st.money);
                     }
                 });
+            } else if (maxed) {
+                push(s.add.text(600, y, '⭐ МАКС', {
+                    fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
+                }).setOrigin(1, 0.5).setDepth(42));
+            } else {
+                push(s.add.text(600, y - 15, `🍞 ${upgradeCost}`, {
+                    fontSize: '20px', fill: canUpgrade ? '#FFD700' : '#FF6666',
+                    fontStyle: 'bold', fontFamily: 'Arial'
+                }).setOrigin(1, 0.5).setDepth(42));
+                push(s.add.text(600, y + 15, `+1 ур.`, {
+                    fontSize: '13px', fill: '#00E5FF', fontStyle: 'bold', fontFamily: 'Arial'
+                }).setOrigin(1, 0.5).setDepth(42));
+                const hit = push(s.add.rectangle(360, y, 620, 105, 0x000000, 0.001).setDepth(43));
+                hit.setInteractive({ useHandCursor: true });
+                hit.on('pointerdown', async () => {
+                    if (st.upgradePet(pet.id)) {
+                        await this._afterBuy();
+                        this.onMessage?.(`🍞 ${pet.name} теперь ур.${st.pets[pet.id].level}!`);
+                        this.onPetBought?.(pet.id);
+                    } else {
+                        this.onMessage?.(`❌ Не хватает еды (нужно ${upgradeCost}🍞)`);
+                    }
+                });
+            }
+        });
+    }
+    _renderLegacy(push) {
+        const s = this.scene, st = this.state;
+        push(s.add.text(360, 220, '👑 НАСЛЕДИЕ', {
+            ...TEXT_STYLES.shop('#FFD700', 28)
+        }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, 258, `Очков: ${st.legacyPoints}  •  Престижей: ${st.prestigeLevel}`, {
+            ...TEXT_STYLES.shopInfo('#FFFFFF', 16)
+        }).setOrigin(0.5).setDepth(42));
+
+        LEGACY_UPGRADES.forEach((up, i) => {
+            const y = 310 + i * 80;
+            const lvl = st.getLegacyUpgradeLevel(up.id);
+            const maxed = lvl >= up.maxLevel;
+            const cost = st.getLegacyUpgradeCost(up.id);
+            const canBuy = st.canBuyLegacy(up.id);
+
+            push(s.add.rectangle(360, y, 620, 70, maxed ? 0x2a4020 : 0x252525)
+                .setDepth(41).setStrokeStyle(3, maxed ? 0x00FF00 : (canBuy ? 0xFFD700 : 0x555555), 0.7));
+            push(s.add.text(75, y, up.icon, { fontSize: '36px' }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(110, y - 12, `${up.name}  ${lvl}/${up.maxLevel}`, {
+                fontSize: '16px', fill: maxed ? '#00FF00' : '#FFFFFF',
+                fontStyle: 'bold', fontFamily: 'Arial'
+            }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(110, y + 14, up.desc, {
+                fontSize: '12px', fill: '#AAAAAA', fontFamily: 'Arial'
+            }).setOrigin(0, 0.5).setDepth(42));
+            if (maxed) {
+                push(s.add.text(600, y, '✅', {
+                    fontSize: '24px', fill: '#00FF00', fontStyle: 'bold', fontFamily: 'Arial'
+                }).setOrigin(1, 0.5).setDepth(42));
+            } else {
+                push(s.add.text(600, y, `👑 ${cost}`, {
+                    fontSize: '18px', fill: canBuy ? '#FFD700' : '#FF6666',
+                    fontStyle: 'bold', fontFamily: 'Arial'
+                }).setOrigin(1, 0.5).setDepth(42));
+                const hit = push(s.add.rectangle(360, y, 620, 70, 0x000000, 0.001).setDepth(43));
+                hit.setInteractive({ useHandCursor: true });
+                hit.on('pointerdown', async () => {
+                    if (st.buyLegacy(up.id)) {
+                        await this._afterBuy();
+                        this.onMessage?.(`👑 ${up.name} улучшено!`);
+                        this.onLegacyBuy?.(up.id);
+                    } else {
+                        this.onMessage?.(`❌ Не хватает очков (нужно ${cost}👑)`);
+                    }
+                });
             }
         });
     }
@@ -1861,30 +2422,31 @@ class ShopUI {
         const s = this.scene, st = this.state;
         if (!st.canPrestige()) {
             push(s.add.text(360, 640,
-                '👑 ПРЕСТИЖ\n\nДоступен после открытия\nвсех 5 ковров',
+                '🔥 ПРЕСТИЖ\n\nДоступен после открытия\nвсех 5 ковров',
                 { ...TEXT_STYLES.shopInfo('#AAAAAA', 24), align: 'center' }).setOrigin(0.5).setDepth(42));
             return;
         }
         const cy = 640;
         push(s.add.rectangle(360, cy, 620, 500, 0x1a0a1a).setDepth(41).setStrokeStyle(3, 0xFFD700, 0.7));
-        push(s.add.text(360, cy - 200, '👑 ПРЕСТИЖ ДОСТУПЕН', {
+        push(s.add.text(360, cy - 200, '🔥 ПРЕСТИЖ ДОСТУПЕН', {
             ...TEXT_STYLES.shop('#FFD700', 28)
         }).setOrigin(0.5).setDepth(42));
         const curMult = st.getPrestigeMultiplier();
-        const nextMult = curMult * BALANCE.prestigeMultiplier;
-        const nextTitles = ['Новичок', 'Профи', 'Мастер', 'Гуру ковров', 'Легенда'];
-        const nextTitle = nextTitles[Math.min(st.prestigeLevel + 1, nextTitles.length - 1)];
+        const nextMult = curMult * 2.0;
+        const gain = st.prestigeLevel === 0 ? BALANCE.legacyPerPrestige1 : BALANCE.legacyPerPrestigeN;
         const info =
-            `${st.getPrestigeTitle()} → ${nextTitle}\n\n` +
-            `Множитель дохода:\n×${curMult.toFixed(2)} → ×${nextMult.toFixed(2)}\n\n` +
-            `✅ ОСТАНЕТСЯ:\nПитомцы, скины, достижения, дейли\n\n` +
-            `❌ СБРОСИТСЯ:\nДеньги, ковры, щётка, автоеда`;
+            `Престиж ${st.prestigeLevel} → ${st.prestigeLevel + 1}\n\n` +
+            `Получишь: +${gain} 👑 Очков Наследия\n` +
+            `Множитель дохода: ×${curMult.toFixed(2)} → ×${nextMult.toFixed(2)}\n\n` +
+            `✅ ОСТАНЕТСЯ:\nНаследие, скины, достижения\n` +
+            (st.legacyUpgrades.pet_friends ? `Питомцы (благодаря "Друзьям навек")\n` : `Питомцы СБРОСЯТСЯ (купи "Друзья навек")\n`) +
+            `\n❌ СБРОСИТСЯ:\nДеньги, ковры, щётка, автоеда`;
         push(s.add.text(360, cy - 20, info, {
-            ...TEXT_STYLES.shopInfo('#FFFFFF', 15), align: 'center', lineSpacing: 4
+            ...TEXT_STYLES.shopInfo('#FFFFFF', 14), align: 'center', lineSpacing: 4
         }).setOrigin(0.5).setDepth(42));
         let confirmPending = false;
-        const btnLabel = `🔄 ПРЕСТИЖ (+×${nextMult.toFixed(2)})`;
-        const btn = push(s.add.text(360, cy + 180, btnLabel, {
+        const btnLabel = `🔥 ПРЕСТИЖ (+${gain} 👑)`;
+        const btn = push(s.add.text(360, cy + 200, btnLabel, {
             fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial',
             backgroundColor: '#FFD700', padding: { x: 30, y: 15 }
         }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true })
@@ -1906,6 +2468,123 @@ class ShopUI {
                 this.close();
             }
           }));
+    }
+}
+</script>
+<script>
+/* ============================================================
+   ОСТАЛЬНЫЕ UI (Achievements, Quests, Museum, DailyBonus, Settings, Leaderboard)
+   ============================================================ */
+class AchievementsUI {
+    constructor(scene, state) { this.scene = scene; this.state = state; this.elements = []; this.isOpen = false; }
+    open() { if (this.isOpen) return; this.isOpen = true; this.render(); }
+    close() { this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; }
+    render() {
+        const s = this.scene, W = 720, H = 1280, st = this.state;
+        const push = (el) => { this.elements.push(el); return el; };
+        const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(40)); ov.setInteractive();
+        push(s.add.rectangle(W/2, H/2, 660, 1140, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0xFFD700));
+        push(s.add.text(W/2, 110, '🏆 ДОСТИЖЕНИЯ', TEXT_STYLES.title('#FFD700')).setOrigin(0.5).setDepth(42));
+        const total = ACHIEVEMENTS.length;
+        const done = Object.keys(st.achievements).length;
+        push(s.add.text(W/2, 165, `Открыто: ${done} / ${total}`, {
+            ...TEXT_STYLES.shopInfo('#FFFFFF', 20)
+        }).setOrigin(0.5).setDepth(42));
+        const startY = 200, itemH = 44, gap = 4;
+        ACHIEVEMENTS.forEach((a, i) => {
+            const y = startY + i * (itemH + gap) + itemH / 2;
+            const unlocked = !!st.achievements[a.id];
+            const val = st.getAchievementValue(a.type);
+            const current = a.type === 'bestTime' ? (val > 0 ? formatTime(val) : '—') : Math.min(val, a.target);
+            push(s.add.rectangle(W/2, y, 620, itemH, unlocked ? 0x2a4020 : 0x252525)
+                .setDepth(41).setStrokeStyle(2, unlocked ? 0x00FF00 : 0x555555, unlocked ? 0.7 : 0.4));
+            push(s.add.text(W/2 - 285, y, a.icon, { fontSize: '26px' }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(W/2 - 250, y - 8, a.name, {
+                fontSize: '13px', fill: unlocked ? '#00FF00' : '#FFFFFF',
+                fontStyle: 'bold', fontFamily: 'Arial'
+            }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(W/2 - 250, y + 9,
+                unlocked ? `✅ +${a.reward}💰` : a.desc, {
+                fontSize: '10px', fill: unlocked ? '#88FF88' : '#AAAAAA', fontFamily: 'Arial'
+            }).setOrigin(0, 0.5).setDepth(42));
+            if (!unlocked && a.type !== 'bestTime') {
+                push(s.add.text(W/2 + 285, y, `${current}/${a.target}`, {
+                    fontSize: '12px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
+                }).setOrigin(1, 0.5).setDepth(42));
+            }
+        });
+        push(s.add.text(620, 110, '✖', {
+            fontSize: '52px', fill: '#FF4444', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 6
+        }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => this.close()));
+    }
+}
+
+class QuestsUI {
+    constructor(scene, state) { this.scene = scene; this.state = state; this.elements = []; this.isOpen = false; this.onClaim = null; }
+    open() { if (this.isOpen) return; this.isOpen = true; this.render(); }
+    close() { this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; }
+    refresh() { if (!this.isOpen) return; this.close(); this.open(); }
+    render() {
+        const s = this.scene, W = 720, H = 1280, st = this.state;
+        const push = (el) => { this.elements.push(el); return el; };
+        const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(40)); ov.setInteractive();
+        push(s.add.rectangle(W/2, H/2, 660, 1140, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0x00E5FF));
+        push(s.add.text(W/2, 130, '📅 ЗАДАНИЯ', TEXT_STYLES.title('#00E5FF')).setOrigin(0.5).setDepth(42));
+        push(s.add.text(W/2, 190, 'Обновление: каждый день (UTC)', {
+            ...TEXT_STYLES.shopInfo('#AAAAAA', 16)
+        }).setOrigin(0.5).setDepth(42));
+        if (st.quests.length === 0) {
+            push(s.add.text(W/2, 640, 'Задания загрузятся при следующем входе', {
+                ...TEXT_STYLES.shopInfo('#FFFFFF', 22)
+            }).setOrigin(0.5).setDepth(42));
+        } else {
+            st.quests.forEach((q, i) => {
+                const y = 320 + i * 260;
+                const val = st.getQuestValue(q);
+                const done = val >= q.target;
+                const claimed = st.questClaimed[q.id];
+                const progress = Math.min(1, val / q.target);
+                push(s.add.rectangle(W/2, y, 600, 220, 0x252525)
+                    .setDepth(41).setStrokeStyle(3, claimed ? 0x555555 : (done ? 0x00FF00 : 0x00E5FF), 0.6));
+                push(s.add.text(W/2 - 260, y - 70, q.icon, { fontSize: '50px' }).setOrigin(0.5).setDepth(42));
+                push(s.add.text(W/2 - 200, y - 70, q.text, {
+                    fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
+                    wordWrap: { width: 400 }
+                }).setOrigin(0, 0.5).setDepth(42));
+                push(s.add.rectangle(W/2, y + 10, 500, 30, 0x111111).setDepth(41));
+                push(s.add.rectangle(W/2 - 250, y + 10, 500 * progress, 30, done ? 0x00FF00 : 0x00E5FF)
+                    .setOrigin(0, 0.5).setDepth(42));
+                push(s.add.text(W/2, y + 10, `${Math.min(val, q.target)} / ${q.target}`, {
+                    fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
+                    stroke: '#000000', strokeThickness: 3
+                }).setOrigin(0.5).setDepth(43));
+                const btnY = y + 70;
+                if (claimed) {
+                    push(s.add.text(W/2, btnY, '✅ ПОЛУЧЕНО', {
+                        fontSize: '20px', fill: '#00AA00', fontStyle: 'bold', fontFamily: 'Arial'
+                    }).setOrigin(0.5).setDepth(42));
+                } else if (done) {
+                    push(s.add.text(W/2, btnY, `🎁 ЗАБРАТЬ +${q.reward}💰`, {
+                        fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial',
+                        backgroundColor: '#FFD700', padding: { x: 30, y: 12 }
+                    }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true })
+                      .on('pointerdown', async () => {
+                        if (st.claimQuest(q)) { await this.onClaim?.(); this.refresh(); }
+                      }));
+                } else {
+                    push(s.add.text(W/2, btnY, `Награда: +${q.reward}💰`, {
+                        fontSize: '18px', fill: '#FFD700', fontFamily: 'Arial'
+                    }).setOrigin(0.5).setDepth(42));
+                }
+            });
+        }
+        push(s.add.text(620, 130, '✖', {
+            fontSize: '52px', fill: '#FF4444', fontStyle: 'bold',
+            stroke: '#000000', strokeThickness: 6
+        }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true })
+          .on('pointerdown', () => this.close()));
     }
 }
 
@@ -2250,165 +2929,7 @@ class LeaderboardUI {
 </script>
 <script>
 /* ============================================================
-   TUTORIAL
-   ============================================================ */
-class Tutorial {
-    constructor(scene) {
-        this.scene = scene;
-        this.step = 0;
-        this.elements = [];
-        this.pulseTween = null;
-        this.steps = [
-            {
-                title: '🧼 Добро пожаловать!',
-                text: 'Намыль ковёр мылом,\nпотом смывай водой.\nЗа каждый чистый ковёр — деньги!',
-                target: null
-            },
-            {
-                title: '🧼 Шаг 1. Намыль',
-                text: 'Кнопка «МЫЛО» уже активна.\nВеди пальцем по ковру.',
-                target: { x: 240, y: 1200, w: 200, h: 80 }
-            },
-            {
-                title: '💧 Шаг 2. Смой',
-                text: 'Выбери «СМЫТЬ» и проведи\nпо мыльным местам.',
-                target: { x: 480, y: 1200, w: 200, h: 80 }
-            },
-            {
-                title: '⭐ Шаг 3. Собери звёзды!',
-                text: 'На 99% грязь превращается\nв звёзды ⭐.\n\nТапай по ним → +5💰 за каждую!',
-                target: null
-            },
-            {
-                title: '💰 Шаг 4. Получи деньги',
-                text: 'Когда ковёр чист на 100% —\nжми «ПОЛУЧИТЬ ДЕНЬГИ» внизу.',
-                target: { x: 360, y: 1050, w: 320, h: 60 }
-            },
-            {
-                title: '🪰 Мухобойка',
-                text: 'Со 2-го ковра появляются жуки.\nПрокачивай мухобойку:\n• быстрее перезаряд\n• больше радиус\n• +монеты за жука',
-                target: { x: 480, y: 1200, w: 200, h: 80 }
-            },
-            {
-                title: '🛒 Магазин',
-                text: 'Здесь: щётка, мыло, смыв,\nмухобойка, питомцы, скины.',
-                target: { x: 550, y: 130, w: 100, h: 100 }
-            },
-            {
-                title: '🏆 Прогресс',
-                text: 'Трекеры:\n🏆 достижения · 📅 задания\n🏛️ музей · 📊 рекорды',
-                target: { x: 445, y: 45, w: 100, h: 100 }
-            },
-            {
-                title: '🎁 Дейли и ⚙️',
-                text: '🎁 Ежедневный бонус — заходи\nкаждый день за наградой!\n\n⚙️ Настройки — вибрация,\nэкспорт/импорт сейва.',
-                target: { x: 655, y: 130, w: 100, h: 100 }
-            },
-            {
-                title: '🌗 День и ночь',
-                text: 'Игра меняется по времени суток.\n🌙 Ночью доход ×1.75!',
-                target: null
-            }
-        ];
-    }
-    start() { if (this.scene.state.tutorialDone) return; this.step = 0; this.show(); }
-    show() {
-        this.destroy();
-        const s = this.scene, W = 720, H = 1280;
-        const step = this.steps[this.step];
-        const g = s.add.graphics().setDepth(100);
-        if (step.target) {
-            const t = step.target, pad = 12;
-            const left = t.x - t.w / 2 - pad, right = t.x + t.w / 2 + pad;
-            const top = t.y - t.h / 2 - pad, bottom = t.y + t.h / 2 + pad;
-            g.fillStyle(0x000000, 0.82);
-            g.fillRect(0, 0, W, top);
-            g.fillRect(0, bottom, W, H - bottom);
-            g.fillRect(0, top, left, bottom - top);
-            g.fillRect(right, top, W - right, bottom - top);
-            g.lineStyle(5, 0xFFD700, 1);
-            g.strokeRect(left, top, right - left, bottom - top);
-        } else {
-            g.fillStyle(0x000000, 0.82);
-            g.fillRect(0, 0, W, H);
-        }
-        this.elements.push(g);
-        if (step.target) {
-            const t = step.target;
-            const glow = s.add.rectangle(t.x, t.y, t.w + 24, t.h + 24, 0xFFFF00, 0.2).setDepth(101);
-            this.elements.push(glow);
-            const ring = s.add.rectangle(t.x, t.y, t.w + 24, t.h + 24, 0x000000, 0).setDepth(102);
-            ring.setStrokeStyle(4, 0xFFFFFF);
-            this.elements.push(ring);
-            this.pulseTween = s.tweens.add({
-                targets: [glow, ring], scaleX: { from: 1, to: 1.10 }, scaleY: { from: 1, to: 1.10 },
-                alpha: { from: 1, to: 0.5 }, duration: 650, yoyo: true, repeat: -1, ease: 'Sine.easeInOut'
-            });
-            const isBottom = t.y > 640;
-            const arrowY = isBottom ? t.y - t.h / 2 - 50 : t.y + t.h / 2 + 50;
-            const arrow = s.add.text(t.x, arrowY, isBottom ? '👇' : '👆', { fontSize: '60px', fontFamily: 'Arial' })
-                .setOrigin(0.5).setDepth(103);
-            this.elements.push(arrow);
-            s.tweens.add({ targets: arrow, y: arrowY + (isBottom ? 15 : -15), duration: 500, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-        }
-        const cardY = 600, cardW = 640, cardH = 340;
-        this.elements.push(s.add.rectangle(W/2 + 4, cardY + 4, cardW, cardH, 0x000000, 0.5).setDepth(103));
-        const cardBg = s.add.rectangle(W/2, cardY, cardW, cardH, 0x1a1a1a, 0.98).setDepth(104);
-        cardBg.setStrokeStyle(5, 0xFFD700);
-        this.elements.push(cardBg);
-        this.elements.push(s.add.text(W/2, cardY - cardH / 2 + 30, `Шаг ${this.step + 1} из ${this.steps.length}`, {
-            fontSize: '14px', fill: '#AAAAAA', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(105));
-        this.elements.push(s.add.text(W/2, cardY - cardH / 2 + 68, step.title, {
-            fontSize: '30px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(105));
-        this.elements.push(s.add.text(W/2, cardY - 20, step.text, {
-            fontSize: '20px', fill: '#FFFFFF', fontFamily: 'Arial',
-            align: 'center', lineSpacing: 10, wordWrap: { width: cardW - 60 }
-        }).setOrigin(0.5).setDepth(105));
-        const btnY = cardY + cardH / 2 - 50;
-        const isLast = this.step === this.steps.length - 1;
-        const isFirst = this.step === 0;
-        const nextBtn = s.add.text(isFirst ? W / 2 : W / 2 + 90, btnY,
-            isLast ? '✅ Начать!' : 'Далее ▶', {
-            fontSize: '20px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial',
-            backgroundColor: '#FFD700', padding: { x: 30, y: 12 }
-        }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
-        nextBtn.on('pointerdown', () => this.next());
-        this.elements.push(nextBtn);
-        if (!isFirst) {
-            const backBtn = s.add.text(W / 2 - 90, btnY, '◀ Назад', {
-                fontSize: '18px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: 'Arial',
-                backgroundColor: '#333333', padding: { x: 20, y: 12 }
-            }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
-            backBtn.on('pointerdown', () => this.prev());
-            this.elements.push(backBtn);
-        }
-        if (!isLast) {
-            const skipBtn = s.add.text(W / 2, cardY + cardH / 2 + 25, 'Пропустить', {
-                fontSize: '14px', fill: '#888888', fontFamily: 'Arial'
-            }).setOrigin(0.5).setDepth(105).setInteractive({ useHandCursor: true });
-            skipBtn.on('pointerdown', () => this.finish());
-            this.elements.push(skipBtn);
-        }
-    }
-    next() { if (this.step >= this.steps.length - 1) { this.finish(); return; } this.step++; this.show(); }
-    prev() { if (this.step <= 0) return; this.step--; this.show(); }
-    destroy() { this.elements.forEach(el => el.destroy()); this.elements = []; if (this.pulseTween) { this.pulseTween.remove(); this.pulseTween = null; } }
-    async finish() {
-        this.destroy();
-        this.scene.state.tutorialDone = true;
-        try { await this.scene.saveSystem.save(); } catch {}
-        this.scene.showMessage('🧼 Удачи!');
-        if (this.scene.pendingDailyBonus) {
-            this.scene.pendingDailyBonus = false;
-            this.scene.time.delayedCall(900, () => this.scene.dailyUI.open());
-        }
-    }
-}
-
-/* ============================================================
-   PRELOAD
+   PRELOAD + MAIN
    ============================================================ */
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
@@ -2439,9 +2960,6 @@ class PreloadScene extends Phaser.Scene {
     }
 }
 
-/* ============================================================
-   MAIN
-   ============================================================ */
 class MainScene extends Phaser.Scene {
     constructor() { super('MainScene'); }
 
@@ -2473,8 +2991,25 @@ class MainScene extends Phaser.Scene {
 
         this.cleaning = new CleaningSystem(this, this.carpetBounds, this.state);
         this.cleaning.onProgress = (p) => this.updateProgressBar(p);
-        this.cleaning.onSoap = (x, y) => this.effects.bubbles(x, y);
-        this.cleaning.onErase = (x, y) => { this.effects.splash(x, y); this.effects.star(x, y); };
+        this.cleaning.onSoap = (x, y) => {
+            this.effects.bubbles(x, y);
+            if (this.tutorial) this.tutorial.reportAction('soap');
+        };
+        this.cleaning.onErase = (x, y) => {
+            this.effects.splash(x, y);
+            this.effects.star(x, y);
+            if (this.tutorial) this.tutorial.reportAction('wash');
+        };
+        this.cleaning.onSteam = (x, y) => {
+            this.effects.steamEffect(x, y);
+            if (this.tutorial) this.tutorial.reportAction('steam');
+        };
+        this.cleaning.onCrustRemove = () => {
+            if (this.tutorial) this.tutorial.reportAction('scrape');
+        };
+        this.cleaning.onStainRemove = () => {
+            if (this.tutorial) this.tutorial.reportAction('stain');
+        };
         this.cleaning.onCelebrate = () => { this.effects.celebration(W, H); this.showMessage('Ковёр чистый! ✨'); };
 
         this.stars = new FinishStarsSystem(this, this.cleaning, this.state, this.effects);
@@ -2523,6 +3058,8 @@ class MainScene extends Phaser.Scene {
         this.carpetElapsed = 0;
         this.prestigeText = null;
         this.dayNightText = null;
+        this.steamFuel = BALANCE.steamMaxFuel;
+        this.tutorial = null;
 
         this.brush = this.add.text(0, 0, this.state.getBrushIcon(), { fontSize: '70px', fontFamily: 'Arial' })
             .setOrigin(0.5).setDepth(3).setVisible(false);
@@ -2532,6 +3069,7 @@ class MainScene extends Phaser.Scene {
         this.setupInput();
         this.selectTool('soap');
 
+        this.cleaning.reset(this.state.carpetIndex);
         this.bugs.spawnForLevel(this.state.carpetIndex);
 
         if (this.state.refreshDailyQuests()) {
@@ -2539,14 +3077,8 @@ class MainScene extends Phaser.Scene {
             this.time.delayedCall(800, () => this.showMessage('📅 Новые задания!'));
         }
 
-        const dailyCanClaim = this.state.getDailyStatus().canClaim;
-        if (!this.state.tutorialDone) {
-            this.pendingDailyBonus = dailyCanClaim;
-            this.tutorial = new Tutorial(this);
-            this.time.delayedCall(400, () => this.tutorial.start());
-        } else if (dailyCanClaim) {
-            this.time.delayedCall(600, () => this.dailyUI.open());
-        }
+        // Запускаем обучалку для этого ковра
+        this.time.delayedCall(400, () => this.startCarpetTutorial());
 
         this.leaderboard.submitScores();
 
@@ -2562,20 +3094,35 @@ class MainScene extends Phaser.Scene {
             }
         });
 
-        /* ============================================================
-           ИСПРАВЛЕНО: сохраняем прогресс при сворачивании браузера
-           и при выгрузке страницы (фикс #3)
-           ============================================================ */
         this._onVisibilityChange = () => {
-            if (document.hidden) {
-                try { this.saveSystem.saveSync(); } catch {}
-            }
+            if (document.hidden) { try { this.saveSystem.saveSync(); } catch {} }
         };
         this._onPageHide = () => {
             try { this.saveSystem.saveSync(); } catch {}
         };
         document.addEventListener('visibilitychange', this._onVisibilityChange);
         window.addEventListener('pagehide', this._onPageHide);
+    }
+
+    startCarpetTutorial() {
+        const idx = this.state.carpetIndex;
+        const stat = this.state.carpetStats[idx];
+        if (!stat || stat.tutorialDone) {
+            // Базовые дейли — только если не первый запуск
+            if (this.state.tutorialDone && this.state.getDailyStatus().canClaim) {
+                this.time.delayedCall(600, () => this.dailyUI.open());
+            }
+            return;
+        }
+        this.tutorial = new CarpetTutorial(this, idx);
+        this.tutorial.start();
+        // Для авто-шагов сразу показываем кнопку
+        this.time.delayedCall(100, () => {
+            if (this.tutorial && this.tutorial.isOpen) {
+                const step = this.tutorial.steps[this.tutorial.stepIndex];
+                if (step && step.check === 'auto') this.tutorial.showAutoButton();
+            }
+        });
     }
 
     buildHUD(W, H) {
@@ -2599,9 +3146,11 @@ class MainScene extends Phaser.Scene {
             stroke: '#000000', strokeThickness: 3
         }).setOrigin(1, 0).setDepth(10);
 
-        if (this.state.prestigeLevel > 0) {
-            this.prestigeText = this.add.text(325, 16, '👑' + this.state.prestigeLevel,
-                TEXT_STYLES.stat('#FFD700', 20)).setOrigin(1, 0).setDepth(10);
+        if (this.state.prestigeLevel > 0 || this.state.legacyPoints > 0) {
+            this.prestigeText = this.add.text(325, 16, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
+                fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial',
+                stroke: '#000000', strokeThickness: 4
+            }).setOrigin(1, 0).setDepth(10);
         }
 
         this.add.rectangle(380, 0, 340, 195, 0x000000, 0.78).setOrigin(0, 0).setDepth(9);
@@ -2641,7 +3190,7 @@ class MainScene extends Phaser.Scene {
         this.updateQuestBadge();
 
         const ds = this.state.getDailyStatus();
-        if (ds.canClaim) {
+        if (ds.canClaim && this.state.tutorialDone) {
             const dailyBg = this.add.circle(360, 100, 24, 0xFFD700, 1).setDepth(14)
                 .setStrokeStyle(3, 0xFFFFFF, 0.9);
             const dailyIcon = this.add.text(360, 100, '🎁', { fontSize: '28px' })
@@ -2656,12 +3205,20 @@ class MainScene extends Phaser.Scene {
             hit.on('pointerdown', () => this.dailyUI.open());
         }
 
+        // Прогресс
         this.add.rectangle(W / 2, 230, 400, 30, 0x000000, 0.7).setDepth(10);
         this.add.rectangle(W / 2, 230, 400, 30, 0x333333).setDepth(10);
         this.progressBar = this.add.rectangle(W / 2 - 200, 230, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
         this.progressText = this.add.text(W / 2, 230, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
 
-        this.starsCounter = this.add.text(W / 2, 275, '', {
+        // Пар
+        this.steamBg = this.add.rectangle(W / 2, 265, 200, 14, 0x111111).setDepth(10).setVisible(false);
+        this.steamBar = this.add.rectangle(W / 2 - 100, 265, 200, 14, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
+        this.steamText = this.add.text(W / 2, 282, '🔥 ПАР', {
+            fontSize: '12px', fill: '#FF8844', fontStyle: 'bold', fontFamily: 'Arial'
+        }).setOrigin(0.5).setDepth(11).setVisible(false);
+
+        this.starsCounter = this.add.text(W / 2, 300, '', {
             fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial',
             stroke: '#000000', strokeThickness: 5
         }).setOrigin(0.5).setDepth(11).setVisible(false);
@@ -2718,38 +3275,81 @@ class MainScene extends Phaser.Scene {
     buildToolButtons(W, H) {
         const btnY = 1200;
         const hasSwatter = this.state.carpetIndex >= 2;
-        const soapX = hasSwatter ? 120 : 240;
-        const washX = hasSwatter ? 360 : 480;
-        const swatterX = 600;
+        const hasScraper = this.state.carpetIndex >= 3;
+        const hasSteam = this.state.carpetIndex >= 4;
+        const hasRemover = this.state.carpetIndex >= 5;
 
-        this.soapBtnBg = this.add.rectangle(soapX, btnY, 200, 80, 0x4A90D9).setDepth(10).setStrokeStyle(5, 0xFFFFFF);
-        this.soapBtnText = this.add.text(soapX, btnY, '🧼 МЫЛО', TEXT_STYLES.button('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
-        this.soapBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('soap'));
+        // Собираем активные инструменты
+        const tools = [];
+        tools.push({ id: 'soap', icon: '🧼', label: 'МЫЛО' });
+        tools.push({ id: 'wash', icon: '💧', label: 'СМЫТЬ' });
+        if (hasSwatter) tools.push({ id: 'swatter', icon: '🪰', label: 'МУХОБОЙКА' });
+        if (hasScraper) tools.push({ id: 'scraper', icon: '🧽', label: 'СКРЕБОК' });
+        if (hasSteam) tools.push({ id: 'steam', icon: '🔥', label: 'ПАР' });
+        if (hasRemover) tools.push({ id: 'remover', icon: '🧴', label: 'ПЯТНОВЫВ' });
 
-        this.washBtnBg = this.add.rectangle(washX, btnY, 200, 80, 0x555555).setDepth(10).setStrokeStyle(5, 0x888888);
-        this.washBtnText = this.add.text(washX, btnY, '💧 СМЫТЬ', TEXT_STYLES.button('#AAAAAA', 22)).setOrigin(0.5).setDepth(11);
-        this.washBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('wash'));
+        const count = tools.length;
+        const btnW = Math.min(140, Math.floor(700 / count));
+        const gap = 6;
+        const totalW = count * btnW + (count - 1) * gap;
+        const startX = W / 2 - totalW / 2 + btnW / 2;
 
-        this.swatterBtnBg = this.add.rectangle(swatterX, btnY, 200, 80, 0x555555).setDepth(10).setStrokeStyle(5, 0x888888);
-        this.swatterBtnText = this.add.text(swatterX, btnY, '🪰 МУХОБОЙКА', TEXT_STYLES.button('#AAAAAA', 18)).setOrigin(0.5).setDepth(11);
-        this.swatterBtnBg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool('swatter'));
+        this.toolBtns = {};
 
-        this.swatterBtnBg.setVisible(hasSwatter);
-        this.swatterBtnText.setVisible(hasSwatter);
+        tools.forEach((tool, i) => {
+            const x = startX + i * (btnW + gap);
+            const bg = this.add.rectangle(x, btnY, btnW, 80, 0x555555).setDepth(10)
+                .setStrokeStyle(4, 0x888888);
+            const txt = this.add.text(x, btnY, `${tool.icon} ${tool.label}`, {
+                fontSize: '14px', fill: '#AAAAAA', fontStyle: 'bold', fontFamily: 'Arial',
+                stroke: '#000000', strokeThickness: 3, align: 'center'
+            }).setOrigin(0.5).setDepth(11);
+            bg.setInteractive({ useHandCursor: true })
+              .on('pointerdown', () => this.selectTool(tool.id));
+            this.toolBtns[tool.id] = { bg, txt, icon: tool.icon, label: tool.label };
+        });
+
+        this.updateSteamUI();
+    }
+
+    updateSteamUI() {
+        const active = this.state.carpetIndex >= 4;
+        if (this.steamBg) this.steamBg.setVisible(active);
+        if (this.steamBar) this.steamBar.setVisible(active);
+        if (this.steamText) this.steamText.setVisible(active);
     }
 
     selectTool(tool) {
         this.currentTool = tool;
-        const setStyle = (bg, txt, active, activeColor = 0x4A90D9) => {
-            if (active) { bg.setFillStyle(activeColor); bg.setStrokeStyle(5, 0xFFFFFF); txt.setColor('#FFFFFF'); }
-            else { bg.setFillStyle(0x555555); bg.setStrokeStyle(5, 0x888888); txt.setColor('#AAAAAA'); }
-        };
-        setStyle(this.soapBtnBg, this.soapBtnText, tool === 'soap');
-        setStyle(this.washBtnBg, this.washBtnText, tool === 'wash');
-        setStyle(this.swatterBtnBg, this.swatterBtnText, tool === 'swatter', 0xFF4444);
+        if (!this.toolBtns) return;
+        for (const id in this.toolBtns) {
+            const b = this.toolBtns[id];
+            const active = id === tool;
+            let activeColor = 0x4A90D9;
+            if (id === 'wash') activeColor = 0x4A90D9;
+            else if (id === 'swatter') activeColor = 0xFF4444;
+            else if (id === 'scraper') activeColor = 0x8B6A2A;
+            else if (id === 'steam') activeColor = 0xFF8844;
+            else if (id === 'remover') activeColor = 0xAA44AA;
+
+            if (active) {
+                b.bg.setFillStyle(activeColor);
+                b.bg.setStrokeStyle(5, 0xFFFFFF);
+                b.txt.setColor('#FFFFFF');
+            } else {
+                b.bg.setFillStyle(0x555555);
+                b.bg.setStrokeStyle(4, 0x888888);
+                b.txt.setColor('#AAAAAA');
+            }
+        }
+
         if (tool === 'soap') this.brush.setText(this.state.getBrushIcon());
         else if (tool === 'wash') this.brush.setText('🧹');
+        else if (tool === 'scraper') this.brush.setText('🧽');
+        else if (tool === 'steam') this.brush.setText('🔥');
+        else if (tool === 'remover') this.brush.setText('🧴');
         else this.brush.setVisible(false);
+
         if (tool !== 'swatter') this.effects.hideSwatterCursor();
     }
 
@@ -2757,8 +3357,9 @@ class MainScene extends Phaser.Scene {
         this.game.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
         this.game.canvas.addEventListener('touchmove',  (e) => e.preventDefault(), { passive: false });
         const uiOpen = () => this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
-            || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen
-            || (this.tutorial && this.tutorial.elements.length > 0);
+            || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen;
+
+        const tutorialBlocks = () => this.tutorial && this.tutorial.isOpen;
 
         const handlePointer = (pointer) => {
             if (this.inputLocked || uiOpen()) return;
@@ -2789,7 +3390,8 @@ class MainScene extends Phaser.Scene {
             if (this.currentTool === 'swatter') {
                 this.effects.drawSwatterCursor(pointer.x, pointer.y);
                 this.effects.swatEffect(pointer.x, pointer.y);
-                this.bugs.swat(pointer.x, pointer.y, this.time.now);
+                const hit = this.bugs.swat(pointer.x, pointer.y, this.time.now);
+                if (hit && this.tutorial) this.tutorial.reportAction('killBugs');
                 this.refreshHUD();
                 return;
             }
@@ -2831,6 +3433,14 @@ class MainScene extends Phaser.Scene {
         if (this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen) return;
         if (this.stars.active) return;
+
+        // Расход пара
+        if (this.currentTool === 'steam') {
+            if (this.steamFuel <= 0) return;
+            this.steamFuel = Math.max(0, this.steamFuel - BALANCE.steamFuelCost);
+            this.updateSteamBar();
+        }
+
         if (this.state.food <= 0) {
             if (this.state.money < BALANCE.foodPrice) {
                 this.state.food = 1;
@@ -2841,7 +3451,11 @@ class MainScene extends Phaser.Scene {
                 return;
             }
         }
-        if (this.bugs.count > 0) { this.showBugWarning(); return; }
+        if (this.bugs.count > 0 && this.currentTool !== 'scraper' && this.currentTool !== 'steam') {
+            // Скребок и пар можно использовать, даже когда есть жуки
+            this.showBugWarning();
+            return;
+        }
 
         const radius = this.state.getCurrentRadius();
         this.cleaning.applyStroke(localX, localY, radius, this.currentTool);
@@ -2853,10 +3467,19 @@ class MainScene extends Phaser.Scene {
         }
     }
 
+    updateSteamBar() {
+        if (!this.steamBar) return;
+        const pct = this.steamFuel / BALANCE.steamMaxFuel;
+        this.steamBar.width = 200 * pct;
+        if (pct < 0.3) this.steamBar.setFillStyle(0xFF4444);
+        else if (pct < 0.6) this.steamBar.setFillStyle(0xFFAA44);
+        else this.steamBar.setFillStyle(0xFF8844);
+    }
+
     async finishCarpet() {
         if (this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen) return;
-        if (this.cleaning.progress < 1.0) {
+        if (this.cleaning.progress < 1.0 || !this.cleaning.isFullyClean()) {
             if (this.stars.active && this.stars.count > 0) {
                 this.showMessage('⭐ Собери все звёзды!');
             } else {
@@ -2873,18 +3496,21 @@ class MainScene extends Phaser.Scene {
         this.refreshHUD();
         await this.saveSystem.save();
         this.showMessage(`+${reward} 💰!  ⏱ ${formatTime(timeSec)}`);
+        if (this.tutorial) this.tutorial.reportAction('finish');
 
         this.bugs.clear();
-        this.cleaning.reset();
+        this.cleaning.reset(this.state.carpetIndex);
         this.stars.clear();
         this.updateProgressBar(0);
         this.carpetElapsed = 0;
+        this.steamFuel = BALANCE.steamMaxFuel;
+        this.updateSteamBar();
         this.updateStarsCounter();
         this.checkAndNotifyAchievements();
         this.leaderboard.submitScores();
 
         if (this.state.canPrestige()) {
-            this.time.delayedCall(400, () => this.showMessage('👑 ПРЕСТИЖ В МАГАЗИНЕ!'));
+            this.time.delayedCall(400, () => this.showMessage('🔥 ПРЕСТИЖ В МАГАЗИНЕ!'));
         }
         if (this.state.carpetsCleaned % 5 === 0) {
             this.ads.showFullscreen();
@@ -2914,52 +3540,85 @@ class MainScene extends Phaser.Scene {
         this.refreshHUD();
         this.room.draw(this.state.selectedRoom, this.state.carpetLevel, this.currentTimeOfDay);
         this.drawCarpet();
-        this.cleaning.reset();
+        this.cleaning.reset(this.state.carpetIndex);
         this.stars.clear();
         this.updateProgressBar(0);
         this.carpetElapsed = 0;
+        this.steamFuel = BALANCE.steamMaxFuel;
+        this.updateSteamBar();
         this.bugs.clear();
         this.updateStarsCounter();
-        if (this.state.carpetIndex >= 2) {
-            this.swatterBtnBg.setVisible(true);
-            this.swatterBtnText.setVisible(true);
-            this.soapBtnBg.setX(120);  this.soapBtnText.setX(120);
-            this.washBtnBg.setX(360);  this.washBtnText.setX(360);
+
+        // Перестроить панель инструментов
+        if (this.toolBtns) {
+            for (const id in this.toolBtns) {
+                this.toolBtns[id].bg.destroy();
+                this.toolBtns[id].txt.destroy();
+            }
         }
+        this.buildToolButtons(720, 1280);
+        this.updateSteamUI();
+        this.selectTool('soap');
+
+        if (this.tutorial) this.tutorial.destroy();
+        this.tutorial = null;
+
         await this.saveSystem.save();
         this.checkAndNotifyAchievements();
         this.effects.celebration(720, 1280);
-        this.time.delayedCall(50, () => this.bugs.spawnForLevel(this.state.carpetIndex));
+        this.time.delayedCall(50, () => {
+            this.bugs.spawnForLevel(this.state.carpetIndex);
+        });
+
+        // Запустить обучалку для нового ковра
+        this.time.delayedCall(600, () => this.startCarpetTutorial());
     }
 
     async doPrestige() {
-        if (!this.state.prestige()) return;
+        const gain = this.state.prestige();
+        if (!gain) return;
         this.unlockInput();
         this.shop.close();
         this.refreshHUD();
         this.room.draw(this.state.selectedRoom, this.state.carpetLevel, this.currentTimeOfDay);
         this.drawCarpet();
-        this.cleaning.reset();
+        this.cleaning.reset(this.state.carpetIndex);
         this.stars.clear();
         this.updateProgressBar(0);
         this.carpetElapsed = 0;
+        this.steamFuel = BALANCE.steamMaxFuel;
+        this.updateSteamBar();
         this.bugs.clear();
         this.updateStarsCounter();
-        this.swatterBtnBg.setVisible(false);
-        this.swatterBtnText.setVisible(false);
-        this.soapBtnBg.setX(240);  this.soapBtnText.setX(240);
-        this.washBtnBg.setX(480);  this.washBtnText.setX(480);
-        if (this.prestigeText) this.prestigeText.destroy();
-        if (this.state.prestigeLevel > 0) {
-            this.prestigeText = this.add.text(325, 16, '👑' + this.state.prestigeLevel,
-                TEXT_STYLES.stat('#FFD700', 20)).setOrigin(1, 0).setDepth(10);
+        this.pets.refreshIndicators();
+
+        if (this.toolBtns) {
+            for (const id in this.toolBtns) {
+                this.toolBtns[id].bg.destroy();
+                this.toolBtns[id].txt.destroy();
+            }
         }
+        this.buildToolButtons(720, 1280);
+        this.updateSteamUI();
+        this.selectTool('soap');
+
+        if (this.prestigeText) this.prestigeText.destroy();
+        this.prestigeText = this.add.text(325, 16, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
+            fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial',
+            stroke: '#000000', strokeThickness: 4
+        }).setOrigin(1, 0).setDepth(10);
+
+        if (this.tutorial) this.tutorial.destroy();
+        this.tutorial = null;
+
         await this.saveSystem.save();
         this.checkAndNotifyAchievements();
         this.leaderboard.submitScores();
         this.effects.celebration(720, 1280);
-        this.showMessage(`👑 ПРЕСТИЖ ${this.state.prestigeLevel}!`);
+        this.showMessage(`🔥 ПРЕСТИЖ! +${gain} 👑 Наследия`);
         this.time.delayedCall(50, () => this.bugs.spawnForLevel(this.state.carpetIndex));
+
+        this.time.delayedCall(600, () => this.startCarpetTutorial());
     }
 
     unlockInput() {
@@ -3078,11 +3737,20 @@ class MainScene extends Phaser.Scene {
     update(_, delta) {
         if (this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen) return;
-        if (this.tutorial && this.tutorial.elements.length > 0) return;
         this.cleaning.draw();
         this.bugs.update(delta);
         this.pets.update(delta);
+        this.cleaning.updateMold(delta);
         this.carpetElapsed += delta;
+
+        // Пар восстанавливается
+        if (this.state.carpetIndex >= 4) {
+            if (this.steamFuel < BALANCE.steamMaxFuel) {
+                this.steamFuel = Math.min(BALANCE.steamMaxFuel, this.steamFuel + BALANCE.steamFuelRegen);
+                this.updateSteamBar();
+            }
+        }
+
         const elapsedSec = Math.floor(this.carpetElapsed / 1000);
         this.timerText.setText('⏱ ' + formatTime(elapsedSec));
 
@@ -3093,12 +3761,17 @@ class MainScene extends Phaser.Scene {
                 this.updateStarsCounter();
             }
         }
+
+        // Для обучалки — обновляем видимость кнопки "Далее" для авто-шагов
+        if (this.tutorial && this.tutorial.isOpen) {
+            const step = this.tutorial.steps[this.tutorial.stepIndex];
+            if (step && step.check === 'auto' && !this.tutorial._autoBtn) {
+                this.tutorial.showAutoButton();
+            }
+        }
     }
 }
 
-/* ============================================================
-   BOOT
-   ============================================================ */
 const phaserConfig = {
     type: Phaser.CANVAS,
     width: 720, height: 1280,
