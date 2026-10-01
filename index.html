@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Чистим Ковры / Clean Carpets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="/sdk.js"></script>
     <script src="phaser.min.js"></script>
     <style>
@@ -14,7 +17,7 @@
             touch-action: none;
             -webkit-user-select: none; user-select: none;
             -webkit-tap-highlight-color: transparent;
-            font-family: Arial, sans-serif;
+            font-family: 'Caveat', 'Comic Sans MS', cursive;
         }
         canvas { display: block; touch-action: none; }
     </style>
@@ -22,15 +25,15 @@
 <body>
 <script>
 /* ============================================================
-   I18N — Локализация с автоопределением через SDK
+   FONT & I18N
    ============================================================ */
+const FONT_HAND = "'Caveat', 'Comic Sans MS', 'Segoe Script', cursive";
+
 const I18N = {
     ru: {
-        title: 'Чистим Ковры',
-        loading: 'Загрузка...',
+        title: 'Чистим Ковры', loading: 'Загрузка...',
         soap: 'МЫЛО', wash: 'СМЫТЬ', swatter: 'МУХОБ.', scraper: 'СКРЕБ.',
-        steam: 'ПАР', remover: 'ПЯТНОВ.',
-        getMoney: 'ПОЛУЧИТЬ ДЕНЬГИ',
+        steam: 'ПАР', remover: 'ПЯТНОВ.', getMoney: 'ПОЛУЧИТЬ ДЕНЬГИ',
         radius: 'Радиус', cleaned: 'Почищено',
         morning: 'Утро', day: 'День', evening: 'Вечер', night: 'Ночь',
         shop: 'МАГАЗИН', museum: 'Музей', achievements: 'Достиж.', quests: 'Задания',
@@ -42,30 +45,23 @@ const I18N = {
         buyNewCarpet: 'КУПИТЬ КОВЁР №{0} — {1}💰',
         needRadius: 'Нужен радиус {0} (сейчас {1})',
         needMoney: 'Ковёр №{0} — нужно {1}💰 (есть {2}💰)',
-        allCarpets: 'ВСЕ КОВРЫ ОТКРЫТЫ',
-        clickToBuy: '👆 НАЖМИ ЧТОБЫ КУПИТЬ',
-        upgradeBrush: '🧹 Прокачай щётку выше',
-        noMoneyHint: '💰 Не хватает денег',
-        adWatch: '📺 ПОСМОТРЕТЬ РЕКЛАМУ → +{0}💰',
-        adWait: '⏳ Реклама через {0}с',
+        allCarpets: 'ВСЕ КОВРЫ ОТКРЫТЫ', clickToBuy: '👆 НАЖМИ ЧТОБЫ КУПИТЬ',
+        upgradeBrush: '🧹 Прокачай щётку выше', noMoneyHint: '💰 Не хватает денег',
+        adWatch: '📺 ПОСМОТРЕТЬ РЕКЛАМУ → +{0}💰', adWait: '⏳ Реклама через {0}с',
         skinsRooms: '🎨 СКИНЫ КОМНАТ', skinsBrushes: '✨ СКИНЫ ЩЁТОК',
         select: '👆 ВЫБРАТЬ', selected: '✅ ВЫБРАНО',
         pets: '🐾 ПИТОМЦЫ', petsSubtitle: 'Покупай за 💰 и прокачивай за 🍞',
         max: '⭐ МАКС', maxed: '⭐ МАКСИМУМ', lvlUp: '+1 ур.',
-        notEnoughFood: '❌ Не хватает еды (нужно {0}🍞)',
-        bought: 'Куплен: {0}!',
+        notEnoughFood: '❌ Не хватает еды (нужно {0}🍞)', bought: 'Куплен: {0}!',
         legacy: '👑 НАСЛЕДИЕ', legacyPoints: 'Очков: {0}  •  Престижей: {1}',
         prestige: '🔥 ПРЕСТИЖ', prestigeAvailable: '🔥 ПРЕСТИЖ ДОСТУПЕН',
         prestigeLocked: '🔥 ПРЕСТИЖ\n\nДоступен после открытия\nвсех 5 ковров',
         prestigeGain: 'Получишь: +{0} 👑 Очков Наследия',
         prestigeMult: 'Множитель дохода: ×{0} → ×{1}',
         willStay: '✅ ОСТАНЕТСЯ:', willReset: '❌ СБРОСИТСЯ:',
-        confirmPrestige: '⚠️ ТОЧНО? ЕЩЁ РАЗ',
-        prestigeBtn: '🔥 ПРЕСТИЖ (+{0} 👑)',
-        achievementsTitle: '🏆 ДОСТИЖЕНИЯ',
-        achievementsOpened: 'Открыто: {0} / {1}',
-        questsTitle: '📅 ЗАДАНИЯ',
-        questsUpdate: 'Обновление: каждый день (UTC)',
+        confirmPrestige: '⚠️ ТОЧНО? ЕЩЁ РАЗ', prestigeBtn: '🔥 ПРЕСТИЖ (+{0} 👑)',
+        achievementsTitle: '🏆 ДОСТИЖЕНИЯ', achievementsOpened: 'Открыто: {0} / {1}',
+        questsTitle: '📅 ЗАДАНИЯ', questsUpdate: 'Обновление: каждый день (UTC)',
         claim: '🎁 ЗАБРАТЬ +{0}💰', claimed: '✅ ПОЛУЧЕНО', reward: 'Награда: +{0}💰',
         museumTitle: '🏛️ МУЗЕЙ КОВРОВ',
         museumInfo: '👑 {0}  •  Престиж {1}\nЧисток: {2}  •  Жуков: {3}  •  Звёзд: {4}',
@@ -73,16 +69,14 @@ const I18N = {
         dailyTitle: '🎁 ЕЖЕДНЕВНЫЙ БОНУС', dailyDay: 'День {0} из 7',
         dailyNow: '👈 СЕЙЧАС', dailyClaim: '🎁 ЗАБРАТЬ',
         dailyDone: '✅ СЕГОДНЯ ПОЛУЧЕНО', dailyComeBack: 'Приходи завтра!',
-        settingsTitle: '⚙️ НАСТРОЙКИ',
-        vibration: '📳 Вибрация', vibOn: '✅ ВКЛ', vibOff: '❌ ВЫКЛ',
+        settingsTitle: '⚙️ НАСТРОЙКИ', vibration: '📳 Вибрация',
+        vibOn: '✅ ВКЛ', vibOff: '❌ ВЫКЛ',
         exportSave: '📤 Экспорт сейва', exportBtn: '📋 Копировать',
         importSave: '📥 Импорт сейва', importBtn: '📋 Вставить',
-        resetProgress: '🗑️ СБРОСИТЬ ВЕСЬ ПРОГРЕСС',
-        resetConfirm: '⚠️ ТОЧНО СБРОСИТЬ?',
+        resetProgress: '🗑️ СБРОСИТЬ ВЕСЬ ПРОГРЕСС', resetConfirm: '⚠️ ТОЧНО СБРОСИТЬ?',
         saveCopied: '📋 Сейв скопирован!', saveLoaded: '✅ Сейв загружен!',
         saveInvalid: '❌ Неверный формат',
-        recordsTitle: '📊 РЕКОРДЫ',
-        coins: '💰 Монеты', prestigeTab: '👑 Престиж',
+        recordsTitle: '📊 РЕКОРДЫ', coins: '💰 Монеты', prestigeTab: '👑 Престиж',
         loadingRecords: '⏳ Загрузка...', noRecords: 'Пока никого нет :(',
         skip: '⏭ Пропустить', next: '👆 Понятно, дальше',
         skipStep: '⏭ Пропустить шаг (сложно)',
@@ -92,28 +86,37 @@ const I18N = {
         noFood: '🍞 НЕТ ЕДЫ!\nКУПИ В МАГАЗИНЕ',
         bugsFirst: '🐛 СНАЧАЛА УБЕРИ ЖУКОВ!\n(мухобойка 🪰)',
         carpetDirty: 'Ковёр ещё грязный! Нужно 100%.',
-        collectStars: '⭐ Собери все звёзды!',
-        allStars: '⭐ Все звёзды собраны!',
-        carpetClean: 'Ковёр чистый! ✨',
-        newQuests: '📅 Новые задания!',
-        foodBonus: '🎁 Бонус: 1 еда!',
-        prestigeAvailableMsg: '🔥 ПРЕСТИЖ В МАГАЗИНЕ!',
+        collectStars: '⭐ Собери все звёзды!', allStars: '⭐ Все звёзды собраны!',
+        carpetClean: 'Ковёр чистый! ✨', newQuests: '📅 Новые задания!',
+        foodBonus: '🎁 Бонус: 1 еда!', prestigeAvailableMsg: '🔥 ПРЕСТИЖ В МАГАЗИНЕ!',
         prestigeDone: '🔥 ПРЕСТИЖ! +{0} 👑 Наследия',
-        steams: '🔥 ПАР', starsLeft: '⭐ Осталось звёзд: {0}',
-        timeFormat: '⏱ {0}',
+        steams: '🔥 ПАР', starsLeft: '⭐ Осталось звёзд: {0}', timeFormat: '⏱ {0}',
         achievementUnlocked: '🏆 {0}: +{1}💰',
-        adUnavailable: 'Реклама недоступна или отменена',
-        adReward: '📺 +{0}💰!',
-        noMoney: 'Не хватает денег!',
-        needMoreFood: '❌ Не хватает еды (нужно {0}🍞)',
-        language: '🌐 Язык / Language'
+        adUnavailable: 'Реклама недоступна или отменена', adReward: '📺 +{0}💰!',
+        noMoney: 'Не хватает денег!', needMoreFood: '❌ Не хватает еды (нужно {0}🍞)',
+        language: '🌐 Язык / Language',
+        music: '🎵 Музыка', musicOn: '✅ ВКЛ', musicOff: '❌ ВЫКЛ',
+        weather: '🌤️ Погода', weatherAuto: 'Авто', weatherOff: 'Выкл',
+        mascotHint: '💡 Совет от котика',
+        // Реплики маскота
+        m_hello: ['Мяу! Помоги мне с ковром 🐾', 'Давай начнём! Я подскажу 🐱', 'Мурр~ Тут пыльно!'],
+        m_soap: ['Наноси мыло круговыми 💫', 'Побольше пены — грязь сама уйдёт!', 'Мыль-мыль 🧼'],
+        m_wash: ['Теперь смывай водичкой 💧', 'Смывай пену — вот так!', 'Буль-буль 💦'],
+        m_bugs: ['Ой! Жуки 🐛 Возьми мухобойку!', 'Убей жуков сначала 🪰', 'Фу, козявки!'],
+        m_star: ['Лови звёздочки ⭐', 'Собери все ✨', 'Тапай по звёздам!'],
+        m_finish: ['Ура! Ковёр как новый 🎉', 'Чистенько! Держи денежку 💰', 'Мурр~ красота!'],
+        m_food: ['Еда кончилась 🍞 Купи в магазине!', 'Я голодный... купи еду 🐾', 'Не забудь поесть!'],
+        m_prestige: ['Ты готов к престижу 👑', 'Пора начинать заново! 🔥', 'Наследие ждёт!'],
+        m_money: ['Богатей-богатей 💰', 'Денежки капают ✨', 'Купи что-нибудь в магазине 🛒'],
+        m_idle: ['Мяу?', 'Мурр~', 'Как дела? 🐾', 'Почистим ещё?', 'Звёздочки лови ✨', 'Не забудь про задания 📅'],
+        m_weather_rain: ['Дождик за окном ☔', 'Уютно! Дождь идёт 🌧️'],
+        m_weather_snow: ['Снежок ❄️', 'Зимняя сказка ✨'],
+        m_weather_leaves: ['Осень 🍂', 'Листья падают 🍁']
     },
     en: {
-        title: 'Clean Carpets',
-        loading: 'Loading...',
+        title: 'Clean Carpets', loading: 'Loading...',
         soap: 'SOAP', wash: 'RINSE', swatter: 'SWATTER', scraper: 'SCRAPER',
-        steam: 'STEAM', remover: 'REMOVER',
-        getMoney: 'GET MONEY',
+        steam: 'STEAM', remover: 'REMOVER', getMoney: 'GET MONEY',
         radius: 'Radius', cleaned: 'Cleaned',
         morning: 'Morning', day: 'Day', evening: 'Evening', night: 'Night',
         shop: 'SHOP', museum: 'Museum', achievements: 'Achiev.', quests: 'Quests',
@@ -125,30 +128,23 @@ const I18N = {
         buyNewCarpet: 'BUY CARPET #{0} — {1}💰',
         needRadius: 'Need radius {0} (now {1})',
         needMoney: 'Carpet #{0} — need {1}💰 (have {2}💰)',
-        allCarpets: 'ALL CARPETS UNLOCKED',
-        clickToBuy: '👆 TAP TO BUY',
-        upgradeBrush: '🧹 Upgrade brush first',
-        noMoneyHint: '💰 Not enough money',
-        adWatch: '📺 WATCH AD → +{0}💰',
-        adWait: '⏳ Ad in {0}s',
+        allCarpets: 'ALL CARPETS UNLOCKED', clickToBuy: '👆 TAP TO BUY',
+        upgradeBrush: '🧹 Upgrade brush first', noMoneyHint: '💰 Not enough money',
+        adWatch: '📺 WATCH AD → +{0}💰', adWait: '⏳ Ad in {0}s',
         skinsRooms: '🎨 ROOM SKINS', skinsBrushes: '✨ BRUSH SKINS',
         select: '👆 SELECT', selected: '✅ SELECTED',
         pets: '🐾 PETS', petsSubtitle: 'Buy with 💰, level up with 🍞',
         max: '⭐ MAX', maxed: '⭐ MAXED', lvlUp: '+1 lvl.',
-        notEnoughFood: '❌ Not enough food (need {0}🍞)',
-        bought: 'Bought: {0}!',
+        notEnoughFood: '❌ Not enough food (need {0}🍞)', bought: 'Bought: {0}!',
         legacy: '👑 LEGACY', legacyPoints: 'Points: {0}  •  Prestiges: {1}',
         prestige: '🔥 PRESTIGE', prestigeAvailable: '🔥 PRESTIGE AVAILABLE',
         prestigeLocked: '🔥 PRESTIGE\n\nAvailable after opening\nall 5 carpets',
         prestigeGain: 'You will get: +{0} 👑 Legacy points',
         prestigeMult: 'Income multiplier: ×{0} → ×{1}',
         willStay: '✅ WILL STAY:', willReset: '❌ WILL RESET:',
-        confirmPrestige: '⚠️ SURE? TAP AGAIN',
-        prestigeBtn: '🔥 PRESTIGE (+{0} 👑)',
-        achievementsTitle: '🏆 ACHIEVEMENTS',
-        achievementsOpened: 'Unlocked: {0} / {1}',
-        questsTitle: '📅 QUESTS',
-        questsUpdate: 'Refresh: every day (UTC)',
+        confirmPrestige: '⚠️ SURE? TAP AGAIN', prestigeBtn: '🔥 PRESTIGE (+{0} 👑)',
+        achievementsTitle: '🏆 ACHIEVEMENTS', achievementsOpened: 'Unlocked: {0} / {1}',
+        questsTitle: '📅 QUESTS', questsUpdate: 'Refresh: every day (UTC)',
         claim: '🎁 CLAIM +{0}💰', claimed: '✅ CLAIMED', reward: 'Reward: +{0}💰',
         museumTitle: '🏛️ CARPET MUSEUM',
         museumInfo: '👑 {0}  •  Prestige {1}\nCleans: {2}  •  Bugs: {3}  •  Stars: {4}',
@@ -156,16 +152,14 @@ const I18N = {
         dailyTitle: '🎁 DAILY BONUS', dailyDay: 'Day {0} of 7',
         dailyNow: '👈 NOW', dailyClaim: '🎁 CLAIM',
         dailyDone: '✅ CLAIMED TODAY', dailyComeBack: 'Come back tomorrow!',
-        settingsTitle: '⚙️ SETTINGS',
-        vibration: '📳 Vibration', vibOn: '✅ ON', vibOff: '❌ OFF',
+        settingsTitle: '⚙️ SETTINGS', vibration: '📳 Vibration',
+        vibOn: '✅ ON', vibOff: '❌ OFF',
         exportSave: '📤 Export save', exportBtn: '📋 Copy',
         importSave: '📥 Import save', importBtn: '📋 Paste',
-        resetProgress: '🗑️ RESET ALL PROGRESS',
-        resetConfirm: '⚠️ SURE TO RESET?',
+        resetProgress: '🗑️ RESET ALL PROGRESS', resetConfirm: '⚠️ SURE TO RESET?',
         saveCopied: '📋 Save copied!', saveLoaded: '✅ Save loaded!',
         saveInvalid: '❌ Invalid format',
-        recordsTitle: '📊 RECORDS',
-        coins: '💰 Coins', prestigeTab: '👑 Prestige',
+        recordsTitle: '📊 RECORDS', coins: '💰 Coins', prestigeTab: '👑 Prestige',
         loadingRecords: '⏳ Loading...', noRecords: 'Nobody yet :(',
         skip: '⏭ Skip', next: '👆 Got it, next',
         skipStep: '⏭ Skip step (hard)',
@@ -175,43 +169,49 @@ const I18N = {
         noFood: '🍞 NO FOOD!\nBUY IN SHOP',
         bugsFirst: '🐛 KILL BUGS FIRST!\n(swatter 🪰)',
         carpetDirty: 'Carpet still dirty! Need 100%.',
-        collectStars: '⭐ Collect all stars!',
-        allStars: '⭐ All stars collected!',
-        carpetClean: 'Carpet is clean! ✨',
-        newQuests: '📅 New quests!',
-        foodBonus: '🎁 Bonus: 1 food!',
-        prestigeAvailableMsg: '🔥 PRESTIGE IN SHOP!',
+        collectStars: '⭐ Collect all stars!', allStars: '⭐ All stars collected!',
+        carpetClean: 'Carpet is clean! ✨', newQuests: '📅 New quests!',
+        foodBonus: '🎁 Bonus: 1 food!', prestigeAvailableMsg: '🔥 PRESTIGE IN SHOP!',
         prestigeDone: '🔥 PRESTIGE! +{0} 👑 Legacy',
-        steams: '🔥 STEAM', starsLeft: '⭐ Stars left: {0}',
-        timeFormat: '⏱ {0}',
+        steams: '🔥 STEAM', starsLeft: '⭐ Stars left: {0}', timeFormat: '⏱ {0}',
         achievementUnlocked: '🏆 {0}: +{1}💰',
-        adUnavailable: 'Ad unavailable or cancelled',
-        adReward: '📺 +{0}💰!',
-        noMoney: 'Not enough money!',
-        needMoreFood: '❌ Not enough food (need {0}🍞)',
-        language: '🌐 Язык / Language'
+        adUnavailable: 'Ad unavailable or cancelled', adReward: '📺 +{0}💰!',
+        noMoney: 'Not enough money!', needMoreFood: '❌ Not enough food (need {0}🍞)',
+        language: '🌐 Language',
+        music: '🎵 Music', musicOn: '✅ ON', musicOff: '❌ OFF',
+        weather: '🌤️ Weather', weatherAuto: 'Auto', weatherOff: 'Off',
+        mascotHint: '💡 Kitty tip',
+        m_hello: ['Meow! Help me with the carpet 🐾', 'Let\'s start! I\'ll help 🐱', 'Purr~ So dusty here!'],
+        m_soap: ['Apply soap in circles 💫', 'More foam — dirt goes away!', 'Soap it 🧼'],
+        m_wash: ['Now rinse with water 💧', 'Wash the foam off!', 'Splash 💦'],
+        m_bugs: ['Oh! Bugs 🐛 Grab the swatter!', 'Kill bugs first 🪰', 'Eww, bugs!'],
+        m_star: ['Catch the stars ⭐', 'Collect them all ✨', 'Tap the stars!'],
+        m_finish: ['Yay! Carpet is like new 🎉', 'So clean! Take money 💰', 'Purr~ beautiful!'],
+        m_food: ['Food is gone 🍞 Buy in shop!', 'I\'m hungry... buy food 🐾', 'Don\'t forget to eat!'],
+        m_prestige: ['You\'re ready for prestige 👑', 'Time to start over! 🔥', 'Legacy awaits!'],
+        m_money: ['Get richer 💰', 'Money flows ✨', 'Buy something in shop 🛒'],
+        m_idle: ['Meow?', 'Purr~', 'How are you? 🐾', 'Clean more?', 'Catch stars ✨', 'Check the quests 📅'],
+        m_weather_rain: ['Rain outside ☔', 'Cozy! It\'s raining 🌧️'],
+        m_weather_snow: ['Snow ❄️', 'Winter magic ✨'],
+        m_weather_leaves: ['Autumn 🍂', 'Leaves falling 🍁']
     }
 };
 
-// Утилита локализации: поддерживает строку и объект {ru, en}
 function loc(obj) {
     if (obj == null) return '';
     if (typeof obj === 'string') return obj;
     return obj[LANG] || obj.ru || '';
 }
+function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-// Автоопределение языка через SDK с фолбэком
 let LANG = 'ru';
 function detectLang(ysdk) {
     try {
         const lang = ysdk?.environment?.i18n?.lang;
         if (lang && I18N[lang]) return lang;
-        // Русский, украинский, белорусский, казахский → ru
         if (lang && ['uk', 'be', 'kk', 'ky', 'uz'].includes(lang)) return 'ru';
-        // Все остальные → en
         if (lang) return 'en';
     } catch {}
-    // Фолбэк на браузер
     try {
         const nav = (navigator.language || 'ru').slice(0, 2).toLowerCase();
         if (I18N[nav]) return nav;
@@ -219,13 +219,16 @@ function detectLang(ysdk) {
     } catch {}
     return 'ru';
 }
-
-// Функция перевода с плейсхолдерами {0}, {1}
 function t(key, ...args) {
     const dict = I18N[LANG] || I18N.ru;
     let s = dict[key] !== undefined ? dict[key] : (I18N.ru[key] !== undefined ? I18N.ru[key] : key);
     for (let i = 0; i < args.length; i++) s = s.replace('{' + i + '}', args[i]);
     return s;
+}
+function tArr(key) {
+    const dict = I18N[LANG] || I18N.ru;
+    const arr = dict[key] || I18N.ru[key];
+    return Array.isArray(arr) ? arr : [key];
 }
 
 /* ============================================================
@@ -246,46 +249,29 @@ const BALANCE = {
     autoFoodBasePrice: 3000, autoFoodPriceIncrease: 1000,
     doubleBugPrice: 2000, bugRewardPerKill: 5,
     soapThreshold: 0.01, eraseStrength: 0.30,
-    finishThreshold: 0.99,
-    finishStarReward: 5,
-    finishStarMinDist: 70,
+    finishThreshold: 0.99, finishStarReward: 5, finishStarMinDist: 70,
     inputLockDuration: 300,
     starChance: 0.2, starLifetime: 700,
     finishStarCount: 25, finishStarDuration: 1800,
-    bugCountBase: 4,
-    bugSpeed: 180,
-    bugFadeDuration: 400,
-    swatterRadius: 50,
-    swatterCooldown: 350,
-    swatterCooldownMin: 100,
-    swatterCooldownStep: 30,
-    swatterRadiusStep: 5,
-    swatterBonusPerLevel: 1,
-    splashChance: 0.25,
-    bubbleChance: 0.20,
-    gridCellSize: 20,
+    bugCountBase: 4, bugSpeed: 180, bugFadeDuration: 400,
+    swatterRadius: 50, swatterCooldown: 350, swatterCooldownMin: 100,
+    swatterCooldownStep: 30, swatterRadiusStep: 5, swatterBonusPerLevel: 1,
+    splashChance: 0.25, bubbleChance: 0.20, gridCellSize: 20,
     adRewardMoney: 200, adCooldownMs: 60000,
     petCatPrice: 4000, petDogPrice: 6000, petParrotPrice: 12000, petHamsterPrice: 9000,
     petCatIntervalMs: 5000, petDogIntervalMs: 10000, petHamsterIntervalMs: 30000,
-    petParrotBonus: 0.10,
-    petMaxLevel: 10,
-    petUpgradeCostStep: 15,
+    petParrotBonus: 0.10, petMaxLevel: 10, petUpgradeCostStep: 15,
     petCatSpeedStep: 0.10, petCatCountBase: 1, petCatCountPerLevel: 0.78,
     petDogSpeedStep: 0.10, petDogCountBase: 1, petDogCountPerLevel: 0.45,
     petHamsterSpeedStep: 0.10, petHamsterCountBase: 1, petHamsterCountPerLevel: 0.78,
     petParrotBonusPerLevel: 0.055,
     scraperBasePower: 2.0,
-    steamMaxFuel: 100,
-    steamFuelCost: 1.0,
-    steamFuelRegen: 0.4,
-    steamPower: 0.5,
-    stainRemoverPower: 2.0,
-    moldSpreadMs: 10000,
+    steamMaxFuel: 100, steamFuelCost: 2.0, steamFuelRegen: 0.4, steamPower: 0.5,
+    stainRemoverPower: 2.0, moldSpreadMs: 10000,
     tutorialPerCarpet: true,
-    legacyPerPrestige1: 2,
-    legacyPerPrestigeN: 3,
-    dayNightBonus: 0.5,
-    vibrationMs: 20
+    legacyPerPrestige1: 2, legacyPerPrestigeN: 3,
+    dayNightBonus: 0.5, vibrationMs: 20,
+    musicVolume: 0.18
 };
 
 const SAVE_KEY = 'carpetGameStats_v11';
@@ -391,47 +377,52 @@ const CARPET_TUTORIALS = {
         { text: { ru: 'После скребка смывай пыль 💧.\nКомбинируй все 3 инструмента!', en: 'After scraping, rinse 💧 dust.\nCombine all 3 tools!' }, check: 'auto', need: 0 }
     ],
     4: [
-        { text: { ru: '🔥 Новый инструмент — ПАР.\nОн растворяет старую грязь.', en: '🔥 New tool — STEAM.\nIt dissolves old dirt.' }, check: 'auto', need: 0 },
+        { text: { ru: '🔥 Новый инструмент — ПАР.\nОн полностью убирает грязь.', en: '🔥 New tool — STEAM.\nIt fully removes all dirt.' }, check: 'auto', need: 0 },
+        { text: { ru: 'На 4-м ковре нет мыла и смыва.\nТолько скребок и пар!', en: 'On carpet 4 there is no soap or rinse.\nOnly scraper and steam!' }, check: 'auto', need: 0 },
         { text: { ru: 'Проведи паром по ковру.\nСледи за полоской топлива!', en: 'Swipe steam over the carpet.\nWatch the fuel bar!' }, check: 'steam', need: 2 },
-        { text: { ru: 'Топливо кончилось —\nподожди, оно восстановится.', en: 'Fuel is out —\nwait, it will restore.' }, check: 'auto', need: 0 }
+        { text: { ru: 'Сначала скребком снимай корки,\nзатем паром убирай всё остальное.', en: 'First scrape the crusts,\nthen steam-clean everything else.' }, check: 'auto', need: 0 }
     ],
     5: [
         { text: { ru: '🧴 Новый инструмент — ПЯТНОВЫВОДИТЕЛЬ.\nУбирает цветные пятна.', en: '🧴 New tool — STAIN REMOVER.\nRemoves colored stains.' }, check: 'auto', need: 0 },
+        { text: { ru: 'На 5-м ковре 4 инструмента:\nскребок, пар, пятновыводитель, мухобойка.', en: 'On carpet 5 there are 4 tools:\nscraper, steam, remover, swatter.' }, check: 'auto', need: 0 },
         { text: { ru: 'Проведи пятновыводителем\nпо цветному пятну.', en: 'Swipe the remover\nover a colored stain.' }, check: 'stain', need: 2 },
-        { text: { ru: '⚠️ Плесень распространяется!\nУбирай её быстро.', en: '⚠️ Mold spreads!\nRemove it quickly.' }, check: 'auto', need: 0 },
-        { text: { ru: 'На 5-м ковре — все 6 инструментов.\nКомбинируй их как хочешь!', en: 'On carpet 5 — all 6 tools.\nCombine them freely!' }, check: 'auto', need: 0 }
+        { text: { ru: '⚠️ Плесень распространяется!\nУбирай её быстро — паром или пятновыводителем.', en: '⚠️ Mold spreads!\nRemove it fast with steam or remover.' }, check: 'auto', need: 0 }
     ]
 };
 
 const TEXT_STYLES = {
     title: (color = '#FFD700') => ({
-        fontSize: '48px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+        fontSize: '48px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
         stroke: '#000000', strokeThickness: 6,
         shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, fill: true }
     }),
     stat: (color = '#FFFFFF', size = 30) => ({
-        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
         stroke: '#000000', strokeThickness: 5,
         shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
     }),
     button: (color = '#FFFFFF', size = 28) => ({
-        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
         stroke: '#000000', strokeThickness: 5,
         shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
     }),
     shop: (color = '#FFFFFF', size = 28) => ({
-        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
         stroke: '#000000', strokeThickness: 4, align: 'center'
     }),
     shopInfo: (color = '#FFFFFF', size = 20) => ({
-        fontSize: size + 'px', fill: color, fontFamily: 'Arial',
+        fontSize: size + 'px', fill: color, fontFamily: FONT_HAND,
         stroke: '#000000', strokeThickness: 3, align: 'center'
     }),
     message: (color = '#FFFF00', size = 26) => ({
-        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: 'Arial',
+        fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
         stroke: '#000000', strokeThickness: 5,
         shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true },
         align: 'center', wordWrap: { width: 640 }
+    }),
+    hand: (color = '#FFFFFF', size = 22) => ({
+        fontSize: size + 'px', fill: color, fontFamily: FONT_HAND,
+        stroke: '#000000', strokeThickness: 4, align: 'center'
     })
 };
 
@@ -452,8 +443,324 @@ function getTimeOfDay() {
     if (h >= 17 && h < 22) return 'evening';
     return 'night';
 }
-</script>
-<script>
+
+/* ============================================================
+   UI KIT — пилюли, press-feedback, glow
+   ============================================================ */
+function makePill(scene, x, y, w, h, opts = {}) {
+    const r = opts.radius ?? Math.min(w, h) / 2;
+    const cont = scene.add.container(x, y).setDepth(opts.depth ?? 10);
+    const g = scene.add.graphics();
+    cont.add(g);
+    const hit = scene.add.rectangle(0, 0, w, h, 0x000000, 0.001);
+    hit.setInteractive({ useHandCursor: true });
+    cont.add(hit);
+    const api = {
+        cont, g, hit, w, h, r,
+        _fill: opts.fill ?? 0x444444, _stroke: opts.stroke ?? 0x888888, _strokeW: opts.strokeW ?? 4,
+        redraw(fill, stroke, strokeW) {
+            if (fill !== undefined) api._fill = fill;
+            if (stroke !== undefined) api._stroke = stroke;
+            if (strokeW !== undefined) api._strokeW = strokeW;
+            g.clear();
+            g.fillStyle(api._fill, 1);
+            g.fillRoundedRect(-w / 2, -h / 2, w, h, r);
+            if (api._strokeW > 0) { g.lineStyle(api._strokeW, api._stroke, 1); g.strokeRoundedRect(-w / 2, -h / 2, w, h, r); }
+        },
+        press() {
+            scene.tweens.killTweensOf(cont); cont.setScale(1);
+            scene.tweens.add({ targets: cont, scaleX: 1.08, scaleY: 1.08, duration: 90, yoyo: true, ease: 'Quad.easeOut' });
+        },
+        tap() {
+            scene.tweens.killTweensOf(cont); cont.setScale(1);
+            scene.tweens.add({ targets: cont, scaleX: 0.92, scaleY: 0.92, duration: 70, yoyo: true, ease: 'Quad.easeOut' });
+        },
+        pulse(scale = 1.05, ms = 700) {
+            scene.tweens.killTweensOf(cont); cont.setScale(1);
+            scene.tweens.add({ targets: cont, scaleX: scale, scaleY: scale, duration: ms, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        },
+        glow(color = 0xFFFFFF, thickness = 6, ms = 1100) {
+            const glow = scene.add.graphics().setDepth((opts.depth ?? 10) - 1);
+            glow.lineStyle(thickness, color, 0.9);
+            glow.strokeRoundedRect(x - w / 2 - 4, y - h / 2 - 4, w + 8, h + 8, r + 4);
+            glow.setAlpha(0);
+            scene.tweens.add({ targets: glow, alpha: { from: 0.85, to: 0 },
+                scaleX: { from: 1, to: 1.12 }, scaleY: { from: 1, to: 1.12 },
+                duration: ms, repeat: -1, ease: 'Cubic.easeOut' });
+            return glow;
+        }
+    };
+    api.redraw();
+    return api;
+}
+
+/* ============================================================
+   AMBIENT MUSIC — генеративная фоновая мелодия
+   ============================================================ */
+class AmbientMusic {
+    constructor() {
+        this.ctx = null; this.master = null; this.bus = null;
+        this.enabled = true; this._playing = false;
+        this._chordTimer = null; this._chimeTimer = null; this._chordIdx = 0;
+        this._chords = [
+            [220.00, 261.63, 329.63],  // Am
+            [174.61, 220.00, 261.63],  // F
+            [130.81, 164.81, 196.00],  // C
+            [196.00, 246.94, 293.66]   // G
+        ];
+        this._chimeScale = [523.25, 587.33, 659.25, 783.99, 880.00];
+    }
+    init() {
+        if (this.ctx) return;
+        const AC = window.AudioContext || window.webkitAudioContext;
+        if (!AC) return;
+        try {
+            this.ctx = new AC();
+            this.master = this.ctx.createGain();
+            this.master.gain.value = 0.0;
+            const lp = this.ctx.createBiquadFilter();
+            lp.type = 'lowpass'; lp.frequency.value = 1000; lp.Q.value = 0.3;
+            // легкое "эхо"
+            const dly = this.ctx.createDelay(); dly.delayTime.value = 0.28;
+            const fb = this.ctx.createGain(); fb.gain.value = 0.28;
+            const wet = this.ctx.createGain(); wet.gain.value = 0.35;
+            lp.connect(dly); dly.connect(fb); fb.connect(dly);
+            dly.connect(wet); wet.connect(this.master);
+            lp.connect(this.master);
+            this.bus = lp;
+            this.master.connect(this.ctx.destination);
+        } catch {}
+    }
+    resume() { try { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); } catch {} }
+    _playNote(freq, dur, type = 'sine', vol = 0.1) {
+        if (!this.ctx || !this.bus) return;
+        const t = this.ctx.currentTime;
+        const o1 = this.ctx.createOscillator(); o1.type = type; o1.frequency.value = freq;
+        const o2 = this.ctx.createOscillator(); o2.type = type; o2.frequency.value = freq * 1.004;
+        const g = this.ctx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(vol, t + dur * 0.35);
+        g.gain.linearRampToValueAtTime(0, t + dur);
+        o1.connect(g); o2.connect(g); g.connect(this.bus);
+        o1.start(t); o2.start(t);
+        o1.stop(t + dur + 0.1); o2.stop(t + dur + 0.1);
+    }
+    start() {
+        if (!this.ctx || this._playing || !this.enabled) return;
+        this._playing = true;
+        const t = this.ctx.currentTime;
+        this.master.gain.cancelScheduledValues(t);
+        this.master.gain.setValueAtTime(this.master.gain.value, t);
+        this.master.gain.linearRampToValueAtTime(BALANCE.musicVolume, t + 3);
+        this._scheduleChord(); this._scheduleChime();
+    }
+    stop() {
+        this._playing = false;
+        clearTimeout(this._chordTimer); clearTimeout(this._chimeTimer);
+        if (this.master && this.ctx) {
+            const t = this.ctx.currentTime;
+            this.master.gain.cancelScheduledValues(t);
+            this.master.gain.setValueAtTime(this.master.gain.value, t);
+            this.master.gain.linearRampToValueAtTime(0, t + 1);
+        }
+    }
+    setEnabled(v) {
+        this.enabled = !!v;
+        if (v) this.start(); else this.stop();
+    }
+    _scheduleChord() {
+        if (!this._playing) return;
+        const chord = this._chords[this._chordIdx % this._chords.length];
+        this._chordIdx++;
+        chord.forEach((f, i) => setTimeout(() => this._playNote(f, 5.5, 'sine', 0.08), i * 220));
+        chord.forEach(f => setTimeout(() => this._playNote(f * 2, 5.5, 'sine', 0.025), 100));
+        this._chordTimer = setTimeout(() => this._scheduleChord(), 5000);
+    }
+    _scheduleChime() {
+        if (!this._playing) return;
+        const f = this._chimeScale[Math.floor(Math.random() * this._chimeScale.length)];
+        this._playNote(f, 2.5, 'triangle', 0.045);
+        this._chimeTimer = setTimeout(() => this._scheduleChime(), 3500 + Math.random() * 4500);
+    }
+}
+
+/* ============================================================
+   WEATHER — погодные слои
+   ============================================================ */
+class WeatherSystem {
+    constructor(scene) {
+        this.scene = scene;
+        this.current = 'none';
+        this.emitters = {};
+        this._ensureTextures();
+    }
+    _ensureTextures() {
+        const s = this.scene;
+        if (!s.textures.exists('wx_rain')) {
+            const g = s.add.graphics();
+            g.fillStyle(0x9AD6FF, 0.9); g.fillRect(0, 0, 3, 18);
+            g.generateTexture('wx_rain', 4, 20); g.destroy();
+        }
+        if (!s.textures.exists('wx_snow')) {
+            const g = s.add.graphics();
+            g.fillStyle(0xFFFFFF, 0.95); g.fillCircle(4, 4, 3.5);
+            g.generateTexture('wx_snow', 8, 8); g.destroy();
+        }
+        if (!s.textures.exists('wx_leaf')) {
+            const g = s.add.graphics();
+            g.fillStyle(0xD97706, 1);
+            g.fillEllipse(8, 8, 14, 8);
+            g.lineStyle(1, 0x7C3A12, 1); g.lineBetween(2, 8, 14, 8);
+            g.generateTexture('wx_leaf', 16, 16); g.destroy();
+        }
+    }
+    _clear() {
+        for (const k in this.emitters) { try { this.emitters[k].destroy(); } catch {} }
+        this.emitters = {};
+    }
+    set(type, opts = {}) {
+        if (type === this.current) return;
+        this._clear();
+        this.current = type;
+        if (type === 'none') return;
+        const W = 720;
+        const depth = opts.depth ?? 7;
+        if (type === 'rain') {
+            this.emitters.rain = this.scene.add.particles(0, -20, 'wx_rain', {
+                x: { min: -50, max: W + 50 }, quantity: 3, frequency: 45,
+                lifespan: 2200, speedY: { min: 400, max: 550 }, speedX: { min: -30, max: 30 },
+                scale: { start: 1.2, end: 0.8 }, alpha: { start: 0.75, end: 0.25 },
+                rotate: -8, blendMode: 'ADD'
+            }).setDepth(depth);
+        } else if (type === 'snow') {
+            this.emitters.snow = this.scene.add.particles(0, -20, 'wx_snow', {
+                x: { min: -50, max: W + 50 }, quantity: 2, frequency: 90,
+                lifespan: 6500, speedY: { min: 40, max: 90 }, speedX: { min: -30, max: 30 },
+                scale: { start: 1, end: 0.6 }, alpha: { start: 0.9, end: 0.4 },
+                rotate: { min: 0, max: 360 }
+            }).setDepth(depth);
+        } else if (type === 'leaves') {
+            this.emitters.leaves = this.scene.add.particles(0, -20, 'wx_leaf', {
+                x: { min: -50, max: W + 50 }, quantity: 1, frequency: 220,
+                lifespan: 9000, speedY: { min: 40, max: 80 }, speedX: { min: -60, max: 60 },
+                scale: { start: 1, end: 0.9 }, alpha: { start: 0.9, end: 0.5 },
+                rotate: { min: 0, max: 360 }, accelerationX: { min: -15, max: 15 }
+            }).setDepth(depth);
+        }
+    }
+    cycleByTimeOfDay(timeOfDay) {
+        let type = 'none';
+        const r = Math.random();
+        if (timeOfDay === 'morning') type = r < 0.45 ? 'leaves' : 'none';
+        else if (timeOfDay === 'day') type = r < 0.25 ? 'leaves' : 'none';
+        else if (timeOfDay === 'evening') type = r < 0.55 ? 'rain' : 'none';
+        else if (timeOfDay === 'night') type = r < 0.6 ? 'snow' : (r < 0.8 ? 'rain' : 'none');
+        this.set(type);
+        return type;
+    }
+}
+
+/* ============================================================
+   MASCOT — котёнок с комментариями
+   ============================================================ */
+class Mascot {
+    constructor(scene) {
+        this.scene = scene;
+        this.x = 640; this.y = 1160;
+        this.container = scene.add.container(this.x, this.y).setDepth(50);
+        this._buildKitten();
+        this.bubble = null; this.bubbleTween = null;
+        this._idleTimer = null; this._lastSaid = 0;
+        this._cooldownKeys = {};
+        this._scheduleIdle();
+    }
+    _buildKitten() {
+        const g = this.scene.add.graphics();
+        // тело
+        g.fillStyle(0xF3A44B, 1); g.fillEllipse(0, 22, 72, 60);
+        // грудка
+        g.fillStyle(0xFFE5C2, 1); g.fillEllipse(0, 28, 40, 36);
+        // голова
+        g.fillStyle(0xF3A44B, 1); g.fillCircle(0, -12, 38);
+        // ушки
+        g.fillStyle(0xF3A44B, 1);
+        g.fillTriangle(-34, -30, -18, -60, -6, -34);
+        g.fillTriangle( 34, -30,  18, -60,  6, -34);
+        g.fillStyle(0xFFC9A0, 1);
+        g.fillTriangle(-30, -33, -18, -52, -10, -35);
+        g.fillTriangle( 30, -33,  18, -52,  10, -35);
+        // глаза
+        g.fillStyle(0x1A1A1A, 1);
+        g.fillCircle(-13, -14, 4.5); g.fillCircle(13, -14, 4.5);
+        g.fillStyle(0xFFFFFF, 1);
+        g.fillCircle(-12, -15, 1.6); g.fillCircle(14, -15, 1.6);
+        // нос + рот
+        g.fillStyle(0xFF7A7A, 1); g.fillTriangle(-3, -2, 3, -2, 0, 2);
+        g.lineStyle(1.5, 0x1A1A1A, 1);
+        g.beginPath(); g.moveTo(0, 2); g.lineTo(-4, 6); g.moveTo(0, 2); g.lineTo(4, 6); g.strokePath();
+        // усы
+        g.lineStyle(1.2, 0x1A1A1A, 0.8);
+        g.lineBetween(-30, -6, -12, -3); g.lineBetween(-30, 2, -12, 0);
+        g.lineBetween( 30, -6,  12, -3); g.lineBetween( 30, 2,  12, 0);
+        // лапки
+        g.fillStyle(0xF3A44B, 1);
+        g.fillEllipse(-18, 46, 22, 16); g.fillEllipse(18, 46, 22, 16);
+        this.container.add(g);
+        // лёгкое покачивание
+        this.scene.tweens.add({ targets: this.container, y: this.y - 4, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
+    say(text, ms = 3200) {
+        if (!text) return;
+        if (this.bubble) { try { this.bubble.destroy(); } catch {} this.bubble = null; }
+        if (this.bubbleTween) { try { this.bubbleTween.remove(); } catch {} this.bubbleTween = null; }
+        const bx = this.x - 200, by = this.y - 80;
+        const bubble = this.scene.add.container(bx, by).setDepth(51);
+        const bg = this.scene.add.graphics();
+        bg.fillStyle(0xFFFFFF, 0.96);
+        bg.fillRoundedRect(-160, -46, 220, 70, 18);
+        bg.lineStyle(3, 0x4A90D9, 1);
+        bg.strokeRoundedRect(-160, -46, 220, 70, 18);
+        // хвостик
+        bg.fillStyle(0xFFFFFF, 0.96);
+        bg.fillTriangle(40, 20, 74, 40, 40, 40);
+        bg.lineStyle(3, 0x4A90D9, 1);
+        bg.beginPath(); bg.moveTo(40, 24); bg.lineTo(74, 40); bg.strokePath();
+        bubble.add(bg);
+        const txt = this.scene.add.text(-50, -10, text, {
+            fontSize: '22px', fill: '#1A1A1A', fontFamily: FONT_HAND,
+            fontStyle: 'bold', align: 'center', wordWrap: { width: 200 }
+        }).setOrigin(0.5);
+        bubble.add(txt);
+        bubble.setAlpha(0).setScale(0.85);
+        this.bubble = bubble;
+        this.scene.tweens.add({ targets: bubble, alpha: 1, scaleX: 1, scaleY: 1, duration: 220, ease: 'Back.easeOut' });
+        this.scene.tweens.add({ targets: bubble, y: by - 6, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        this.scene.time.delayedCall(ms, () => {
+            if (!bubble.active) return;
+            this.scene.tweens.add({ targets: bubble, alpha: 0, scaleX: 0.9, scaleY: 0.9, duration: 250,
+                onComplete: () => { try { bubble.destroy(); } catch {} if (this.bubble === bubble) this.bubble = null; } });
+        });
+    }
+    react(key, ms = 3000) {
+        const now = Date.now();
+        if (now - (this._cooldownKeys[key] || 0) < 5000) return;
+        this._cooldownKeys[key] = now;
+        const pool = tArr('m_' + key);
+        this.say(pick(pool), ms);
+    }
+    _scheduleIdle() {
+        const loop = () => {
+            if (!this.bubble) {
+                const pool = tArr('m_idle');
+                this.say(pick(pool), 2600);
+            }
+            this._idleTimer = setTimeout(loop, 22000 + Math.random() * 20000);
+        };
+        this._idleTimer = setTimeout(loop, 30000);
+    }
+    destroy() { clearTimeout(this._idleTimer); }
+}
+
 /* ============================================================
    GAMESTATE
    ============================================================ */
@@ -462,49 +769,24 @@ class GameState {
         this.money = BALANCE.startMoney;
         this.food = BALANCE.startFood;
         this.toolLevel = BALANCE.startToolLevel;
-        this.soapLevel = 1;
-        this.washLevel = 1;
-        this.swatterLevel = 0;
-        this.carpetIndex = 1;
-        this.carpetLevel = 0;
-        this.carpetsCleaned = 0;
-        this.bugsKilledTotal = 0;
-        this.starsPopped = 0;
-        this.maxMoney = 0;
-        this.autoFoodEnabled = false;
-        this.prestigeLevel = 0;
-        this.legacyPoints = 0;
-        this.legacyUpgrades = {};
+        this.soapLevel = 1; this.washLevel = 1; this.swatterLevel = 0;
+        this.carpetIndex = 1; this.carpetLevel = 0;
+        this.carpetsCleaned = 0; this.bugsKilledTotal = 0; this.starsPopped = 0;
+        this.maxMoney = 0; this.autoFoodEnabled = false;
+        this.prestigeLevel = 0; this.legacyPoints = 0; this.legacyUpgrades = {};
         this.carpetStats = {};
-        for (let i = 1; i <= BALANCE.totalCarpets; i++) {
-            this.carpetStats[i] = { cleanings: 0, bestTime: 0, tutorialDone: false };
-        }
+        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.carpetStats[i] = { cleanings: 0, bestTime: 0, tutorialDone: false };
         this.doubleBugReward = false;
-        this.selectedRoom = 'classic';
-        this.selectedBrush = 'classic';
-        this.unlockedRooms = ['classic'];
-        this.unlockedBrushes = ['classic'];
-        this.achievements = {};
-        this.questDate = '';
-        this.quests = [];
-        this.questProgress = {};
-        this.questClaimed = {};
-        this.questCounters = {
-            cleanToday: 0, killBugsToday: 0, fastCleanToday: 0,
-            soapUsesToday: 0, moneyEarnedToday: 0, petActionsToday: 0, starsToday: 0
-        };
-        this.lastAdTime = 0;
-        this.tutorialDone = false;
-        this.pets = {
-            cat: { owned: false, level: 1 },
-            dog: { owned: false, level: 1 },
-            hamster: { owned: false, level: 1 },
-            parrot: { owned: false, level: 1 }
-        };
-        this.settings = { vibration: true, lang: null };
+        this.selectedRoom = 'classic'; this.selectedBrush = 'classic';
+        this.unlockedRooms = ['classic']; this.unlockedBrushes = ['classic'];
+        this.achievements = {}; this.questDate = ''; this.quests = [];
+        this.questProgress = {}; this.questClaimed = {};
+        this.questCounters = { cleanToday: 0, killBugsToday: 0, fastCleanToday: 0, soapUsesToday: 0, moneyEarnedToday: 0, petActionsToday: 0, starsToday: 0 };
+        this.lastAdTime = 0; this.tutorialDone = false;
+        this.pets = { cat: { owned: false, level: 1 }, dog: { owned: false, level: 1 }, hamster: { owned: false, level: 1 }, parrot: { owned: false, level: 1 } };
+        this.settings = { vibration: true, lang: null, music: true, weather: true };
         this.dailyBonus = { lastClaimDate: '', streakDay: 0 };
-        this.leaderboardBestMoney = 0;
-        this.leaderboardBestPrestige = 0;
+        this.leaderboardBestMoney = 0; this.leaderboardBestPrestige = 0;
     }
     getCurrentRadius() {
         const legacyBonus = (this.legacyUpgrades.brush_master || 0) * 5;
@@ -525,13 +807,11 @@ class GameState {
     getSwatterUpgradePrice() { return BALANCE.swatterBasePrice + this.swatterLevel * BALANCE.swatterBasePrice; }
     getSoapPower() {
         const base = BALANCE.soapPower * (1 + (this.soapLevel - 1) * 0.40);
-        const legacyBonus = (this.legacyUpgrades.soap_master || 0) * 0.25;
-        return base * (1 + legacyBonus);
+        return base * (1 + (this.legacyUpgrades.soap_master || 0) * 0.25);
     }
     getWashStrength() {
         const base = BALANCE.washStrength * (1 + (this.washLevel - 1) * 0.35);
-        const legacyBonus = (this.legacyUpgrades.wash_master || 0) * 0.25;
-        return base * (1 + legacyBonus);
+        return base * (1 + (this.legacyUpgrades.wash_master || 0) * 0.25);
     }
     getSwatterCooldown() { return Math.max(BALANCE.swatterCooldownMin, BALANCE.swatterCooldown - this.swatterLevel * BALANCE.swatterCooldownStep); }
     getSwatterRadius() { return BALANCE.swatterRadius + this.swatterLevel * BALANCE.swatterRadiusStep; }
@@ -578,10 +858,8 @@ class GameState {
     }
     upgradePet(id) {
         if (!this.canUpgradePet(id)) return false;
-        const cost = this.getPetUpgradeCost(id);
-        this.food -= cost;
-        this.pets[id].level += 1;
-        return true;
+        this.food -= this.getPetUpgradeCost(id);
+        this.pets[id].level += 1; return true;
     }
     getLegacyUpgradeLevel(id) { return this.legacyUpgrades[id] || 0; }
     getLegacyUpgradeCost(id) {
@@ -600,8 +878,7 @@ class GameState {
     buyLegacy(id) {
         if (!this.canBuyLegacy(id)) return false;
         this.legacyPoints -= this.getLegacyUpgradeCost(id);
-        this.legacyUpgrades[id] = (this.legacyUpgrades[id] || 0) + 1;
-        return true;
+        this.legacyUpgrades[id] = (this.legacyUpgrades[id] || 0) + 1; return true;
     }
     getLegacyUpgradesBought() { let c = 0; for (const id in this.legacyUpgrades) c += this.legacyUpgrades[id]; return c; }
     canPrestige() { return this.carpetIndex >= BALANCE.totalCarpets; }
@@ -610,9 +887,7 @@ class GameState {
         this.prestigeLevel += 1;
         const gain = this.prestigeLevel === 1 ? BALANCE.legacyPerPrestige1 : BALANCE.legacyPerPrestigeN;
         this.legacyPoints += gain;
-        this.money = 0;
-        this.food = BALANCE.startFood;
-        this.toolLevel = BALANCE.startToolLevel;
+        this.money = 0; this.food = BALANCE.startFood; this.toolLevel = BALANCE.startToolLevel;
         if (this.legacyUpgrades.jump_start) { this.carpetIndex = 3; this.carpetLevel = 2; }
         else if (this.legacyUpgrades.fast_start) { this.carpetIndex = 2; this.carpetLevel = 1; }
         else { this.carpetIndex = 1; this.carpetLevel = 0; }
@@ -659,11 +934,8 @@ class GameState {
     }
     buyNewCarpet() {
         if (!this.canBuyNewCarpet()) return false;
-        this.money = 0;
-        this.food = BALANCE.startFood;
-        this.carpetIndex += 1;
-        this.carpetLevel += 1;
-        return true;
+        this.money = 0; this.food = BALANCE.startFood;
+        this.carpetIndex += 1; this.carpetLevel += 1; return true;
     }
     upgradeTool() { const p = this.getToolUpgradePrice(); if (this.money < p) return false; this.money -= p; this.toolLevel += 1; return true; }
     upgradeSoap() { const p = this.getSoapUpgradePrice(); if (this.money < p) return false; this.money -= p; this.soapLevel += 1; return true; }
@@ -711,14 +983,7 @@ class GameState {
             case 'maxMoney': return this.maxMoney;
             case 'bugsKilledTotal': return this.bugsKilledTotal;
             case 'starsPopped': return this.starsPopped;
-            case 'bestTime': {
-                let best = 99999;
-                for (const k in this.carpetStats) {
-                    const t = this.carpetStats[k].bestTime;
-                    if (t > 0 && t < best) best = t;
-                }
-                return best;
-            }
+            case 'bestTime': { let best = 99999; for (const k in this.carpetStats) { const tt = this.carpetStats[k].bestTime; if (tt > 0 && tt < best) best = tt; } return best; }
             case 'prestigeLevel': return this.prestigeLevel;
             case 'soapLevel': return this.soapLevel;
             case 'washLevel': return this.washLevel;
@@ -726,13 +991,7 @@ class GameState {
             case 'roomsUnlocked': return this.unlockedRooms.length;
             case 'brushesUnlocked': return this.unlockedBrushes.length;
             case 'petsOwned': return this.getPetsOwned();
-            case 'maxPetLevel': {
-                let maxLvl = 0;
-                for (const id of ['cat','dog','hamster','parrot']) {
-                    if (this.pets[id] && this.pets[id].level > maxLvl) maxLvl = this.pets[id].level;
-                }
-                return maxLvl;
-            }
+            case 'maxPetLevel': { let maxLvl = 0; for (const id of ['cat','dog','hamster','parrot']) { if (this.pets[id] && this.pets[id].level > maxLvl) maxLvl = this.pets[id].level; } return maxLvl; }
             case 'dailyStreak': return this.dailyBonus.streakDay;
             case 'legacyUpgradesBought': return this.getLegacyUpgradesBought();
             default: return 0;
@@ -758,8 +1017,7 @@ class GameState {
             const idx = Math.floor(Math.random() * pool.length);
             this.quests.push(pool.splice(idx, 1)[0]);
         }
-        this.questProgress = {};
-        this.questClaimed = {};
+        this.questProgress = {}; this.questClaimed = {};
         this.questCounters = { cleanToday: 0, killBugsToday: 0, fastCleanToday: 0, soapUsesToday: 0, moneyEarnedToday: 0, petActionsToday: 0, starsToday: 0 };
         return true;
     }
@@ -768,9 +1026,7 @@ class GameState {
     claimQuest(q) {
         if (this.questClaimed[q.id]) return false;
         if (!this.isQuestComplete(q)) return false;
-        this.questClaimed[q.id] = true;
-        this.money += q.reward;
-        return true;
+        this.questClaimed[q.id] = true; this.money += q.reward; return true;
     }
     getDailyStatus() {
         const today = todayKey();
@@ -779,8 +1035,7 @@ class GameState {
         let nextDay = this.dailyBonus.streakDay + 1;
         if (!last) nextDay = 1;
         else if (last !== today) {
-            const y = new Date();
-            y.setUTCDate(y.getUTCDate() - 1);
+            const y = new Date(); y.setUTCDate(y.getUTCDate() - 1);
             const yKey = `${y.getUTCFullYear()}-${y.getUTCMonth() + 1}-${y.getUTCDate()}`;
             if (last !== yKey) nextDay = 1;
         }
@@ -791,8 +1046,7 @@ class GameState {
         const st = this.getDailyStatus();
         if (!st.canClaim) return null;
         const reward = DAILY_REWARDS[st.nextDay - 1];
-        this.money += reward.money;
-        this.food += reward.food;
+        this.money += reward.money; this.food += reward.food;
         this.dailyBonus.lastClaimDate = todayKey();
         this.dailyBonus.streakDay = st.nextDay;
         return reward;
@@ -892,7 +1146,7 @@ class GameState {
 }
 
 /* ============================================================
-   SAVE / ADS / LEADERBOARD (с интеграцией Яндекс SDK)
+   SAVE / ADS / LEADERBOARD
    ============================================================ */
 class SaveSystem {
     constructor(state) { this.state = state; this.ysdk = null; this.useLocal = false; this._saving = false; }
@@ -900,32 +1154,19 @@ class SaveSystem {
         try {
             if (typeof YaGames === 'undefined') throw new Error('no SDK');
             this.ysdk = await YaGames.init();
-            // ✅ Автоопределение языка через SDK
             const detected = detectLang(this.ysdk);
-            if (this.state.settings.lang && I18N[this.state.settings.lang]) {
-                LANG = this.state.settings.lang;
-            } else {
-                LANG = detected;
-                this.state.settings.lang = detected;
-            }
+            if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+            else { LANG = detected; this.state.settings.lang = detected; }
             const keys = Object.keys(this.state.toSaveObject());
             const stats = await this.ysdk.player.getStats(keys);
             this.state.fromSaveObject(stats);
-            // После загрузки сейва проверим ручной выбор языка
-            if (this.state.settings.lang && I18N[this.state.settings.lang]) {
-                LANG = this.state.settings.lang;
-            }
-        } catch (e) {
+            if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+        } catch {
             this.useLocal = true;
             LANG = detectLang(null);
             try {
                 const raw = localStorage.getItem(SAVE_KEY);
-                if (raw) {
-                    this.state.fromSaveObject(JSON.parse(raw));
-                    if (this.state.settings.lang && I18N[this.state.settings.lang]) {
-                        LANG = this.state.settings.lang;
-                    }
-                }
+                if (raw) { this.state.fromSaveObject(JSON.parse(raw)); if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang; }
             } catch {}
         }
         return this;
@@ -935,7 +1176,6 @@ class SaveSystem {
     gameplayStop() { try { this.ysdk?.features?.GameplayAPI?.stop?.(); } catch {} }
     onPause(cb) { try { this.ysdk?.on?.('game_api_pause', cb); } catch {} }
     onResume(cb) { try { this.ysdk?.on?.('game_api_resume', cb); } catch {} }
-    getLang() { try { return this.ysdk?.environment?.i18n?.lang || LANG; } catch { return LANG; } }
     async save() {
         if (this._saving) return;
         this._saving = true;
@@ -945,16 +1185,17 @@ class SaveSystem {
             try { localStorage.setItem(SAVE_KEY, JSON.stringify(data)); } catch {}
         } finally { this._saving = false; }
     }
-    saveSync() {
-        try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.state.toSaveObject())); } catch {}
-    }
+    saveSync() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(this.state.toSaveObject())); } catch {} }
     async fullReset() {
         try {
             const fresh = new GameState();
-            // сохраняем выбранный язык
             const savedLang = this.state.settings.lang;
+            const savedMusic = this.state.settings.music;
+            const savedWeather = this.state.settings.weather;
             this.state.fromSaveObject(fresh.toSaveObject());
             this.state.settings.lang = savedLang;
+            this.state.settings.music = savedMusic;
+            this.state.settings.weather = savedWeather;
             try { localStorage.removeItem(SAVE_KEY); } catch {}
             const data = this.state.toSaveObject();
             if (!this.useLocal && this.ysdk) { try { await this.ysdk.player.setStats(data); } catch {} }
@@ -968,9 +1209,7 @@ class AdsSystem {
     constructor(saveSystem) {
         this.saveSystem = saveSystem;
         this.ysdk = saveSystem.ysdk;
-        this.busy = false;
-        this.onAdStart = null;
-        this.onAdEnd = null;
+        this.busy = false; this.onAdStart = null; this.onAdEnd = null;
     }
     isAvailable() { return !!this.ysdk?.adv?.showRewardedVideo; }
     getCooldownRemaining() {
@@ -995,38 +1234,26 @@ class AdsSystem {
                 this.ysdk.adv.showRewardedVideo({
                     callbacks: {
                         onRewarded: () => { rewarded = true; },
-                        onClose: () => {
-                            this.busy = false;
-                            if (rewarded) this.saveSystem.state.lastAdTime = Date.now();
-                            this.onAdEnd?.();
-                            resolve(rewarded);
-                        },
+                        onClose: () => { this.busy = false; if (rewarded) this.saveSystem.state.lastAdTime = Date.now(); this.onAdEnd?.(); resolve(rewarded); },
                         onError: () => { this.busy = false; this.onAdEnd?.(); resolve(false); }
                     }
                 });
-            } catch (e) { this.busy = false; this.onAdEnd?.(); resolve(false); }
+            } catch { this.busy = false; this.onAdEnd?.(); resolve(false); }
         });
     }
     async showFullscreen() {
         this.onAdStart?.();
         if (!this.ysdk?.adv?.showFullscreenAdv) { this.onAdEnd?.(); return; }
         try {
-            this.ysdk.adv.showFullscreenAdv({
-                callbacks: {
-                    onClose: () => { this.onAdEnd?.(); },
-                    onError: () => { this.onAdEnd?.(); }
-                }
-            });
+            this.ysdk.adv.showFullscreenAdv({ callbacks: { onClose: () => { this.onAdEnd?.(); }, onError: () => { this.onAdEnd?.(); } } });
         } catch { this.onAdEnd?.(); }
     }
 }
 
 class LeaderboardSystem {
     constructor(state, saveSystem) {
-        this.state = state;
-        this.saveSystem = saveSystem;
-        this.ysdk = saveSystem.ysdk;
-        this.lb = null;
+        this.state = state; this.saveSystem = saveSystem;
+        this.ysdk = saveSystem.ysdk; this.lb = null;
     }
     isAvailable() { return !!(this.ysdk?.getLeaderboards) && !this.saveSystem.useLocal; }
     async _init() {
@@ -1045,8 +1272,7 @@ class LeaderboardSystem {
             const res = await this.lb.getLeaderboardEntries(name, { quantityTop: count, includeUser: true, quantityAround: 3 });
             return res.entries.map(e => ({
                 rank: e.rank, score: e.score, name: e.player?.publicName || 'Guest',
-                avatar: e.player?.avatarSmall || null,
-                isMe: e.player?.scopePermission && e.rank === res.userRank
+                avatar: e.player?.avatarSmall || null, isMe: e.player?.scopePermission && e.rank === res.userRank
             }));
         } catch { return this._localTop(name, count); }
     }
@@ -1055,54 +1281,77 @@ class LeaderboardSystem {
         return [{ rank: 1, score: myBest, name: 'You', avatar: null, isMe: true }];
     }
 }
-</script>
-<script>
+
 /* ============================================================
-   EFFECTS / FINISH STARS / CLEANING / BUGS / ROOM / PETS
+   EFFECTS
    ============================================================ */
 class Effects {
     constructor(scene) {
         this.scene = scene;
         this.gfxSwatter = scene.add.graphics().setDepth(6);
         this.gfxSwatter.setVisible(false);
-        this._fxCount = 0;
-        this._fxMax = 40;
+        this._fxCount = 0; this._fxMax = 40;
+        this._ensureTextures();
+    }
+    _ensureTextures() {
+        const s = this.scene;
+        if (!s.textures.exists('fx_bubble')) {
+            const g = s.add.graphics();
+            g.fillStyle(0xE0F4FF, 0.85); g.fillCircle(8, 8, 7);
+            g.lineStyle(1.5, 0xFFFFFF, 0.9); g.strokeCircle(8, 8, 7);
+            g.fillStyle(0xFFFFFF, 1); g.fillCircle(6, 6, 2);
+            g.generateTexture('fx_bubble', 16, 16); g.destroy();
+        }
+        if (!s.textures.exists('fx_drop')) {
+            const g = s.add.graphics();
+            g.fillStyle(0x9AD6FF, 1); g.fillCircle(4, 5, 4); g.fillTriangle(0, 5, 8, 5, 4, 0);
+            g.generateTexture('fx_drop', 8, 10); g.destroy();
+        }
+        if (!s.textures.exists('fx_star')) {
+            const g = s.add.graphics();
+            g.fillStyle(0xFFD700, 1);
+            const pts = [];
+            for (let i = 0; i < 10; i++) {
+                const r = i % 2 === 0 ? 7 : 3;
+                const a = -Math.PI / 2 + i * Math.PI / 5;
+                pts.push({ x: 8 + Math.cos(a) * r, y: 8 + Math.sin(a) * r });
+            }
+            g.fillPoints(pts, true);
+            g.generateTexture('fx_star', 16, 16); g.destroy();
+        }
+        if (!s.textures.exists('fx_spark')) {
+            const g = s.add.graphics();
+            g.fillStyle(0xFFFFFF, 1); g.fillCircle(3, 3, 2.5);
+            g.generateTexture('fx_spark', 6, 6); g.destroy();
+        }
+    }
+    _emitter(key, x, y, cfg) {
+        const em = this.scene.add.particles(x, y, key, Object.assign({
+            lifespan: 600, speed: { min: 40, max: 120 }, scale: { start: 1, end: 0 }, alpha: { start: 1, end: 0 },
+            quantity: 4, emitting: false
+        }, cfg)).setDepth(8);
+        em.explode(cfg.quantity || 4);
+        this.scene.time.delayedCall((cfg.lifespan || 600) + 200, () => { try { em.destroy(); } catch {} });
     }
     bubbles(x, y) {
         if (this._fxCount >= this._fxMax) return;
         if (Math.random() > BALANCE.bubbleChance) return;
         this._fxCount++;
-        const s = ['🫧','💭','⭕'][Math.floor(Math.random() * 3)];
-        const t = this.scene.add.text(x, y, s, { fontSize: (25 + Math.random() * 20) + 'px' }).setOrigin(0.5).setDepth(8).setAlpha(0.85);
-        const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 50;
-        this.scene.tweens.add({ targets: t, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d - 50,
-            alpha: { from: 0.85, to: 0 }, scale: { from: 1, to: 1.6 },
-            duration: 700 + Math.random() * 300, ease: 'Cubic.easeOut',
-            onComplete: () => { this._fxCount--; t.destroy(); } });
+        this._emitter('fx_bubble', x, y, { quantity: 2, lifespan: 700, speed: { min: 30, max: 70 }, scale: { start: 0.9, end: 1.4 }, alpha: { start: 0.9, end: 0 } });
+        this._fxCount--;
     }
     splash(x, y) {
         if (this._fxCount >= this._fxMax) return;
         if (Math.random() > BALANCE.splashChance) return;
-        const n = 1 + Math.floor(Math.random() * 2);
-        for (let i = 0; i < n; i++) {
-            if (this._fxCount >= this._fxMax) return;
-            this._fxCount++;
-            const s = ['💧','💦','·','°'][Math.floor(Math.random() * 4)];
-            const t = this.scene.add.text(x, y, s, { fontSize: (20 + Math.random() * 25) + 'px' }).setOrigin(0.5).setDepth(8).setAlpha(0.9);
-            const a = Math.random() * Math.PI * 2, d = 40 + Math.random() * 70;
-            this.scene.tweens.add({ targets: t, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d,
-                alpha: { from: 0.9, to: 0 }, scale: { from: 1, to: 0.3 },
-                angle: { from: 0, to: (Math.random() - 0.5) * 360 },
-                duration: 500 + Math.random() * 300, ease: 'Cubic.easeOut',
-                onComplete: () => { this._fxCount--; t.destroy(); } });
-        }
+        this._fxCount++;
+        this._emitter('fx_drop', x, y, { quantity: 3, lifespan: 550, speed: { min: 50, max: 130 }, angle: { min: 0, max: 360 }, scale: { start: 1.1, end: 0.2 } });
+        this._fxCount--;
     }
     star(x, y) {
         if (this._fxCount >= this._fxMax) return;
         if (Math.random() > BALANCE.starChance) return;
         this._fxCount++;
-        const s = Math.random() > 0.5 ? '⭐' : '✨';
-        const t = this.scene.add.text(x, y, s, { fontSize: (20 + Math.random() * 15) + 'px' }).setOrigin(0.5).setDepth(5);
+        const t = this.scene.add.text(x, y, Math.random() > 0.5 ? '⭐' : '✨', { fontSize: (18 + Math.random() * 15) + 'px' }).setOrigin(0.5).setDepth(5);
         const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 60;
         this.scene.tweens.add({ targets: t, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d - 40,
             alpha: { from: 1, to: 0 }, scale: { from: 1, to: 0.3 },
@@ -1113,7 +1362,7 @@ class Effects {
     moneyPopup(x, y, amount, color = '#FFD700') {
         if (this._fxCount >= this._fxMax) return;
         this._fxCount++;
-        const t = this.scene.add.text(x, y, `+${amount}💰`, { fontSize: '28px', fill: color, fontStyle: 'bold', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(30);
+        const t = this.scene.add.text(x, y, `+${amount}💰`, { fontSize: '28px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(30);
         this.scene.tweens.add({ targets: t, y: y - 70, alpha: { from: 1, to: 0 }, scale: { from: 1, to: 1.4 }, duration: 900, ease: 'Cubic.easeOut',
             onComplete: () => { this._fxCount--; t.destroy(); } });
     }
@@ -1162,8 +1411,19 @@ class Effects {
                     duration: BALANCE.finishStarDuration * 0.6, ease: 'Cubic.easeIn', onComplete: () => t.destroy() }) });
         }
     }
+    // fаde-in контейнера (для UI-окон)
+    fadeIn(container, ms = 220) {
+        container.setAlpha(0);
+        this.scene.tweens.add({ targets: container, alpha: 1, duration: ms, ease: 'Cubic.easeOut' });
+    }
+    fadeOut(container, onDone, ms = 180) {
+        this.scene.tweens.add({ targets: container, alpha: 0, duration: ms, ease: 'Cubic.easeIn', onComplete: () => onDone && onDone() });
+    }
 }
-
+    <script>
+/* ============================================================
+   FINISH STARS (с glow)
+   ============================================================ */
 class FinishStarsSystem {
     constructor(scene, cleaning, state, effects) {
         this.scene = scene; this.cleaning = cleaning; this.state = state; this.effects = effects;
@@ -1205,13 +1465,24 @@ class FinishStarsSystem {
             let icon = '⭐';
             if (c.hasStain) icon = '🧴';
             else if (c.hasCrust) icon = '🧱';
+
+            // ✨ glow под кластером
+            const glow = this.scene.add.graphics().setDepth(23);
+            glow.fillStyle(0xFFD700, 0.35);
+            glow.fillCircle(c.x, c.y, 42);
+            glow.setAlpha(0);
+            this.scene.tweens.add({ targets: glow, alpha: { from: 0.15, to: 0.7 },
+                scaleX: { from: 0.85, to: 1.15 }, scaleY: { from: 0.85, to: 1.15 },
+                duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+
             const star = this.scene.add.text(c.x, c.y, icon, { fontSize: '44px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(24);
             star.setScale(0);
             this.scene.tweens.add({ targets: star, scale: 1, duration: 350, ease: 'Back.easeOut' });
             this.scene.tweens.add({ targets: star, scaleX: 1.15, scaleY: 1.15, duration: 700, yoyo: true, repeat: -1, delay: 350, ease: 'Sine.easeInOut' });
+
             const hit = this.scene.add.circle(c.x, c.y, 45, 0x000000, 0.001).setDepth(25).setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.popStar(c));
-            this.stars.push({ star, hit, cells: c.cells });
+            this.stars.push({ star, hit, glow, cells: c.cells });
         }
     }
     popStar(cluster) {
@@ -1223,14 +1494,12 @@ class FinishStarsSystem {
         this.cleaning.needRedrawCrust = true; this.cleaning.needRedrawStain = true;
         this.cleaning.recalcProgress();
         const reward = BALANCE.finishStarReward;
-        this.state.addMoney(reward);
-        this.state.registerStarPopped(1);
+        this.state.addMoney(reward); this.state.registerStarPopped(1);
         this.effects.moneyPopup(cluster.x, cluster.y, reward, '#FFD700');
         this.effects.starBurst(cluster.x, cluster.y, 4);
-        entry.star.disableInteractive();
-        entry.hit.disableInteractive();
-        this.scene.tweens.add({ targets: entry.star, scale: 2, alpha: 0, angle: 180, duration: 350, ease: 'Cubic.easeOut',
-            onComplete: () => entry.star.destroy() });
+        entry.star.disableInteractive(); entry.hit.disableInteractive();
+        this.scene.tweens.add({ targets: [entry.star, entry.glow], scale: 2, alpha: 0, angle: 180, duration: 350, ease: 'Cubic.easeOut',
+            onComplete: () => { entry.star.destroy(); try { entry.glow.destroy(); } catch {} } });
         entry.hit.destroy();
         const idx = this.stars.indexOf(entry);
         if (idx > -1) this.stars.splice(idx, 1);
@@ -1250,12 +1519,16 @@ class FinishStarsSystem {
         for (const s of this.stars) {
             if (s.star && s.star.active) s.star.destroy();
             if (s.hit && s.hit.active) s.hit.destroy();
+            if (s.glow && s.glow.active) s.glow.destroy();
         }
         this.stars = []; this.active = false;
     }
     get count() { return this.stars.length; }
 }
 
+/* ============================================================
+   CLEANING
+   ============================================================ */
 class CleaningSystem {
     constructor(scene, bounds, state) {
         this.scene = scene; this.bounds = bounds; this.state = state;
@@ -1325,12 +1598,8 @@ class CleaningSystem {
                         this.onCrustRemove?.(localX + this.originX, localY + this.originY);
                     }
                 } else if (tool === 'steam') {
-                    if (this.crust[i] > 0) { this.crust[i] = Math.max(0, this.crust[i] - falloff); crustChanged = true; }
-                    if (this.dirt[i] > 0.01) {
-                        this.dirt[i] = Math.max(0, this.dirt[i] - BALANCE.steamPower * falloff);
-                        if (this.dirt[i] < 0.01) this.dirt[i] = 0;
-                        dirtChanged = true; erased = true;
-                    }
+                    if (this.crust[i] > 0) { this.crust[i] = 0; crustChanged = true; }
+                    if (this.dirt[i] > 0) { this.dirt[i] = 0; dirtChanged = true; erased = true; }
                     if (this.stainType[i] > 0) { this.stainType[i] = 0; stainChanged = true; this.onStainRemove?.(localX + this.originX, localY + this.originY); }
                 } else if (tool === 'remover') {
                     if (this.stainType[i] > 0) {
@@ -1488,6 +1757,9 @@ class CleaningSystem {
     }
 }
 
+/* ============================================================
+   BUGS
+   ============================================================ */
 class BugSystem {
     constructor(scene, bounds, state, opts = {}) {
         this.scene = scene; this.bounds = bounds; this.state = state;
@@ -1581,6 +1853,9 @@ class BugSystem {
     }
 }
 
+/* ============================================================
+   ROOM
+   ============================================================ */
 class RoomRenderer {
     constructor(scene) {
         this.scene = scene;
@@ -1669,24 +1944,41 @@ class RoomRenderer {
     }
 }
 
+/* ============================================================
+   PETS
+   ============================================================ */
 class PetSystem {
     constructor(scene, cleaning, bugs, effects, state) {
         this.scene = scene; this.cleaning = cleaning; this.bugs = bugs; this.effects = effects; this.state = state;
         this.timers = { cat: 0, dog: 0, hamster: 0 };
-        this.icons = [];
+        this.icons = []; this.iconsBg = null;
         this.createIndicators();
     }
     createIndicators() {
         const order = ['cat', 'dog', 'hamster', 'parrot'];
-        order.forEach((id, i) => {
-            if (!this.state.pets[id].owned) return;
+        const ownedPets = order.filter(id => this.state.pets[id].owned);
+        if (ownedPets.length === 0) return;
+        const rowH = 55, padTop = 20, padBottom = 20;
+        const boxH = ownedPets.length * rowH + padTop + padBottom - 20;
+        const firstIconY = 240, lastIconY = 240 + (ownedPets.length - 1) * rowH;
+        const centerY = (firstIconY + lastIconY) / 2;
+        this.iconsBg = this.scene.add.rectangle(670, centerY, 120, boxH, 0x000000, 0.75)
+            .setDepth(9).setStrokeStyle(3, 0x4A90D9, 0.8);
+        ownedPets.forEach((id, i) => {
             const pet = PETS.find(p => p.id === id);
             const lvl = this.state.pets[id].level;
-            const icon = this.scene.add.text(670, 240 + i * 55, pet.icon + ` ${lvl}`, { fontSize: '24px' }).setOrigin(0.5).setDepth(10).setAlpha(0.85);
+            const icon = this.scene.add.text(670, 240 + i * rowH, pet.icon + ' ' + lvl, {
+                fontSize: '26px', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 5
+            }).setOrigin(0.5).setDepth(10);
             this.icons.push({ id, icon });
         });
     }
-    refreshIndicators() { this.icons.forEach(i => i.icon.destroy()); this.icons = []; this.createIndicators(); }
+    refreshIndicators() {
+        this.icons.forEach(i => i.icon.destroy());
+        this.icons = [];
+        if (this.iconsBg) { this.iconsBg.destroy(); this.iconsBg = null; }
+        this.createIndicators();
+    }
     update(delta) {
         if (this.state.pets.cat.owned) { this.timers.cat += delta; if (this.timers.cat >= this.state.getCatInterval()) { this.timers.cat = 0; this.catAction(); } }
         if (this.state.pets.dog.owned) { this.timers.dog += delta; if (this.timers.dog >= this.state.getDogInterval()) { this.timers.dog = 0; this.dogAction(); } }
@@ -1700,8 +1992,7 @@ class PetSystem {
         while (cleaned < count && tries++ < 60) {
             const i = Math.floor(Math.random() * cells);
             if (dirt[i] > 0.05) {
-                dirt[i] = 0;
-                cleaned++;
+                dirt[i] = 0; cleaned++;
                 const col = i % this.cleaning.cols;
                 const row = Math.floor(i / this.cleaning.cols);
                 lastPos = { x: this.cleaning.originX + col * this.cleaning.cellSize + this.cleaning.cellSize / 2,
@@ -1739,10 +2030,9 @@ class PetSystem {
         if (this.scene.refreshHUD) this.scene.refreshHUD();
     }
 }
-</script>
-<script>
+
 /* ============================================================
-   ОБУЧАЛКА
+   TUTORIAL
    ============================================================ */
 class CarpetTutorial {
     constructor(scene, carpetIndex) {
@@ -1764,23 +2054,23 @@ class CarpetTutorial {
         const border = s.add.rectangle(W/2, 310, W, 6, 0xFFD700, 1).setDepth(151);
         this.elements.push(border);
         const stepNum = s.add.text(20, 105, t('carpetGrad', this.carpetIndex, this.stepIndex + 1, this.steps.length), {
-            fontSize: '16px', fill: '#AAAAAA', fontStyle: 'bold', fontFamily: 'Arial'
+            fontSize: '16px', fill: '#AAAAAA', fontStyle: 'bold', fontFamily: FONT_HAND
         }).setOrigin(0, 0.5).setDepth(152);
         this.elements.push(stepNum);
         const skipBtn = s.add.text(W - 15, 105, t('skip'), {
-            fontSize: '16px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
+            fontSize: '16px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND,
             backgroundColor: '#660000', padding: { x: 12, y: 8 }
         }).setOrigin(1, 0.5).setDepth(153).setInteractive({ useHandCursor: true });
         skipBtn.on('pointerdown', () => this.skip());
         this.elements.push(skipBtn);
         const text = s.add.text(W/2, 200, loc(step.text), {
-            fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
+            fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND,
             align: 'center', lineSpacing: 6, wordWrap: { width: 660 }
         }).setOrigin(0.5).setDepth(152);
         this.elements.push(text);
         if (step.check !== 'auto' && step.need > 0) {
             const progress = s.add.text(W/2, 270, t('progress', 0, step.need), {
-                fontSize: '20px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 4
+                fontSize: '20px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4
             }).setOrigin(0.5).setDepth(152);
             this.elements.push(progress); this.progressText = progress;
         }
@@ -1798,7 +2088,7 @@ class CarpetTutorial {
             if (!this._forceSkipBtn || !this._forceSkipBtn.active) {
                 const s = this.scene;
                 this._forceSkipBtn = s.add.text(360, 340, t('skipStep'), {
-                    fontSize: '16px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial',
+                    fontSize: '16px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND,
                     backgroundColor: '#660000', padding: { x: 14, y: 10 }
                 }).setOrigin(0.5).setDepth(154).setInteractive({ useHandCursor: true });
                 this._forceSkipBtn.on('pointerdown', () => {
@@ -1829,7 +2119,7 @@ class CarpetTutorial {
         if (!step || step.check !== 'auto') return;
         if (this._autoBtn && this._autoBtn.active) return;
         this._autoBtn = s.add.text(W/2, 265, t('next'), {
-            fontSize: '20px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial',
+            fontSize: '20px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND,
             backgroundColor: '#FFD700', padding: { x: 30, y: 12 }
         }).setOrigin(0.5).setDepth(153).setInteractive({ useHandCursor: true });
         this._autoBtn.on('pointerdown', () => {
@@ -1858,24 +2148,50 @@ class CarpetTutorial {
     }
 }
 </script>
+
 <script>
 /* ============================================================
-   UI — Магазин
+   HELPER: fade-UI
+   ============================================================ */
+class FadeGroup {
+    constructor(scene) { this.scene = scene; this.elements = []; this.isOpen = false; this._closing = false; }
+    push(el) { this.elements.push(el); return el; }
+    openFade() { this._closing = false; this.elements.forEach(e => { if (e.setAlpha) e.setAlpha(0); });
+        this.scene.tweens.add({ targets: this.elements.filter(e => e.setAlpha), alpha: 1, duration: 200, ease: 'Cubic.easeOut' }); }
+    closeFade(onDone) {
+        if (this._closing) return;
+        this._closing = true;
+        const alive = this.elements.filter(e => e && e.active);
+        if (alive.length === 0) { this._destroyAll(); onDone && onDone(); return; }
+        this.scene.tweens.add({ targets: alive.filter(e => e.setAlpha), alpha: 0, duration: 160, ease: 'Cubic.easeIn',
+            onComplete: () => { this._destroyAll(); this._closing = false; onDone && onDone(); } });
+    }
+    _destroyAll() { this.elements.forEach(e => { try { e.destroy(); } catch {} }); this.elements = []; }
+}
+
+/* ============================================================
+   SHOP UI
    ============================================================ */
 class ShopUI {
     constructor(scene, state, ads) {
         this.scene = scene; this.state = state; this.ads = ads;
-        this.elements = []; this.isOpen = false; this.activeTab = 'upgrades';
+        this.group = new FadeGroup(scene); this.isOpen = false; this.activeTab = 'upgrades';
         this.onBuyCarpet = null; this.onChanged = null; this.onMessage = null;
         this.onPrestige = null; this.onSkinChange = null; this.onPetBought = null;
         this.onLegacyBuy = null; this.onOpen = null; this.onClose = null;
     }
+    get elements() { return this.group.elements; }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
-    close() { if (!this.isOpen) return; this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; this.onClose?.(); }
-    refresh() { if (!this.isOpen) return; this.close(); this.open(); }
+    close() {
+        if (!this.isOpen) return;
+        this.isOpen = false;
+        const done = () => this.onClose?.();
+        this.group.closeFade(done);
+    }
+    refresh() { if (!this.isOpen) return; this.group._destroyAll(); this.render(); }
     render() {
         const s = this.scene, W = 720, H = 1280;
-        const push = (el) => { this.elements.push(el); return el; };
+        const push = (el) => this.group.push(el);
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.9).setDepth(40)); ov.setInteractive();
         push(s.add.rectangle(W/2, H/2, 680, 1180, 0x2a2a2a).setDepth(41).setStrokeStyle(5, 0xFFD700));
         push(s.add.text(W/2, 100, '🛒 ' + t('shop'), TEXT_STYLES.title()).setOrigin(0.5).setDepth(42));
@@ -1885,9 +2201,10 @@ class ShopUI {
         else if (this.activeTab === 'pets') this._renderPets(push);
         else if (this.activeTab === 'legacy') this._renderLegacy(push);
         else if (this.activeTab === 'prestige') this._renderPrestige(push);
-        push(s.add.text(630, 100, '✖', {
-            fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6
-        }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
+        const closeHit = push(s.add.text(630, 100, '✖', { fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
+            .setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }));
+        closeHit.on('pointerdown', () => this.close());
+        this.group.openFade();
     }
     _renderTabs(push) {
         const s = this.scene, st = this.state;
@@ -1902,57 +2219,53 @@ class ShopUI {
         const totalW = tabs.length * tabW + (tabs.length - 1) * 6;
         const startX = 360 - totalW / 2 + tabW / 2;
         tabs.forEach((tab, i) => {
-            const x = startX + i * (tabW + 6);
-            const y = 175;
+            const x = startX + i * (tabW + 6), y = 175;
             const active = this.activeTab === tab.id;
-            push(s.add.rectangle(x, y, tabW, tabH, active ? 0xFFD700 : 0x444444).setDepth(41).setStrokeStyle(3, active ? 0xFFFFFF : 0x666666)
-                .setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.activeTab = tab.id; this.refresh(); }));
-            push(s.add.text(x, y, tab.label, { fontSize: '24px', fill: active ? '#000000' : '#CCCCCC', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(42));
+            const pill = makePill(s, x, y, tabW, tabH, { radius: 18, fill: active ? 0xFFD700 : 0x444444, stroke: active ? 0xFFFFFF : 0x666666, strokeW: 3, depth: 41 });
+            push(pill.cont);
+            pill.hit.on('pointerdown', () => { pill.tap(); this.activeTab = tab.id; this.refresh(); });
+            push(s.add.text(x, y, tab.label, { fontSize: '24px', fill: active ? '#000000' : '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
         });
     }
     _renderUpgrades(push) {
         const s = this.scene, st = this.state;
         const item = (y, sublabel, price, onBuy, opts = {}) => {
             const canBuy = st.money >= price && !opts.disabled;
-            const color = opts.disabled ? 0x333333 : (canBuy ? 0x444444 : 0x2a2a2a);
-            const borderColor = opts.disabled ? 0x555555 : (canBuy ? 0x00FF00 : 0x666666);
-            push(s.add.rectangle(360, y, 620, 56, color).setDepth(41).setStrokeStyle(2, borderColor, 0.6));
-            push(s.add.text(70, y, sublabel, { fontSize: '14px', fill: opts.disabled ? '#888888' : '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0, 0.5).setDepth(42));
+            const fill = opts.disabled ? 0x2a2a2a : (canBuy ? 0x3a4a3a : 0x2a2a2a);
+            const stroke = opts.disabled ? 0x555555 : (canBuy ? 0x00FF00 : 0x666666);
+            const pill = makePill(s, 360, y, 620, 56, { radius: 20, fill, stroke, strokeW: 2, depth: 41 });
+            push(pill.cont);
+            push(s.add.text(70, y, sublabel, { fontSize: '14px', fill: opts.disabled ? '#888888' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
             const priceStr = opts.priceLabel || `${price}💰`;
-            push(s.add.text(630, y, priceStr, { fontSize: '18px', fill: opts.disabled ? '#666666' : (canBuy ? '#00FF00' : '#FF6666'), fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(1, 0.5).setDepth(42));
-            const hit = push(s.add.rectangle(360, y, 620, 56, 0x000000, 0.001).setDepth(43));
-            hit.setInteractive({ useHandCursor: true });
-            hit.on('pointerdown', async () => {
+            push(s.add.text(630, y, priceStr, { fontSize: '18px', fill: opts.disabled ? '#666666' : (canBuy ? '#00FF00' : '#FF6666'), fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+            pill.hit.on('pointerdown', async () => {
+                pill.tap();
                 if (opts.disabled) return;
-                if (canBuy) { onBuy(); } else { await this._offerAd(push, price - st.money); }
+                if (canBuy) { await onBuy(); } else { await this._offerAd(push, price - st.money); }
             });
         };
         let y = 240;
-        item(y, `🍞 ${t('buyFood')} (+1)`, BALANCE.foodPrice, async () => { st.buyFood(); await this._afterBuy(); });
-        y += 62;
+        item(y, `🍞 ${t('buyFood')} (+1)`, BALANCE.foodPrice, async () => { st.buyFood(); await this._afterBuy(); }); y += 62;
         const bulkPrice = Math.floor(BALANCE.foodPrice * BALANCE.foodBulkCount * BALANCE.foodBulkDiscount);
-        item(y, `🍞 ${t('foodBulk', BALANCE.foodBulkCount)}`, bulkPrice, async () => { st.buyFoodBulk(); await this._afterBuy(); });
-        y += 62;
+        item(y, `🍞 ${t('foodBulk', BALANCE.foodBulkCount)}`, bulkPrice, async () => { st.buyFoodBulk(); await this._afterBuy(); }); y += 62;
         item(y, st.autoFoodEnabled ? `✅ ${t('autoFoodOn')}` : `🍞 ${t('autoFood')} (${st.getAutoFoodPrice()}💰)`, st.getAutoFoodPrice(),
-            async () => { st.buyAutoFood(); await this._afterBuy(); }, { disabled: st.autoFoodEnabled });
-        y += 62;
+            async () => { st.buyAutoFood(); await this._afterBuy(); }, { disabled: st.autoFoodEnabled }); y += 62;
         const curR = st.getCurrentRadius();
         const nextR = Math.floor(BALANCE.brushRadius * (1 + st.toolLevel * BALANCE.toolRadiusBonus)) + (st.legacyUpgrades.brush_master || 0) * 5;
         const curM = Math.round(st.getToolMoneyMultiplier() * 100);
         const nextM = Math.round((1 + st.toolLevel * BALANCE.toolMoneyBonus) * 100);
         item(y, `🧹 ${t('brush')} ${st.toolLevel}  ${curR}→${nextR}  ${curM}%→${nextM}%💰`, st.getToolUpgradePrice(),
-            async () => { st.upgradeTool(); await this._afterBuy(); });
-        y += 62;
-        const curSoap = (st.getSoapPower() * 100).toFixed(0);
-        const nextSoap = ((st.getSoapPower() + BALANCE.soapPower * 0.40) * 100).toFixed(0);
-        item(y, `🧼 ${t('soap2')} ${st.soapLevel}  ${curSoap}%→${nextSoap}%`, st.getSoapUpgradePrice(),
-            async () => { st.upgradeSoap(); await this._afterBuy(); });
-        y += 62;
-        const curWash = (st.getWashStrength() * 100).toFixed(0);
-        const nextWash = ((st.getWashStrength() + BALANCE.washStrength * 0.35) * 100).toFixed(0);
-        item(y, `💧 ${t('wash2')} ${st.washLevel}  ${curWash}%→${nextWash}%`, st.getWashUpgradePrice(),
-            async () => { st.upgradeWash(); await this._afterBuy(); });
-        y += 62;
+            async () => { st.upgradeTool(); await this._afterBuy(); }); y += 62;
+        if (st.carpetIndex <= 3) {
+            const curSoap = (st.getSoapPower() * 100).toFixed(0);
+            const nextSoap = ((st.getSoapPower() + BALANCE.soapPower * 0.40) * 100).toFixed(0);
+            item(y, `🧼 ${t('soap2')} ${st.soapLevel}  ${curSoap}%→${nextSoap}%`, st.getSoapUpgradePrice(),
+                async () => { st.upgradeSoap(); await this._afterBuy(); }); y += 62;
+            const curWash = (st.getWashStrength() * 100).toFixed(0);
+            const nextWash = ((st.getWashStrength() + BALANCE.washStrength * 0.35) * 100).toFixed(0);
+            item(y, `💧 ${t('wash2')} ${st.washLevel}  ${curWash}%→${nextWash}%`, st.getWashUpgradePrice(),
+                async () => { st.upgradeWash(); await this._afterBuy(); }); y += 62;
+        }
         if (st.carpetIndex >= 2) {
             const curCd = st.getSwatterCooldown();
             const nextCd = Math.max(BALANCE.swatterCooldownMin, BALANCE.swatterCooldown - (st.swatterLevel + 1) * BALANCE.swatterCooldownStep);
@@ -1961,8 +2274,7 @@ class ShopUI {
             const curBonus = st.getSwatterRewardBonus();
             const nextBonus = curBonus + BALANCE.swatterBonusPerLevel;
             item(y, `🪰 ${t('swatter2')} ${st.swatterLevel}  ${curCd}→${nextCd}мс  ${curRad}→${nextRad}  +${curBonus}→+${nextBonus}💰`,
-                st.getSwatterUpgradePrice(), async () => { st.upgradeSwatter(); await this._afterBuy(); });
-            y += 62;
+                st.getSwatterUpgradePrice(), async () => { st.upgradeSwatter(); await this._afterBuy(); }); y += 62;
             if (st.doubleBugReward) {
                 item(y, `💰 ${t('doubleBugOn')}`, 0, () => {}, { disabled: true, priceLabel: '✅' });
             } else {
@@ -1971,8 +2283,7 @@ class ShopUI {
             }
             y += 62;
         }
-        this._renderAdBlock(push, y);
-        y += 90;
+        this._renderAdBlock(push, y); y += 90;
         this._renderNewCarpetSection(push, y);
     }
     _renderAdBlock(push, y) {
@@ -1980,19 +2291,17 @@ class ShopUI {
         const cooldown = this.ads.getCooldownRemaining();
         const available = cooldown <= 0;
         const label = available ? t('adWatch', BALANCE.adRewardMoney) : t('adWait', Math.ceil(cooldown / 1000));
-        push(s.add.rectangle(360, y, 620, 60, available ? 0x4a3a10 : 0x2a2a2a).setDepth(41).setStrokeStyle(3, available ? 0xFFD700 : 0x666666, 0.8));
-        push(s.add.text(360, y, label, { fontSize: '15px', fill: available ? '#FFD700' : '#888888', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(42));
-        if (available) {
-            push(s.add.rectangle(360, y, 620, 60, 0x000000, 0.001).setDepth(43)).setInteractive({ useHandCursor: true })
-                .on('pointerdown', async () => { await this._showAdAndRefresh(); });
-        }
+        const pill = makePill(s, 360, y, 620, 60, { radius: 20, fill: available ? 0x4a3a10 : 0x2a2a2a, stroke: available ? 0xFFD700 : 0x666666, strokeW: 3, depth: 41 });
+        push(pill.cont);
+        push(s.add.text(360, y, label, { fontSize: '15px', fill: available ? '#FFD700' : '#888888', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+        if (available) pill.hit.on('pointerdown', async () => { pill.tap(); await this._showAdAndRefresh(); });
     }
     _renderNewCarpetSection(push, y) {
         const s = this.scene, st = this.state;
         const hasNext = st.carpetIndex < BALANCE.totalCarpets;
         if (!hasNext) {
             push(s.add.rectangle(360, y, 620, 70, 0x2a2010).setDepth(41).setStrokeStyle(3, 0xFFD700, 0.8));
-            push(s.add.text(360, y, '🏆 ' + t('allCarpets'), { fontSize: '20px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(360, y, '🏆 ' + t('allCarpets'), { fontSize: '20px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
             return;
         }
         const price = st.getNewCarpetPrice();
@@ -2000,56 +2309,40 @@ class ShopUI {
         const curR = st.getCurrentRadius();
         const radiusOk = curR >= reqR, moneyOk = st.money >= price;
         const canBuy = radiusOk && moneyOk;
-        let label, bg, border, textColor, hint;
-        if (canBuy) {
-            bg = 0x205020; border = 0x00FF00; textColor = '#00FF00';
-            label = t('buyNewCarpet', st.carpetIndex + 1, price);
-            hint = t('clickToBuy');
-        } else if (!radiusOk) {
-            bg = 0x2a1010; border = 0xFF6666; textColor = '#FF8888';
-            label = t('needRadius', reqR, curR);
-            hint = t('upgradeBrush');
-        } else {
-            bg = 0x2a2010; border = 0xFFD700; textColor = '#FFD700';
-            label = t('needMoney', st.carpetIndex + 1, price, st.money);
-            hint = t('noMoneyHint');
-        }
-        push(s.add.rectangle(360, y, 620, 80, bg).setDepth(41).setStrokeStyle(3, border, 0.8));
-        push(s.add.text(360, y - 14, label, { fontSize: '17px', fill: textColor, fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(42));
-        push(s.add.text(360, y + 14, hint, { fontSize: '12px', fill: '#AAAAAA', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(42));
-        if (canBuy) {
-            push(s.add.rectangle(360, y, 620, 80, 0x000000, 0.001).setDepth(43)).setInteractive({ useHandCursor: true })
-                .on('pointerdown', async () => { await this.onBuyCarpet?.(); this.close(); });
-        }
+        let label, fill, stroke, textColor, hint;
+        if (canBuy) { fill = 0x205020; stroke = 0x00FF00; textColor = '#00FF00'; label = t('buyNewCarpet', st.carpetIndex + 1, price); hint = t('clickToBuy'); }
+        else if (!radiusOk) { fill = 0x2a1010; stroke = 0xFF6666; textColor = '#FF8888'; label = t('needRadius', reqR, curR); hint = t('upgradeBrush'); }
+        else { fill = 0x2a2010; stroke = 0xFFD700; textColor = '#FFD700'; label = t('needMoney', st.carpetIndex + 1, price, st.money); hint = t('noMoneyHint'); }
+        const pill = makePill(s, 360, y, 620, 80, { radius: 22, fill, stroke, strokeW: 3, depth: 41 });
+        push(pill.cont);
+        push(s.add.text(360, y - 14, label, { fontSize: '17px', fill: textColor, fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, y + 14, hint, { fontSize: '12px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+        if (canBuy) pill.hit.on('pointerdown', async () => { pill.tap(); await this.onBuyCarpet?.(); this.close(); });
     }
     async _offerAd(push, missing) {
         const s = this.scene;
-        const ov = s.add.rectangle(360, 640, 720, 1280, 0x000000, 0.7).setDepth(50); ov.setInteractive();
-        const box = s.add.rectangle(360, 640, 560, 380, 0x1a1a1a).setDepth(51).setStrokeStyle(4, 0xFFD700);
-        const txt = s.add.text(360, 540, LANG === 'ru'
+        const el = [];
+        const ov = s.add.rectangle(360, 640, 720, 1280, 0x000000, 0.7).setDepth(50); ov.setInteractive(); el.push(ov);
+        el.push(s.add.rectangle(360, 640, 560, 380, 0x1a1a1a).setDepth(51).setStrokeStyle(4, 0xFFD700));
+        el.push(s.add.text(360, 540, LANG === 'ru'
             ? `Не хватает ${missing}💰\n\nПосмотреть рекламу\nи получить +${BALANCE.adRewardMoney}💰?`
             : `Missing ${missing}💰\n\nWatch ad\nfor +${BALANCE.adRewardMoney}💰?`,
-            { ...TEXT_STYLES.shopInfo('#FFFFFF', 22), align: 'center' }).setOrigin(0.5).setDepth(52);
+            { ...TEXT_STYLES.shopInfo('#FFFFFF', 22), align: 'center' }).setOrigin(0.5).setDepth(52));
         const yes = s.add.text(260, 700, LANG === 'ru' ? '📺 СМОТРЕТЬ' : '📺 WATCH', {
-            fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial', backgroundColor: '#FFD700', padding: { x: 25, y: 12 }
+            fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(52).setInteractive({ useHandCursor: true });
         const no = s.add.text(460, 700, LANG === 'ru' ? '❌ ОТМЕНА' : '❌ CANCEL', {
-            fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial', backgroundColor: '#444444', padding: { x: 25, y: 12 }
+            fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#444444', padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(52).setInteractive({ useHandCursor: true });
-        const cleanup = () => { ov.destroy(); box.destroy(); txt.destroy(); yes.destroy(); no.destroy(); };
+        el.push(yes, no);
+        const cleanup = () => { el.forEach(e => { try { e.destroy(); } catch {} }); };
         no.on('pointerdown', () => cleanup());
         yes.on('pointerdown', async () => { cleanup(); await this._showAdAndRefresh(); });
     }
     async _showAdAndRefresh() {
         const ok = await this.ads.showRewarded();
-        if (ok) {
-            this.state.addMoney(BALANCE.adRewardMoney);
-            await this.onChanged?.();
-            this.onMessage?.(t('adReward', BALANCE.adRewardMoney));
-            this.refresh();
-        } else {
-            this.onMessage?.(t('adUnavailable'));
-        }
+        if (ok) { this.state.addMoney(BALANCE.adRewardMoney); await this.onChanged?.(); this.onMessage?.(t('adReward', BALANCE.adRewardMoney)); this.refresh(); }
+        else this.onMessage?.(t('adUnavailable'));
     }
     async _afterBuy() { await this.onChanged?.(); this.refresh(); }
     _renderSkins(push) {
@@ -2068,32 +2361,22 @@ class ShopUI {
             const x = startX + i * (cardW + gap), y = startY + cardH / 2;
             const unlocked = kind === 'room' ? st.unlockedRooms.includes(skin.id) : st.unlockedBrushes.includes(skin.id);
             const selected = kind === 'room' ? st.selectedRoom === skin.id : st.selectedBrush === skin.id;
-            const bg = selected ? 0x2a5020 : (unlocked ? 0x2a2a2a : 0x1a1a1a);
-            const border = selected ? 0x00FF00 : (unlocked ? 0x888888 : 0x444444);
-            push(s.add.rectangle(x, y, cardW, cardH, bg).setDepth(41).setStrokeStyle(selected ? 4 : 2, border, 0.8));
+            const fill = selected ? 0x2a5020 : (unlocked ? 0x2a2a2a : 0x1a1a1a);
+            const stroke = selected ? 0x00FF00 : (unlocked ? 0x888888 : 0x444444);
+            const pill = makePill(s, x, y, cardW, cardH, { radius: 16, fill, stroke, strokeW: selected ? 4 : 2, depth: 41 });
+            push(pill.cont);
             push(s.add.text(x, y - 30, skin.icon, { fontSize: '46px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(x, y + 15, loc(skin.name), {
-                fontSize: '13px', fill: unlocked ? '#FFFFFF' : '#888888', fontStyle: 'bold', fontFamily: 'Arial'
-            }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(x, y + 15, loc(skin.name), { fontSize: '13px', fill: unlocked ? '#FFFFFF' : '#888888', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
             const priceY = y + 45;
-            if (selected) {
-                push(s.add.text(x, priceY, t('selected'), { fontSize: '12px', fill: '#00FF00', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(42));
-            } else if (unlocked) {
-                push(s.add.text(x, priceY, t('select'), { fontSize: '12px', fill: '#00E5FF', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(42));
-            } else {
-                push(s.add.text(x, priceY, `${skin.price}💰`, { fontSize: '14px', fill: st.money >= skin.price ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(42));
-            }
-            const hit = push(s.add.rectangle(x, y, cardW, cardH, 0x000000, 0.001).setDepth(43));
-            hit.setInteractive({ useHandCursor: true });
-            hit.on('pointerdown', async () => {
+            if (selected) push(s.add.text(x, priceY, t('selected'), { fontSize: '12px', fill: '#00FF00', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+            else if (unlocked) push(s.add.text(x, priceY, t('select'), { fontSize: '12px', fill: '#00E5FF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+            else push(s.add.text(x, priceY, `${skin.price}💰`, { fontSize: '14px', fill: st.money >= skin.price ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+            pill.hit.on('pointerdown', async () => {
+                pill.tap();
                 if (selected) return;
-                if (unlocked) {
-                    if (kind === 'room') st.selectRoomSkin(skin.id); else st.selectBrushSkin(skin.id);
-                    await this._afterBuy(); this.onSkinChange?.(kind);
-                } else if (st.money >= skin.price) {
-                    if (kind === 'room') st.buyRoomSkin(skin.id); else st.buyBrushSkin(skin.id);
-                    await this._afterBuy(); this.onMessage?.(t('bought', loc(skin.name)));
-                } else await this._offerAd(push, skin.price - st.money);
+                if (unlocked) { if (kind === 'room') st.selectRoomSkin(skin.id); else st.selectBrushSkin(skin.id); await this._afterBuy(); this.onSkinChange?.(kind); }
+                else if (st.money >= skin.price) { if (kind === 'room') st.buyRoomSkin(skin.id); else st.buyBrushSkin(skin.id); await this._afterBuy(); this.onMessage?.(t('bought', loc(skin.name))); }
+                else await this._offerAd(push, skin.price - st.money);
             });
         });
     }
@@ -2109,61 +2392,34 @@ class ShopUI {
             const upgradeCost = st.getPetUpgradeCost(pet.id);
             const canUpgrade = st.canUpgradePet(pet.id);
             const canBuy = st.money >= pet.price;
-            push(s.add.rectangle(360, y, 620, 105, owned ? 0x2a4020 : 0x252525).setDepth(41).setStrokeStyle(3, owned ? 0x00FF00 : 0x666666, 0.7));
+            const pill = makePill(s, 360, y, 620, 105, { radius: 22, fill: owned ? 0x2a4020 : 0x252525, stroke: owned ? 0x00FF00 : 0x666666, strokeW: 3, depth: 41 });
+            push(pill.cont);
             push(s.add.text(75, y, pet.icon, { fontSize: '50px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(120, y - 30, loc(pet.name) + (owned ? `  ${level}` : ''), {
-                fontSize: '20px', fill: owned ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial'
-            }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(120, y - 30, loc(pet.name) + (owned ? `  ${level}` : ''), { fontSize: '20px', fill: owned ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
             let desc = '';
             if (!owned) desc = loc(pet.desc);
             else if (maxed) desc = t('maxed');
-            else if (pet.id === 'cat') {
-                const cells = Math.round(st.getCatCellsPerAction());
-                const nextCells = Math.round(BALANCE.petCatCountBase + level * BALANCE.petCatCountPerLevel);
-                const interval = (st.getCatInterval() / 1000).toFixed(1);
-                desc = `${cells} / ${interval}s  →  ${nextCells}`;
-            } else if (pet.id === 'dog') {
-                const bugs = Math.round(st.getDogBugsPerAction());
-                const nextBugs = Math.round(BALANCE.petDogCountBase + level * BALANCE.petDogCountPerLevel);
-                const interval = (st.getDogInterval() / 1000).toFixed(1);
-                desc = `${bugs} / ${interval}s  →  ${nextBugs}`;
-            } else if (pet.id === 'hamster') {
-                const food = Math.round(st.getHamsterFoodPerAction());
-                const nextFood = Math.round(BALANCE.petHamsterCountBase + level * BALANCE.petHamsterCountPerLevel);
-                const interval = (st.getHamsterInterval() / 1000).toFixed(1);
-                desc = `+${food}🍞 / ${interval}s  →  +${nextFood}`;
-            } else if (pet.id === 'parrot') {
-                const cur = Math.round(st.getParrotBonus() * 100);
-                const next = Math.round((st.getParrotBonus() + BALANCE.petParrotBonusPerLevel) * 100);
-                desc = `+${cur}%💰  →  +${next}%💰`;
-            }
-            push(s.add.text(120, y + 8, desc, { fontSize: '12px', fill: '#AAAAAA', fontFamily: 'Arial' }).setOrigin(0, 0.5).setDepth(42));
+            else if (pet.id === 'cat') { const cells = Math.round(st.getCatCellsPerAction()); const nextCells = Math.round(BALANCE.petCatCountBase + level * BALANCE.petCatCountPerLevel); const interval = (st.getCatInterval() / 1000).toFixed(1); desc = `${cells} / ${interval}s  →  ${nextCells}`; }
+            else if (pet.id === 'dog') { const bugs = Math.round(st.getDogBugsPerAction()); const nextBugs = Math.round(BALANCE.petDogCountBase + level * BALANCE.petDogCountPerLevel); const interval = (st.getDogInterval() / 1000).toFixed(1); desc = `${bugs} / ${interval}s  →  ${nextBugs}`; }
+            else if (pet.id === 'hamster') { const food = Math.round(st.getHamsterFoodPerAction()); const nextFood = Math.round(BALANCE.petHamsterCountBase + level * BALANCE.petHamsterCountPerLevel); const interval = (st.getHamsterInterval() / 1000).toFixed(1); desc = `+${food}🍞 / ${interval}s  →  +${nextFood}`; }
+            else if (pet.id === 'parrot') { const cur = Math.round(st.getParrotBonus() * 100); const next = Math.round((st.getParrotBonus() + BALANCE.petParrotBonusPerLevel) * 100); desc = `+${cur}%💰  →  +${next}%💰`; }
+            push(s.add.text(120, y + 8, desc, { fontSize: '12px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
             if (!owned) {
-                push(s.add.text(600, y, `${pet.price}💰`, { fontSize: '22px', fill: canBuy ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(1, 0.5).setDepth(42));
-                const hit = push(s.add.rectangle(360, y, 620, 105, 0x000000, 0.001).setDepth(43));
-                hit.setInteractive({ useHandCursor: true });
-                hit.on('pointerdown', async () => {
-                    if (canBuy) {
-                        if (st.buyPet(pet.id)) {
-                            await this._afterBuy();
-                            this.onMessage?.(t('bought', loc(pet.name)));
-                            this.onPetBought?.(pet.id);
-                        }
-                    } else await this._offerAd(push, pet.price - st.money);
+                push(s.add.text(600, y, `${pet.price}💰`, { fontSize: '22px', fill: canBuy ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+                pill.hit.on('pointerdown', async () => {
+                    pill.tap();
+                    if (canBuy) { if (st.buyPet(pet.id)) { await this._afterBuy(); this.onMessage?.(t('bought', loc(pet.name))); this.onPetBought?.(pet.id); } }
+                    else await this._offerAd(push, pet.price - st.money);
                 });
             } else if (maxed) {
-                push(s.add.text(600, y, t('max'), { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(1, 0.5).setDepth(42));
+                push(s.add.text(600, y, t('max'), { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
             } else {
-                push(s.add.text(600, y - 15, `🍞 ${upgradeCost}`, { fontSize: '20px', fill: canUpgrade ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(1, 0.5).setDepth(42));
-                push(s.add.text(600, y + 15, t('lvlUp'), { fontSize: '13px', fill: '#00E5FF', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(1, 0.5).setDepth(42));
-                const hit = push(s.add.rectangle(360, y, 620, 105, 0x000000, 0.001).setDepth(43));
-                hit.setInteractive({ useHandCursor: true });
-                hit.on('pointerdown', async () => {
-                    if (st.upgradePet(pet.id)) {
-                        await this._afterBuy();
-                        this.onMessage?.(t('bought', loc(pet.name)));
-                        this.onPetBought?.(pet.id);
-                    } else this.onMessage?.(t('notEnoughFood', upgradeCost));
+                push(s.add.text(600, y - 15, `🍞 ${upgradeCost}`, { fontSize: '20px', fill: canUpgrade ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+                push(s.add.text(600, y + 15, t('lvlUp'), { fontSize: '13px', fill: '#00E5FF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+                pill.hit.on('pointerdown', async () => {
+                    pill.tap();
+                    if (st.upgradePet(pet.id)) { await this._afterBuy(); this.onMessage?.(t('bought', loc(pet.name))); this.onPetBought?.(pet.id); }
+                    else this.onMessage?.(t('notEnoughFood', upgradeCost));
                 });
             }
         });
@@ -2178,19 +2434,16 @@ class ShopUI {
             const maxed = lvl >= up.maxLevel;
             const cost = st.getLegacyUpgradeCost(up.id);
             const canBuy = st.canBuyLegacy(up.id);
-            push(s.add.rectangle(360, y, 620, 70, maxed ? 0x2a4020 : 0x252525).setDepth(41).setStrokeStyle(3, maxed ? 0x00FF00 : (canBuy ? 0xFFD700 : 0x555555), 0.7));
+            const pill = makePill(s, 360, y, 620, 70, { radius: 20, fill: maxed ? 0x2a4020 : 0x252525, stroke: maxed ? 0x00FF00 : (canBuy ? 0xFFD700 : 0x555555), strokeW: 3, depth: 41 });
+            push(pill.cont);
             push(s.add.text(75, y, up.icon, { fontSize: '36px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(110, y - 12, `${loc(up.name)}  ${lvl}/${up.maxLevel}`, {
-                fontSize: '16px', fill: maxed ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial'
-            }).setOrigin(0, 0.5).setDepth(42));
-            push(s.add.text(110, y + 14, loc(up.desc), { fontSize: '12px', fill: '#AAAAAA', fontFamily: 'Arial' }).setOrigin(0, 0.5).setDepth(42));
-            if (maxed) {
-                push(s.add.text(600, y, '✅', { fontSize: '24px', fill: '#00FF00', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(1, 0.5).setDepth(42));
-            } else {
-                push(s.add.text(600, y, `👑 ${cost}`, { fontSize: '18px', fill: canBuy ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(1, 0.5).setDepth(42));
-                const hit = push(s.add.rectangle(360, y, 620, 70, 0x000000, 0.001).setDepth(43));
-                hit.setInteractive({ useHandCursor: true });
-                hit.on('pointerdown', async () => {
+            push(s.add.text(110, y - 12, `${loc(up.name)}  ${lvl}/${up.maxLevel}`, { fontSize: '16px', fill: maxed ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(110, y + 14, loc(up.desc), { fontSize: '12px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            if (maxed) push(s.add.text(600, y, '✅', { fontSize: '24px', fill: '#00FF00', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+            else {
+                push(s.add.text(600, y, `👑 ${cost}`, { fontSize: '18px', fill: canBuy ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+                pill.hit.on('pointerdown', async () => {
+                    pill.tap();
                     if (st.buyLegacy(up.id)) { await this._afterBuy(); this.onMessage?.(`👑 ${loc(up.name)}!`); this.onLegacyBuy?.(up.id); }
                     else this.onMessage?.(`❌ 👑 ${cost}`);
                 });
@@ -2222,32 +2475,28 @@ class ShopUI {
         let confirmPending = false;
         const btnLabel = t('prestigeBtn', gain);
         const btn = push(s.add.text(360, cy + 200, btnLabel, {
-            fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial', backgroundColor: '#FFD700', padding: { x: 30, y: 15 }
-        }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true })
-          .on('pointerdown', async () => {
+            fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 30, y: 15 }
+        }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }));
+        btn.on('pointerdown', async () => {
             if (!confirmPending) {
-                confirmPending = true;
-                btn.setText(t('confirmPrestige'));
+                confirmPending = true; btn.setText(t('confirmPrestige'));
                 btn.setBackgroundColor('#FF4444'); btn.setColor('#FFFFFF');
-                s.time.delayedCall(3000, () => {
-                    if (confirmPending && btn.active) { confirmPending = false; btn.setText(btnLabel); btn.setBackgroundColor('#FFD700'); btn.setColor('#000000'); }
-                });
+                s.time.delayedCall(3000, () => { if (confirmPending && btn.active) { confirmPending = false; btn.setText(btnLabel); btn.setBackgroundColor('#FFD700'); btn.setColor('#000000'); } });
             } else { confirmPending = false; await this.onPrestige?.(); this.close(); }
-          }));
+        });
     }
 }
-</script>
-<script>
+
 /* ============================================================
-   Остальные UI (с локализацией)
+   ACHIEVEMENTS
    ============================================================ */
 class AchievementsUI {
-    constructor(scene, state) { this.scene = scene; this.state = state; this.elements = []; this.isOpen = false; this.onOpen = null; this.onClose = null; }
+    constructor(scene, state) { this.scene = scene; this.state = state; this.group = new FadeGroup(scene); this.isOpen = false; this.onOpen = null; this.onClose = null; }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
-    close() { if (!this.isOpen) return; this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; this.onClose?.(); }
+    close() { if (!this.isOpen) return; this.isOpen = false; this.group.closeFade(() => this.onClose?.()); }
     render() {
         const s = this.scene, W = 720, H = 1280, st = this.state;
-        const push = (el) => { this.elements.push(el); return el; };
+        const push = (el) => this.group.push(el);
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(40)); ov.setInteractive();
         push(s.add.rectangle(W/2, H/2, 660, 1140, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0xFFD700));
         push(s.add.text(W/2, 110, t('achievementsTitle'), TEXT_STYLES.title('#FFD700')).setOrigin(0.5).setDepth(42));
@@ -2261,31 +2510,27 @@ class AchievementsUI {
             const current = a.type === 'bestTime' ? (val > 0 ? formatTime(val) : '—') : Math.min(val, a.target);
             push(s.add.rectangle(W/2, y, 620, itemH, unlocked ? 0x2a4020 : 0x252525).setDepth(41).setStrokeStyle(2, unlocked ? 0x00FF00 : 0x555555, unlocked ? 0.7 : 0.4));
             push(s.add.text(W/2 - 285, y, a.icon, { fontSize: '26px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(W/2 - 250, y - 8, loc(a.name), {
-                fontSize: '13px', fill: unlocked ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial'
-            }).setOrigin(0, 0.5).setDepth(42));
-            push(s.add.text(W/2 - 250, y + 9, unlocked ? `✅ +${a.reward}💰` : loc(a.desc), {
-                fontSize: '10px', fill: unlocked ? '#88FF88' : '#AAAAAA', fontFamily: 'Arial'
-            }).setOrigin(0, 0.5).setDepth(42));
-            if (!unlocked && a.type !== 'bestTime') {
-                push(s.add.text(W/2 + 285, y, `${current}/${a.target}`, {
-                    fontSize: '12px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial'
-                }).setOrigin(1, 0.5).setDepth(42));
-            }
+            push(s.add.text(W/2 - 250, y - 8, loc(a.name), { fontSize: '13px', fill: unlocked ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(W/2 - 250, y + 9, unlocked ? `✅ +${a.reward}💰` : loc(a.desc), { fontSize: '10px', fill: unlocked ? '#88FF88' : '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            if (!unlocked && a.type !== 'bestTime') push(s.add.text(W/2 + 285, y, `${current}/${a.target}`, { fontSize: '12px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
         });
         push(s.add.text(620, 110, '✖', { fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
+        this.group.openFade();
     }
 }
 
+/* ============================================================
+   QUESTS
+   ============================================================ */
 class QuestsUI {
-    constructor(scene, state) { this.scene = scene; this.state = state; this.elements = []; this.isOpen = false; this.onClaim = null; this.onOpen = null; this.onClose = null; }
+    constructor(scene, state) { this.scene = scene; this.state = state; this.group = new FadeGroup(scene); this.isOpen = false; this.onClaim = null; this.onOpen = null; this.onClose = null; }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
-    close() { if (!this.isOpen) return; this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; this.onClose?.(); }
-    refresh() { if (!this.isOpen) return; this.close(); this.open(); }
+    close() { if (!this.isOpen) return; this.isOpen = false; this.group.closeFade(() => this.onClose?.()); }
+    refresh() { if (!this.isOpen) return; this.group._destroyAll(); this.render(); }
     render() {
         const s = this.scene, W = 720, H = 1280, st = this.state;
-        const push = (el) => { this.elements.push(el); return el; };
+        const push = (el) => this.group.push(el);
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(40)); ov.setInteractive();
         push(s.add.rectangle(W/2, H/2, 660, 1140, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0x00E5FF));
         push(s.add.text(W/2, 130, t('questsTitle'), TEXT_STYLES.title('#00E5FF')).setOrigin(0.5).setDepth(42));
@@ -2301,39 +2546,32 @@ class QuestsUI {
                 const progress = Math.min(1, val / q.target);
                 push(s.add.rectangle(W/2, y, 600, 220, 0x252525).setDepth(41).setStrokeStyle(3, claimed ? 0x555555 : (done ? 0x00FF00 : 0x00E5FF), 0.6));
                 push(s.add.text(W/2 - 260, y - 70, q.icon, { fontSize: '50px' }).setOrigin(0.5).setDepth(42));
-                push(s.add.text(W/2 - 200, y - 70, loc(q.text), {
-                    fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial', wordWrap: { width: 400 }
-                }).setOrigin(0, 0.5).setDepth(42));
+                push(s.add.text(W/2 - 200, y - 70, loc(q.text), { fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, wordWrap: { width: 400 } }).setOrigin(0, 0.5).setDepth(42));
                 push(s.add.rectangle(W/2, y + 10, 500, 30, 0x111111).setDepth(41));
                 push(s.add.rectangle(W/2 - 250, y + 10, 500 * progress, 30, done ? 0x00FF00 : 0x00E5FF).setOrigin(0, 0.5).setDepth(42));
-                push(s.add.text(W/2, y + 10, `${Math.min(val, q.target)} / ${q.target}`, {
-                    fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 3
-                }).setOrigin(0.5).setDepth(43));
+                push(s.add.text(W/2, y + 10, `${Math.min(val, q.target)} / ${q.target}`, { fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(43));
                 const btnY = y + 70;
-                if (claimed) {
-                    push(s.add.text(W/2, btnY, t('claimed'), { fontSize: '20px', fill: '#00AA00', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(42));
-                } else if (done) {
-                    push(s.add.text(W/2, btnY, t('claim', q.reward), {
-                        fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial', backgroundColor: '#FFD700', padding: { x: 30, y: 12 }
-                    }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true })
-                      .on('pointerdown', async () => { if (st.claimQuest(q)) { await this.onClaim?.(); this.refresh(); } }));
-                } else {
-                    push(s.add.text(W/2, btnY, t('reward', q.reward), { fontSize: '18px', fill: '#FFD700', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(42));
-                }
+                if (claimed) push(s.add.text(W/2, btnY, t('claimed'), { fontSize: '20px', fill: '#00AA00', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+                else if (done) push(s.add.text(W/2, btnY, t('claim', q.reward), { fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 30, y: 12 } }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }).on('pointerdown', async () => { if (st.claimQuest(q)) { await this.onClaim?.(); this.refresh(); } }));
+                else push(s.add.text(W/2, btnY, t('reward', q.reward), { fontSize: '18px', fill: '#FFD700', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
             });
         }
         push(s.add.text(620, 130, '✖', { fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
+        this.group.openFade();
     }
 }
 
+/* ============================================================
+   MUSEUM
+   ============================================================ */
 class MuseumUI {
-    constructor(scene, state) { this.scene = scene; this.state = state; this.elements = []; this.isOpen = false; this.onOpen = null; this.onClose = null; }
+    constructor(scene, state) { this.scene = scene; this.state = state; this.group = new FadeGroup(scene); this.isOpen = false; this.onOpen = null; this.onClose = null; }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
-    close() { if (!this.isOpen) return; this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; this.onClose?.(); }
+    close() { if (!this.isOpen) return; this.isOpen = false; this.group.closeFade(() => this.onClose?.()); }
     render() {
         const s = this.scene, W = 720, H = 1280, st = this.state;
-        const push = (el) => { this.elements.push(el); return el; };
+        const push = (el) => this.group.push(el);
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(40)); ov.setInteractive();
         push(s.add.rectangle(W/2, H/2, 660, 1140, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0xFFD700));
         push(s.add.text(W/2, 110, t('museumTitle'), TEXT_STYLES.title('#FFD700')).setOrigin(0.5).setDepth(42));
@@ -2363,26 +2601,24 @@ class MuseumUI {
             if (unlocked) {
                 push(s.add.text(infoX, y - 28, `✅ ${stat.cleanings}`, { ...TEXT_STYLES.shopInfo('#00FF00', 17) }).setOrigin(0, 0.5).setDepth(42));
                 push(s.add.text(infoX, y + 5, t('bestTime', formatTime(stat.bestTime)), { ...TEXT_STYLES.shopInfo('#87CEEB', 17) }).setOrigin(0, 0.5).setDepth(42));
-            } else {
-                push(s.add.text(infoX, y, t('locked'), { ...TEXT_STYLES.shopInfo('#888888', 18) }).setOrigin(0, 0.5).setDepth(42));
-            }
+            } else push(s.add.text(infoX, y, t('locked'), { ...TEXT_STYLES.shopInfo('#888888', 18) }).setOrigin(0, 0.5).setDepth(42));
         }
         push(s.add.text(620, 110, '✖', { fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
+        this.group.openFade();
     }
 }
 
+/* ============================================================
+   DAILY BONUS
+   ============================================================ */
 class DailyBonusUI {
-    constructor(scene, state) {
-        this.scene = scene; this.state = state;
-        this.elements = []; this.isOpen = false;
-        this.onClaim = null; this.onOpen = null; this.onClose = null;
-    }
+    constructor(scene, state) { this.scene = scene; this.state = state; this.group = new FadeGroup(scene); this.isOpen = false; this.onClaim = null; this.onOpen = null; this.onClose = null; }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
-    close() { if (!this.isOpen) return; this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; this.onClose?.(); }
+    close() { if (!this.isOpen) return; this.isOpen = false; this.group.closeFade(() => this.onClose?.()); }
     render() {
         const s = this.scene, W = 720, H = 1280, st = this.state;
-        const push = (el) => { this.elements.push(el); return el; };
+        const push = (el) => this.group.push(el);
         const status = st.getDailyStatus();
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.85).setDepth(60)); ov.setInteractive();
         push(s.add.rectangle(W/2, H/2, 660, 940, 0x1e1e28).setDepth(61).setStrokeStyle(5, 0xFFD700));
@@ -2401,181 +2637,157 @@ class DailyBonusUI {
             const isPast = (i + 1) < status.nextDay;
             const isFuture = (i + 1) > status.nextDay;
             let bg = 0x252525, border = 0x555555;
-            if (isToday) { bg = 0x4a3a10; border = 0xFFD700; }
-            else if (isPast) { bg = 0x2a4020; border = 0x00AA00; }
+            if (isToday) { bg = 0x4a3a10; border = 0xFFD700; } else if (isPast) { bg = 0x2a4020; border = 0x00AA00; }
             push(s.add.rectangle(x, y, cardW, cardH, bg).setDepth(62).setStrokeStyle(isToday ? 4 : 2, border, 0.9));
             push(s.add.text(x, y - 40, DAILY_REWARDS[i].icon, { fontSize: '34px' }).setOrigin(0.5).setDepth(63));
-            push(s.add.text(x, y - 5, `${LANG === 'ru' ? 'День' : 'Day'} ${i + 1}`, {
-                fontSize: '13px', fill: isFuture ? '#888888' : '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial'
-            }).setOrigin(0.5).setDepth(63));
+            push(s.add.text(x, y - 5, `${LANG === 'ru' ? 'День' : 'Day'} ${i + 1}`, { fontSize: '13px', fill: isFuture ? '#888888' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
             const rewardText = DAILY_REWARDS[i].food > 0 ? `${DAILY_REWARDS[i].money}💰\n+${DAILY_REWARDS[i].food}🍞` : `${DAILY_REWARDS[i].money}💰`;
-            push(s.add.text(x, y + 30, rewardText, {
-                fontSize: '13px', fill: isFuture ? '#888888' : '#FFD700', fontStyle: 'bold', fontFamily: 'Arial', align: 'center'
-            }).setOrigin(0.5).setDepth(63));
-            if (isToday) push(s.add.text(x, y + 55, t('dailyNow'), { fontSize: '10px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(63));
+            push(s.add.text(x, y + 30, rewardText, { fontSize: '13px', fill: isFuture ? '#888888' : '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, align: 'center' }).setOrigin(0.5).setDepth(63));
+            if (isToday) push(s.add.text(x, y + 55, t('dailyNow'), { fontSize: '10px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
             else if (isPast) push(s.add.text(x, y + 55, '✅', { fontSize: '14px' }).setOrigin(0.5).setDepth(63));
         }
         if (status.canClaim) {
-            const btn = push(s.add.text(W/2, 900, t('dailyClaim'), {
-                fontSize: '26px', fill: '#000000', fontStyle: 'bold', fontFamily: 'Arial', backgroundColor: '#FFD700', padding: { x: 45, y: 18 }
-            }).setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }));
+            const btn = push(s.add.text(W/2, 900, t('dailyClaim'), { fontSize: '26px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 45, y: 18 } }).setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }));
             btn.on('pointerdown', async () => {
                 const reward = this.state.claimDailyBonus();
-                if (reward) {
-                    await this.onClaim?.();
-                    this.close();
-                    this.scene.showMessage(`+${reward.money}💰${reward.food ? ` +${reward.food}🍞` : ''}`);
-                }
+                if (reward) { await this.onClaim?.(); this.close(); this.scene.showMessage(`+${reward.money}💰${reward.food ? ` +${reward.food}🍞` : ''}`); }
             });
         } else {
-            push(s.add.text(W/2, 900, t('dailyDone'), {
-                fontSize: '20px', fill: '#00AA00', fontStyle: 'bold', fontFamily: 'Arial', backgroundColor: '#1a1a1a', padding: { x: 30, y: 15 }
-            }).setOrigin(0.5).setDepth(63));
-            push(s.add.text(W/2, 960, t('dailyComeBack'), { fontSize: '16px', fill: '#AAAAAA', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(63));
+            push(s.add.text(W/2, 900, t('dailyDone'), { fontSize: '20px', fill: '#00AA00', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#1a1a1a', padding: { x: 30, y: 15 } }).setOrigin(0.5).setDepth(63));
+            push(s.add.text(W/2, 960, t('dailyComeBack'), { fontSize: '16px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
         }
         push(s.add.text(640, 260, '✖', { fontSize: '44px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
+        this.group.openFade();
     }
 }
 
+/* ============================================================
+   SETTINGS
+   ============================================================ */
 class SettingsUI {
     constructor(scene, state, saveSystem, onReset) {
         this.scene = scene; this.state = state; this.saveSystem = saveSystem;
         this.onReset = onReset;
-        this.elements = []; this.isOpen = false;
+        this.group = new FadeGroup(scene); this.isOpen = false;
         this.onOpen = null; this.onClose = null;
     }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
-    close() { if (!this.isOpen) return; this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; this.onClose?.(); }
-    refresh() { if (!this.isOpen) return; this.close(); this.open(); }
+    close() { if (!this.isOpen) return; this.isOpen = false; this.group.closeFade(() => this.onClose?.()); }
+    refresh() { if (!this.isOpen) return; this.group._destroyAll(); this.render(); }
     render() {
         const s = this.scene, W = 720, H = 1280, st = this.state;
-        const push = (el) => { this.elements.push(el); return el; };
+        const push = (el) => this.group.push(el);
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.9).setDepth(60)); ov.setInteractive();
-        push(s.add.rectangle(W/2, H/2, 640, 900, 0x1e1e28).setDepth(61).setStrokeStyle(5, 0x00E5FF));
-        push(s.add.text(W/2, 280, t('settingsTitle'), TEXT_STYLES.title('#00E5FF')).setOrigin(0.5).setDepth(62));
-        // Язык
-        const langY = 370;
-        push(s.add.rectangle(W/2, langY, 560, 60, 0x252525).setDepth(62).setStrokeStyle(2, 0x666666));
-        push(s.add.text(120, langY, t('language'), { fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0, 0.5).setDepth(63));
-        const langLabel = LANG === 'ru' ? '🇷🇺 Русский' : '🇬🇧 English';
-        const langBtn = push(s.add.text(540, langY, langLabel, {
-            fontSize: '16px', fill: '#00FF88', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(1, 0.5).setDepth(63).setInteractive({ useHandCursor: true }));
-        langBtn.on('pointerdown', async () => {
+        push(s.add.rectangle(W/2, H/2, 640, 1000, 0x1e1e28).setDepth(61).setStrokeStyle(5, 0x00E5FF));
+        push(s.add.text(W/2, 240, t('settingsTitle'), TEXT_STYLES.title('#00E5FF')).setOrigin(0.5).setDepth(62));
+
+        const row = (y, label, rightLabel, rightColor, onTap) => {
+            const pill = makePill(s, W/2, y, 560, 60, { radius: 20, fill: 0x252525, stroke: 0x666666, strokeW: 2, depth: 62 });
+            push(pill.cont);
+            push(s.add.text(120, y, label, { fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(63));
+            push(s.add.text(540, y, rightLabel, { fontSize: '16px', fill: rightColor, fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(63));
+            pill.hit.on('pointerdown', () => { pill.tap(); onTap(); });
+        };
+
+        row(330, t('language'), LANG === 'ru' ? '🇷🇺 Русский' : '🇬🇧 English', '#00FF88', async () => {
             LANG = LANG === 'ru' ? 'en' : 'ru';
             st.settings.lang = LANG;
             await this.saveSystem.save();
             this.scene.scene.restart();
         });
-        // Вибрация
-        const vibY = 450;
-        push(s.add.rectangle(W/2, vibY, 560, 60, 0x252525).setDepth(62).setStrokeStyle(2, 0x666666));
-        push(s.add.text(120, vibY, t('vibration'), { fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0, 0.5).setDepth(63));
-        const vibBtn = push(s.add.text(540, vibY, st.settings.vibration ? t('vibOn') : t('vibOff'), {
-            fontSize: '20px', fill: st.settings.vibration ? '#00FF00' : '#FF6666', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(1, 0.5).setDepth(63).setInteractive({ useHandCursor: true }));
-        vibBtn.on('pointerdown', async () => {
+        row(400, t('music'), st.settings.music ? t('musicOn') : t('musicOff'), st.settings.music ? '#00FF00' : '#FF6666', async () => {
+            st.settings.music = !st.settings.music;
+            await this.saveSystem.save();
+            this.scene.ambientMusic?.setEnabled(st.settings.music);
+            this.refresh();
+        });
+        row(470, t('weather'), st.settings.weather ? t('weatherAuto') : t('weatherOff'), st.settings.weather ? '#00FF00' : '#FF6666', async () => {
+            st.settings.weather = !st.settings.weather;
+            await this.saveSystem.save();
+            if (!st.settings.weather) this.scene.weather?.set('none');
+            else this.scene.weather?.cycleByTimeOfDay(this.scene.currentTimeOfDay);
+            this.refresh();
+        });
+        row(540, t('vibration'), st.settings.vibration ? t('vibOn') : t('vibOff'), st.settings.vibration ? '#00FF00' : '#FF6666', async () => {
             st.settings.vibration = !st.settings.vibration;
             await this.saveSystem.save();
             if (st.settings.vibration) { try { navigator.vibrate?.(BALANCE.vibrationMs); } catch {} }
             this.refresh();
         });
-        // Экспорт
-        const expY = 540;
-        push(s.add.rectangle(W/2, expY, 560, 60, 0x252525).setDepth(62).setStrokeStyle(2, 0x666666));
-        push(s.add.text(120, expY, t('exportSave'), { fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0, 0.5).setDepth(63));
-        const expBtn = push(s.add.text(540, expY, t('exportBtn'), {
-            fontSize: '16px', fill: '#00E5FF', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(1, 0.5).setDepth(63).setInteractive({ useHandCursor: true }));
-        expBtn.on('pointerdown', () => {
+        row(610, t('exportSave'), t('exportBtn'), '#00E5FF', () => {
             const data = JSON.stringify(st.toSaveObject());
             try { navigator.clipboard.writeText(data); this.scene.showMessage(t('saveCopied')); }
-            catch {
-                try { const ta = document.createElement('textarea'); ta.value = data; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); this.scene.showMessage(t('saveCopied')); } catch {}
-            }
+            catch { try { const ta = document.createElement('textarea'); ta.value = data; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); this.scene.showMessage(t('saveCopied')); } catch {} }
         });
-        // Импорт
-        const impY = 610;
-        push(s.add.rectangle(W/2, impY, 560, 60, 0x252525).setDepth(62).setStrokeStyle(2, 0x666666));
-        push(s.add.text(120, impY, t('importSave'), { fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0, 0.5).setDepth(63));
-        const impBtn = push(s.add.text(540, impY, t('importBtn'), {
-            fontSize: '16px', fill: '#00E5FF', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(1, 0.5).setDepth(63).setInteractive({ useHandCursor: true }));
-        impBtn.on('pointerdown', async () => {
+        row(680, t('importSave'), t('importBtn'), '#00E5FF', async () => {
             try {
                 const text = await navigator.clipboard.readText();
                 const data = JSON.parse(text);
                 if (data && typeof data === 'object') {
-                    const savedLang = st.settings.lang;
+                    const savedLang = st.settings.lang, savedMusic = st.settings.music, savedWeather = st.settings.weather;
                     st.fromSaveObject(data);
-                    st.settings.lang = savedLang;
+                    st.settings.lang = savedLang; st.settings.music = savedMusic; st.settings.weather = savedWeather;
                     await this.saveSystem.save();
                     this.scene.showMessage(t('saveLoaded'));
                     this.scene.scene.restart();
                 }
             } catch { this.scene.showMessage(t('saveInvalid')); }
         });
-        // Сброс
-        const rstY = 690;
+
         let confirmPending = false;
-        const rstBtn = push(s.add.text(W/2, rstY, t('resetProgress'), {
-            fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial', backgroundColor: '#550000', padding: { x: 25, y: 14 }
+        const rstBtn = push(s.add.text(W/2, 770, t('resetProgress'), {
+            fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#550000', padding: { x: 25, y: 14 }
         }).setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }));
         rstBtn.on('pointerdown', async () => {
             if (!confirmPending) {
-                confirmPending = true;
-                rstBtn.setText(t('resetConfirm')); rstBtn.setBackgroundColor('#FF0000');
-                s.time.delayedCall(3000, () => {
-                    if (confirmPending && rstBtn.active) { confirmPending = false; rstBtn.setText(t('resetProgress')); rstBtn.setBackgroundColor('#550000'); }
-                });
+                confirmPending = true; rstBtn.setText(t('resetConfirm')); rstBtn.setBackgroundColor('#FF0000');
+                s.time.delayedCall(3000, () => { if (confirmPending && rstBtn.active) { confirmPending = false; rstBtn.setText(t('resetProgress')); rstBtn.setBackgroundColor('#550000'); } });
             } else { confirmPending = false; await this.onReset?.(); }
         });
-        push(s.add.text(620, 250, '✖', { fontSize: '44px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
+        push(s.add.text(620, 220, '✖', { fontSize: '44px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
+        this.group.openFade();
     }
 }
 
+/* ============================================================
+   LEADERBOARD
+   ============================================================ */
 class LeaderboardUI {
     constructor(scene, state, lb) {
         this.scene = scene; this.state = state; this.lb = lb;
-        this.elements = []; this.isOpen = false;
-        this.currentBoard = 'bestMoney';
-        this.loading = false;
+        this.group = new FadeGroup(scene); this.isOpen = false;
+        this.currentBoard = 'bestMoney'; this.loading = false;
         this.onOpen = null; this.onClose = null;
     }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.loadAndRender(); }
-    close() { if (!this.isOpen) return; this.isOpen = false; this.elements.forEach(e => e.destroy()); this.elements = []; this.onClose?.(); }
+    close() { if (!this.isOpen) return; this.isOpen = false; this.group.closeFade(() => this.onClose?.()); }
     async loadAndRender() {
-        this.elements.forEach(e => e.destroy());
-        this.elements = [];
+        this.group._destroyAll();
         const s = this.scene, W = 720, H = 1280;
-        const push = (el) => { this.elements.push(el); return el; };
+        const push = (el) => this.group.push(el);
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(60)); ov.setInteractive();
         push(s.add.rectangle(W/2, H/2, 660, 1000, 0x1e1e28).setDepth(61).setStrokeStyle(5, 0xFFD700));
         push(s.add.text(W/2, 200, t('recordsTitle'), TEXT_STYLES.title('#FFD700')).setOrigin(0.5).setDepth(62));
-        const tabs = [
-            { id: 'bestMoney', label: t('coins') },
-            { id: 'prestige', label: t('prestigeTab') }
-        ];
+        const tabs = [{ id: 'bestMoney', label: t('coins') }, { id: 'prestige', label: t('prestigeTab') }];
         tabs.forEach((tab, i) => {
             const x = 200 + i * 160, y = 270;
             const active = this.currentBoard === tab.id;
             push(s.add.rectangle(x, y, 150, 45, active ? 0xFFD700 : 0x444444).setDepth(62).setStrokeStyle(2, active ? 0xFFFFFF : 0x666666)
                 .setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.currentBoard = tab.id; this.loadAndRender(); }));
-            push(s.add.text(x, y, tab.label, {
-                fontSize: '15px', fill: active ? '#000000' : '#CCCCCC', fontStyle: 'bold', fontFamily: 'Arial'
-            }).setOrigin(0.5).setDepth(63));
+            push(s.add.text(x, y, tab.label, { fontSize: '15px', fill: active ? '#000000' : '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
         });
         const loadingText = push(s.add.text(W/2, 640, t('loadingRecords'), { ...TEXT_STYLES.shopInfo('#FFFFFF', 22) }).setOrigin(0.5).setDepth(62));
-        if (this.loading) return;
+        if (this.loading) { this.group.openFade(); return; }
         this.loading = true;
         let entries = [];
         try { entries = await this.lb.fetchTop(this.currentBoard, 10); } catch { entries = []; }
         this.loading = false;
         if (!this.isOpen) return;
-        loadingText.destroy();
-        this.elements = this.elements.filter(e => e !== loadingText);
+        try { loadingText.destroy(); } catch {}
+        const idx = this.group.elements.indexOf(loadingText);
+        if (idx > -1) this.group.elements.splice(idx, 1);
         if (!entries || entries.length === 0) {
             push(s.add.text(W/2, 640, t('noRecords'), { ...TEXT_STYLES.shopInfo('#AAAAAA', 22) }).setOrigin(0.5).setDepth(62));
         } else {
@@ -2583,16 +2795,18 @@ class LeaderboardUI {
                 const y = 340 + i * 60;
                 const rankColor = e.rank === 1 ? '#FFD700' : e.rank === 2 ? '#C0C0C0' : e.rank === 3 ? '#CD7F32' : '#FFFFFF';
                 push(s.add.rectangle(W/2, y, 600, 52, e.isMe ? 0x205020 : 0x252525).setDepth(62).setStrokeStyle(2, e.isMe ? 0x00FF00 : 0x555555, 0.6));
-                push(s.add.text(140, y, `${e.rank}.`, { fontSize: '22px', fill: rankColor, fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(63));
-                push(s.add.text(200, y, e.name.substring(0, 18), { fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(0, 0.5).setDepth(63));
-                push(s.add.text(620, y, `${e.score}`, { fontSize: '22px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial' }).setOrigin(1, 0.5).setDepth(63));
+                push(s.add.text(140, y, `${e.rank}.`, { fontSize: '22px', fill: rankColor, fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
+                push(s.add.text(200, y, e.name.substring(0, 18), { fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(63));
+                push(s.add.text(620, y, `${e.score}`, { fontSize: '22px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(63));
             });
         }
         push(s.add.text(620, 200, '✖', { fontSize: '44px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
+        this.group.openFade();
     }
 }
 </script>
+
 <script>
 /* ============================================================
    PRELOAD + MAIN
@@ -2600,7 +2814,7 @@ class LeaderboardUI {
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
-        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
+        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `carpets/carpet${i}.png`);
         this.load.on('loaderror', (file) => console.warn('Не загрузилось:', file.key, file.src));
         const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w / 2, h / 2 - 50, t('loading'), TEXT_STYLES.title()).setOrigin(0.5);
@@ -2637,9 +2851,29 @@ class MainScene extends Phaser.Scene {
         this.carpetW = 500; this.carpetH = 700;
         this.carpetX = W / 2; this.carpetY = 600;
         this.carpetBounds = new Phaser.Geom.Rectangle(this.carpetX - this.carpetW / 2, this.carpetY - this.carpetH / 2, this.carpetW, this.carpetH);
+
+        // ---- музыка ----
+        this.ambientMusic = new AmbientMusic();
+        this.ambientMusic.init();
+        this._startMusicOnce = () => {
+            this.ambientMusic.resume();
+            if (this.state.settings.music) this.ambientMusic.setEnabled(true);
+            window.removeEventListener('pointerdown', this._startMusicOnce);
+            window.removeEventListener('touchstart', this._startMusicOnce);
+            window.removeEventListener('keydown', this._startMusicOnce);
+        };
+        window.addEventListener('pointerdown', this._startMusicOnce);
+        window.addEventListener('touchstart', this._startMusicOnce);
+        window.addEventListener('keydown', this._startMusicOnce);
+
         this.room = new RoomRenderer(this);
         this.currentTimeOfDay = getTimeOfDay();
         this.room.draw(this.state.selectedRoom, this.state.carpetLevel, this.currentTimeOfDay);
+
+        // ---- погода ----
+        this.weather = new WeatherSystem(this);
+        if (this.state.settings.weather) this.weather.cycleByTimeOfDay(this.currentTimeOfDay);
+
         this.carpetContainer = this.add.container(0, 0).setDepth(0);
         this.drawCarpet();
         this.effects = new Effects(this);
@@ -2652,7 +2886,7 @@ class MainScene extends Phaser.Scene {
         this.cleaning.onStainRemove = () => { if (this.tutorial) this.tutorial.reportAction('stain'); };
         this.cleaning.onCelebrate = () => { this.effects.celebration(W, H); this.showMessage(t('carpetClean')); };
         this.stars = new FinishStarsSystem(this, this.cleaning, this.state, this.effects);
-        this.stars.onStarPopped = () => { this.refreshHUD(); this.vibrate(); };
+        this.stars.onStarPopped = () => { this.refreshHUD(); this.vibrate(); this.mascot?.react('star'); };
         this.stars.onAllPopped = () => { this.showMessage(t('allStars')); this.refreshHUD(); };
         this.bugs = new BugSystem(this, this.carpetBounds, this.state, {
             onKill: (x, y) => this.effects.starBurst(x, y, 3),
@@ -2660,6 +2894,11 @@ class MainScene extends Phaser.Scene {
         });
         this.bugsRef = this.bugs;
         this.pets = new PetSystem(this, this.cleaning, this.bugs, this.effects, this.state);
+
+        // ---- маскот ----
+        this.mascot = new Mascot(this);
+        this.time.delayedCall(1500, () => this.mascot.react('hello'));
+
         this.shop = new ShopUI(this, this.state, this.ads);
         this.shop.onChanged = async () => { this.refreshHUD(); await this.saveSystem.save(); this.checkAndNotifyAchievements(); };
         this.shop.onMessage = (msg) => this.showMessage(msg);
@@ -2678,21 +2917,19 @@ class MainScene extends Phaser.Scene {
         this.dailyUI.onClaim = async () => { this.refreshHUD(); await this.saveSystem.save(); this.checkAndNotifyAchievements(); };
         this.settingsUI = new SettingsUI(this, this.state, this.saveSystem, async () => { await this.saveSystem.fullReset(); this.scene.restart(); });
         this.leaderboardUI = new LeaderboardUI(this, this.state, this.leaderboard);
+
         const onUIChange = () => this.updateGameplayAPI();
-        [this.shop, this.museum, this.questsUI, this.achievementsUI, this.dailyUI, this.settingsUI, this.leaderboardUI].forEach(ui => {
-            ui.onOpen = onUIChange; ui.onClose = onUIChange;
-        });
+        [this.shop, this.museum, this.questsUI, this.achievementsUI, this.dailyUI, this.settingsUI, this.leaderboardUI].forEach(ui => { ui.onOpen = onUIChange; ui.onClose = onUIChange; });
+
         this.currentTool = 'soap';
         this.isPointerDown = false;
         this.lastLocalX = -9999; this.lastLocalY = -9999;
         this.inputLocked = false;
-        this.pendingDailyBonus = false;
         this.gameplayStopped = false;
         this.noFoodText = null; this.noFoodTween = null; this.noFoodCooldown = false;
         this.bugWarningText = null; this.bugWarningTween = null; this.bugWarningCooldown = false;
         this.carpetElapsed = 0;
-        this.prestigeText = null;
-        this.dayNightText = null;
+        this.prestigeText = null; this.dayNightText = null;
         this.steamFuel = BALANCE.steamMaxFuel;
         this.tutorial = null;
         this.brush = this.add.text(0, 0, this.state.getBrushIcon(), { fontSize: '70px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(3).setVisible(false);
@@ -2714,6 +2951,12 @@ class MainScene extends Phaser.Scene {
                 this.currentTimeOfDay = nt;
                 this.room.draw(this.state.selectedRoom, this.state.carpetLevel, this.currentTimeOfDay);
                 this.updateDayNightText();
+                if (this.state.settings.weather) {
+                    const w = this.weather.cycleByTimeOfDay(nt);
+                    if (w === 'rain') this.mascot?.react('weather_rain');
+                    else if (w === 'snow') this.mascot?.react('weather_snow');
+                    else if (w === 'leaves') this.mascot?.react('weather_leaves');
+                }
             }
         }});
         this._onVisibilityChange = () => {
@@ -2756,25 +2999,27 @@ class MainScene extends Phaser.Scene {
         this.toolText = this.add.text(20, 92, '🧹 ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 18)).setDepth(10);
         this.carpetText = this.add.text(145, 92, '🧽 ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
         this.soapLvlText = this.add.text(20, 120, `🧼${this.state.soapLevel}  💤${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
-        this.dayNightText = this.add.text(20, 150, '', { fontSize: '14px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 3 }).setDepth(10);
+        this.dayNightText = this.add.text(20, 150, '', { fontSize: '14px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
         this.updateDayNightText();
-        this.timerText = this.add.text(325, 150, '⏱ 0:00', { fontSize: '14px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0).setDepth(10);
+        this.timerText = this.add.text(325, 150, '⏱ 0:00', { fontSize: '14px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0).setDepth(10);
         if (this.state.prestigeLevel > 0 || this.state.legacyPoints > 0) {
-            this.prestigeText = this.add.text(325, 16, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
-                fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 4
-            }).setOrigin(1, 0).setDepth(10);
+            this.prestigeText = this.add.text(325, 16, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
         }
         this.add.rectangle(380, 0, 340, 195, 0x000000, 0.78).setOrigin(0, 0).setDepth(9);
         this.add.rectangle(380, 195, 340, 3, 0x4A90D9, 0.7).setOrigin(0, 0).setDepth(9);
+
         const makeBtn = (x, y, icon, label, onClick, color = '#FFFFFF') => {
             const r = 26;
-            this.add.circle(x, y, r, 0x1e1e28, 0.95).setDepth(10).setStrokeStyle(2, 0x4A90D9, 0.7);
-            this.add.text(x, y, icon, { fontSize: '32px' }).setOrigin(0.5).setDepth(11);
-            this.add.text(x, y + r + 12, label, {
-                fontSize: '11px', fill: color, fontStyle: 'bold', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 4
-            }).setOrigin(0.5).setDepth(11);
-            const hit = this.add.rectangle(x, y + 5, 100, 100, 0x000000, 0.001).setDepth(12);
-            hit.setInteractive({ useHandCursor: true }); hit.on('pointerdown', onClick);
+            const circle = this.add.circle(x, y, r, 0x1e1e28, 0.95).setDepth(10).setStrokeStyle(2, 0x4A90D9, 0.7);
+            const ic = this.add.text(x, y, icon, { fontSize: '32px' }).setOrigin(0.5).setDepth(11);
+            const lb = this.add.text(x, y + r + 12, label, { fontSize: '11px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
+            const hit = this.add.circle(x, y, r + 8, 0x000000, 0.001).setDepth(12);
+            hit.setInteractive({ useHandCursor: true });
+            hit.on('pointerdown', () => {
+                this.tweens.add({ targets: [circle, ic], scaleX: 1.12, scaleY: 1.12, duration: 90, yoyo: true, ease: 'Quad.easeOut' });
+                this.tweens.add({ targets: lb, alpha: 0.6, duration: 100, yoyo: true });
+                onClick();
+            });
         };
         const c1 = 445, c2 = 550, c3 = 655;
         const r1 = 45, r2 = 130;
@@ -2784,39 +3029,49 @@ class MainScene extends Phaser.Scene {
         makeBtn(c1, r2, '📊', t('records'),  () => this.leaderboardUI.open(), '#00E5FF');
         makeBtn(c2, r2, '🛒', t('shop'),     () => this.shop.open(), '#00FF88');
         makeBtn(c3, r2, '⚙️', t('settings'), () => this.settingsUI.open(), '#CCCCCC');
+
         this.questBadge = this.add.text(c3 + 22, r1 - 22, '●', { fontSize: '20px', fill: '#FF4444' }).setOrigin(0.5).setDepth(13).setVisible(false);
         this.tweens.add({ targets: this.questBadge, alpha: { from: 1, to: 0.3 }, duration: 700, yoyo: true, repeat: -1 });
         this.updateQuestBadge();
+
         const ds = this.state.getDailyStatus();
         if (ds.canClaim && this.state.tutorialDone) {
             const dailyBg = this.add.circle(360, 100, 24, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
             const dailyIcon = this.add.text(360, 100, '🎁', { fontSize: '28px' }).setOrigin(0.5).setDepth(15);
+            // ✨ glow под кнопкой 🎁
+            const dailyGlow = this.add.graphics().setDepth(13);
+            dailyGlow.fillStyle(0xFFD700, 0.4); dailyGlow.fillCircle(360, 100, 34);
+            this.tweens.add({ targets: dailyGlow, alpha: { from: 0.3, to: 0.9 }, scaleX: { from: 0.9, to: 1.15 }, scaleY: { from: 0.9, to: 1.15 }, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
             this.tweens.add({ targets: [dailyBg, dailyIcon], scale: { from: 1, to: 1.15 }, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
             const hit = this.add.circle(360, 100, 30, 0x000000, 0.001).setDepth(16).setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.dailyUI.open());
         }
+
         this.add.rectangle(W / 2, 230, 400, 30, 0x000000, 0.7).setDepth(10);
         this.add.rectangle(W / 2, 230, 400, 30, 0x333333).setDepth(10);
         this.progressBar = this.add.rectangle(W / 2 - 200, 230, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
         this.progressText = this.add.text(W / 2, 230, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
+
+        // ✨ glow полоска при 90%+
+        this.progressGlow = this.add.graphics().setDepth(9).setVisible(false);
+
         this.steamBg = this.add.rectangle(W / 2, 265, 200, 14, 0x111111).setDepth(10).setVisible(false);
         this.steamBar = this.add.rectangle(W / 2 - 100, 265, 200, 14, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
-        this.steamText = this.add.text(W / 2, 282, t('steams'), {
-            fontSize: '12px', fill: '#FF8844', fontStyle: 'bold', fontFamily: 'Arial'
-        }).setOrigin(0.5).setDepth(11).setVisible(false);
-        this.starsCounter = this.add.text(W / 2, 300, '', {
-            fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 5
-        }).setOrigin(0.5).setDepth(11).setVisible(false);
-        this.add.text(W / 2, 1050, t('getMoney'), {
-            ...TEXT_STYLES.button('#00FF00', 30), backgroundColor: '#000000', padding: { x: 30, y: 15 }
-        }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.finishCarpet());
+        this.steamText = this.add.text(W / 2, 282, t('steams'), { fontSize: '12px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(11).setVisible(false);
+        this.starsCounter = this.add.text(W / 2, 300, '', { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(11).setVisible(false);
+
+        const finishBtn = this.add.text(W / 2, 1050, t('getMoney'), { ...TEXT_STYLES.button('#00FF00', 30), backgroundColor: '#000000', padding: { x: 30, y: 15 } }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
+        finishBtn.on('pointerdown', () => {
+            this.tweens.add({ targets: finishBtn, scaleX: 0.94, scaleY: 0.94, duration: 80, yoyo: true, ease: 'Quad.easeOut' });
+            this.finishCarpet();
+        });
     }
     updateDayNightText() {
         if (!this.dayNightText) return;
-        const t2 = getTimeOfDay();
-        const icon = t2 === 'morning' ? '🌅' : t2 === 'day' ? '☀️' : t2 === 'evening' ? '🌇' : '🌙';
+        const td = getTimeOfDay();
+        const icon = td === 'morning' ? '🌅' : td === 'day' ? '☀️' : td === 'evening' ? '🌇' : '🌙';
         const bonus = Math.round(this.state.getDayNightBonus() * 100);
-        this.dayNightText.setText(`${icon} ${t(t2)}  +${bonus}%💰`);
+        this.dayNightText.setText(`${icon} ${t(td)}  +${bonus}%💰`);
     }
     refreshHUD() {
         this.moneyText.setText('💰 ' + this.state.money);
@@ -2835,17 +3090,15 @@ class MainScene extends Phaser.Scene {
     updateBrushIcon() { if (this.currentTool === 'soap') this.brush.setText(this.state.getBrushIcon()); }
     buildToolButtons(W, H) {
         const btnY = 1195;
-        const hasSwatter = this.state.carpetIndex >= 2;
-        const hasScraper = this.state.carpetIndex >= 3;
-        const hasSteam = this.state.carpetIndex >= 4;
-        const hasRemover = this.state.carpetIndex >= 5;
         const tools = [];
-        tools.push({ id: 'soap', icon: '🧼', label: t('soap'), color: 0x4A90D9 });
-        tools.push({ id: 'wash', icon: '💧', label: t('wash'), color: 0x4A90D9 });
-        if (hasSwatter) tools.push({ id: 'swatter', icon: '🪰', label: t('swatter'), color: 0xFF4444 });
-        if (hasScraper) tools.push({ id: 'scraper', icon: '🧽', label: t('scraper'), color: 0x8B6A2A });
-        if (hasSteam) tools.push({ id: 'steam', icon: '🔥', label: t('steam'), color: 0xFF8844 });
-        if (hasRemover) tools.push({ id: 'remover', icon: '🧴', label: t('remover'), color: 0xAA44AA });
+        if (this.state.carpetIndex <= 3) {
+            tools.push({ id: 'soap', icon: '🧼', label: t('soap'), color: 0x4A90D9 });
+            tools.push({ id: 'wash', icon: '💧', label: t('wash'), color: 0x4A90D9 });
+        }
+        if (this.state.carpetIndex >= 2) tools.push({ id: 'swatter', icon: '🪰', label: t('swatter'), color: 0xFF4444 });
+        if (this.state.carpetIndex >= 3) tools.push({ id: 'scraper', icon: '🧽', label: t('scraper'), color: 0x8B6A2A });
+        if (this.state.carpetIndex >= 4) tools.push({ id: 'steam',   icon: '🔥', label: t('steam'),   color: 0xFF8844 });
+        if (this.state.carpetIndex >= 5) tools.push({ id: 'remover', icon: '🧴', label: t('remover'), color: 0xAA44AA });
         const count = tools.length;
         const gap = 8;
         const totalW = 700 - (count - 1) * gap;
@@ -2855,16 +3108,15 @@ class MainScene extends Phaser.Scene {
         this.toolBtns = {};
         tools.forEach((tool, i) => {
             const x = startX + i * (btnW + gap);
-            const bg = this.add.rectangle(x, btnY, btnW, btnH, 0x444444).setDepth(10).setStrokeStyle(4, 0x888888);
-            const accent = this.add.rectangle(x, btnY + btnH / 2 - 6, btnW - 8, 4, tool.color, 0.9).setDepth(11);
+            const pill = makePill(this, x, btnY, btnW, btnH, { radius: 22, fill: 0x2a2a2a, stroke: 0x666666, strokeW: 4, depth: 10 });
+            const accent = this.add.rectangle(x, btnY + btnH / 2 - 8, btnW - 24, 4, tool.color, 0.95).setDepth(11).setOrigin(0.5);
             const icon = this.add.text(x, btnY - 14, tool.icon, { fontSize: '38px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(11);
-            const label = this.add.text(x, btnY + 22, tool.label, {
-                fontSize: '13px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 4
-            }).setOrigin(0.5).setDepth(11);
-            bg.setInteractive({ useHandCursor: true }).on('pointerdown', () => this.selectTool(tool.id));
-            this.toolBtns[tool.id] = { bg, txt: label, icon, accent, color: tool.color };
+            const label = this.add.text(x, btnY + 22, tool.label, { fontSize: '13px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
+            pill.hit.on('pointerdown', () => { pill.tap(); this.selectTool(tool.id); });
+            this.toolBtns[tool.id] = { pill, txt: label, icon, accent, color: tool.color, x, y: btnY, w: btnW, h: btnH };
         });
         this.updateSteamUI();
+        this.selectTool(this.currentTool || 'soap');
     }
     updateSteamUI() {
         const active = this.state.carpetIndex >= 4;
@@ -2873,13 +3125,24 @@ class MainScene extends Phaser.Scene {
         if (this.steamText) this.steamText.setVisible(active);
     }
     selectTool(tool) {
+        if (this.state.carpetIndex >= 4 && (tool === 'soap' || tool === 'wash')) tool = 'scraper';
         this.currentTool = tool;
         if (!this.toolBtns) return;
         for (const id in this.toolBtns) {
             const b = this.toolBtns[id];
             const active = id === tool;
-            if (active) { b.bg.setFillStyle(b.color); b.bg.setStrokeStyle(6, 0xFFFFFF); b.txt.setColor('#FFFFFF'); if (b.icon) b.icon.setScale(1.15); }
-            else { b.bg.setFillStyle(0x444444); b.bg.setStrokeStyle(4, 0x888888); b.txt.setColor('#FFFFFF'); if (b.icon) b.icon.setScale(1); }
+            if (active) {
+                b.pill.redraw(b.color, 0xFFFFFF, 6);
+                b.txt.setColor('#FFFFFF');
+                if (b.icon) { b.icon.setScale(1); this.tweens.killTweensOf(b.icon); this.tweens.add({ targets: b.icon, scaleX: 1.2, scaleY: 1.2, duration: 110, yoyo: true, ease: 'Back.easeOut' }); }
+                if (b.accent) b.accent.setAlpha(1);
+                b.pill.press();
+            } else {
+                b.pill.redraw(0x2a2a2a, 0x666666, 4);
+                b.txt.setColor('#FFFFFF');
+                if (b.icon) b.icon.setScale(1);
+                if (b.accent) b.accent.setAlpha(0.6);
+            }
         }
         if (tool === 'soap') this.brush.setText(this.state.getBrushIcon());
         else if (tool === 'wash') this.brush.setText('🧹');
@@ -2910,6 +3173,7 @@ class MainScene extends Phaser.Scene {
         };
         this.input.on('pointerdown', (pointer) => {
             if (this.inputLocked || uiOpen() || this.stars.active) return;
+            this.ambientMusic.resume();
             if (this.currentTool === 'swatter') {
                 this.effects.drawSwatterCursor(pointer.x, pointer.y);
                 this.effects.swatEffect(pointer.x, pointer.y);
@@ -2942,6 +3206,7 @@ class MainScene extends Phaser.Scene {
         if (this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen) return;
         if (this.stars.active) return;
+        if (this.state.carpetIndex >= 4 && (this.currentTool === 'soap' || this.currentTool === 'wash')) return;
         if (this.currentTool === 'steam') {
             if (this.steamFuel <= 0) return;
             this.steamFuel = Math.max(0, this.steamFuel - BALANCE.steamFuelCost);
@@ -2949,9 +3214,9 @@ class MainScene extends Phaser.Scene {
         }
         if (this.state.food <= 0) {
             if (this.state.money < BALANCE.foodPrice) { this.state.food = 1; this.refreshHUD(); this.showMessage(t('foodBonus')); }
-            else { this.showNoFoodWarning(); return; }
+            else { this.showNoFoodWarning(); this.mascot?.react('food'); return; }
         }
-        if (this.bugs.count > 0 && this.currentTool !== 'scraper' && this.currentTool !== 'steam') { this.showBugWarning(); return; }
+        if (this.bugs.count > 0 && this.currentTool !== 'scraper' && this.currentTool !== 'steam') { this.showBugWarning(); this.mascot?.react('bugs'); return; }
         this.cleaning.applyStroke(lx, ly, this.state.getCurrentRadius(), this.currentTool);
         const p = this.cleaning.progress;
         if (!this.stars.active && p >= BALANCE.finishThreshold && p < 1.0) { this.stars.activate(); this.updateStarsCounter(); }
@@ -2979,6 +3244,8 @@ class MainScene extends Phaser.Scene {
         this.refreshHUD();
         await this.saveSystem.save();
         this.showMessage(`+${reward} 💰!  ⏱ ${formatTime(timeSec)}`);
+        this.mascot?.react('finish');
+        this.mascot?.react('money');
         if (this.tutorial) this.tutorial.reportAction('finish');
         this.bugs.clear();
         this.cleaning.reset(this.state.carpetIndex);
@@ -2990,17 +3257,18 @@ class MainScene extends Phaser.Scene {
         this.updateStarsCounter();
         this.checkAndNotifyAchievements();
         this.leaderboard.submitScores();
-        if (this.state.canPrestige()) this.time.delayedCall(400, () => this.showMessage(t('prestigeAvailableMsg')));
+        if (this.state.canPrestige()) {
+            this.time.delayedCall(400, () => this.showMessage(t('prestigeAvailableMsg')));
+            this.time.delayedCall(600, () => this.mascot?.react('prestige'));
+        }
         if (this.state.carpetsCleaned % 5 === 0) this.ads.showFullscreen();
-        this.time.delayedCall(50, () => { this.bugs.spawnForLevel(this.state.carpetIndex); });
+        this.time.delayedCall(50, () => this.bugs.spawnForLevel(this.state.carpetIndex));
     }
     checkAndNotifyAchievements() {
         const unlocked = this.state.checkAchievements();
         if (unlocked.length > 0) {
             this.saveSystem.save();
-            unlocked.forEach((a, i) => {
-                this.time.delayedCall(400 + i * 600, () => this.showMessage(t('achievementUnlocked', loc(a.name), a.reward)));
-            });
+            unlocked.forEach((a, i) => { this.time.delayedCall(400 + i * 600, () => this.showMessage(t('achievementUnlocked', loc(a.name), a.reward))); });
             this.refreshHUD();
         }
     }
@@ -3022,7 +3290,7 @@ class MainScene extends Phaser.Scene {
         if (this.toolBtns) {
             for (const id in this.toolBtns) {
                 const b = this.toolBtns[id];
-                if (b.bg) b.bg.destroy();
+                if (b.pill) try { b.pill.cont.destroy(true); } catch {}
                 if (b.txt) b.txt.destroy();
                 if (b.icon) b.icon.destroy();
                 if (b.accent) b.accent.destroy();
@@ -3060,7 +3328,7 @@ class MainScene extends Phaser.Scene {
         if (this.toolBtns) {
             for (const id in this.toolBtns) {
                 const b = this.toolBtns[id];
-                if (b.bg) b.bg.destroy();
+                if (b.pill) try { b.pill.cont.destroy(true); } catch {}
                 if (b.txt) b.txt.destroy();
                 if (b.icon) b.icon.destroy();
                 if (b.accent) b.accent.destroy();
@@ -3072,7 +3340,7 @@ class MainScene extends Phaser.Scene {
         this.selectTool('soap');
         if (this.prestigeText) this.prestigeText.destroy();
         this.prestigeText = this.add.text(325, 16, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
-            fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: 'Arial', stroke: '#000000', strokeThickness: 4
+            fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4
         }).setOrigin(1, 0).setDepth(10);
         if (this.tutorial) { this.tutorial.isOpen = false; this.tutorial.clearStep(); }
         this.tutorial = null;
@@ -3085,8 +3353,7 @@ class MainScene extends Phaser.Scene {
         this.time.delayedCall(600, () => this.startCarpetTutorial());
     }
     unlockInput() {
-        this.inputLocked = true;
-        this.isPointerDown = false;
+        this.inputLocked = true; this.isPointerDown = false;
         this.lastLocalX = -9999; this.lastLocalY = -9999;
         this.brush.setVisible(false);
         this.effects.hideSwatterCursor();
@@ -3095,6 +3362,19 @@ class MainScene extends Phaser.Scene {
     updateProgressBar(p) {
         this.progressBar.width = 400 * p;
         this.progressText.setText(Math.min(100, Math.floor(p * 100)) + '%');
+        // glow при 90%+
+        if (p >= 0.9 && p < 1.0) {
+            this.progressGlow.clear();
+            this.progressGlow.lineStyle(4, 0x00FF88, 0.85);
+            this.progressGlow.strokeRoundedRect(360 - 202, 230 - 17, 404, 34, 12);
+            this.progressGlow.setVisible(true);
+            if (!this._glowTween) {
+                this._glowTween = this.tweens.add({ targets: this.progressGlow, alpha: { from: 1, to: 0.25 }, duration: 550, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+            }
+        } else {
+            if (this.progressGlow) { this.progressGlow.setVisible(false); this.progressGlow.clear(); }
+            if (this._glowTween) { this._glowTween.remove(); this._glowTween = null; }
+        }
     }
     vibrate() { if (!this.state.settings.vibration) return; try { navigator.vibrate?.(BALANCE.vibrationMs); } catch {} }
     showNoFoodWarning() {
@@ -3102,30 +3382,36 @@ class MainScene extends Phaser.Scene {
         this.noFoodCooldown = true;
         if (this.noFoodText) { if (this.noFoodTween) this.noFoodTween.remove(); this.noFoodText.destroy(); this.noFoodText = null; }
         this.noFoodText = this.add.text(360, 640, t('noFood'), {
-            fontSize: '52px', fill: '#FF0000', fontStyle: 'bold', fontFamily: 'Arial', align: 'center',
+            fontSize: '52px', fill: '#FF0000', fontStyle: 'bold', fontFamily: FONT_HAND, align: 'center',
             stroke: '#000000', strokeThickness: 8, shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, fill: true }
-        }).setOrigin(0.5).setDepth(80);
-        this.noFoodTween = this.tweens.add({ targets: this.noFoodText, alpha: { from: 1, to: 0.2 }, duration: 400, yoyo: true, repeat: 4,
+        }).setOrigin(0.5).setDepth(80).setAlpha(0);
+        this.tweens.add({ targets: this.noFoodText, alpha: 1, duration: 200, ease: 'Cubic.easeOut' });
+        this.noFoodTween = this.tweens.add({ targets: this.noFoodText, alpha: { from: 1, to: 0.2 }, duration: 400, yoyo: true, repeat: 4, delay: 200,
             onComplete: () => { if (this.noFoodText) { this.noFoodText.destroy(); this.noFoodText = null; } this.noFoodTween = null; } });
-        this.time.delayedCall(1500, () => { this.noFoodCooldown = false; });
+        this.time.delayedCall(1800, () => { this.noFoodCooldown = false; });
     }
     showBugWarning() {
         if (this.bugWarningCooldown) return;
         this.bugWarningCooldown = true;
         if (this.bugWarningText) { if (this.bugWarningTween) this.bugWarningTween.remove(); this.bugWarningText.destroy(); this.bugWarningText = null; }
         this.bugWarningText = this.add.text(360, 640, t('bugsFirst'), {
-            fontSize: '42px', fill: '#FF4444', fontStyle: 'bold', fontFamily: 'Arial', align: 'center',
+            fontSize: '42px', fill: '#FF4444', fontStyle: 'bold', fontFamily: FONT_HAND, align: 'center',
             stroke: '#000000', strokeThickness: 8, shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, fill: true }
-        }).setOrigin(0.5).setDepth(80);
-        this.bugWarningTween = this.tweens.add({ targets: this.bugWarningText, alpha: { from: 1, to: 0.2 }, duration: 400, yoyo: true, repeat: 4,
+        }).setOrigin(0.5).setDepth(80).setAlpha(0);
+        this.tweens.add({ targets: this.bugWarningText, alpha: 1, duration: 200, ease: 'Cubic.easeOut' });
+        this.bugWarningTween = this.tweens.add({ targets: this.bugWarningText, alpha: { from: 1, to: 0.2 }, duration: 400, yoyo: true, repeat: 4, delay: 200,
             onComplete: () => { if (this.bugWarningText) { this.bugWarningText.destroy(); this.bugWarningText = null; } this.bugWarningTween = null; } });
-        this.time.delayedCall(1500, () => { this.bugWarningCooldown = false; });
+        this.time.delayedCall(1800, () => { this.bugWarningCooldown = false; });
     }
     showMessage(text) {
         const msg = this.add.text(360, 1000, text, {
             ...TEXT_STYLES.message('#FFFF00', 26), backgroundColor: '#000000', padding: { x: 25, y: 12 }
-        }).setOrigin(0.5).setDepth(30);
-        this.time.delayedCall(2400, () => msg.destroy());
+        }).setOrigin(0.5).setDepth(30).setAlpha(0).setScale(0.9);
+        this.tweens.add({ targets: msg, alpha: 1, scaleX: 1, scaleY: 1, duration: 200, ease: 'Back.easeOut' });
+        this.time.delayedCall(2200, () => {
+            if (!msg.active) return;
+            this.tweens.add({ targets: msg, alpha: 0, scaleX: 0.9, scaleY: 0.9, duration: 220, ease: 'Cubic.easeIn', onComplete: () => msg.destroy() });
+        });
     }
     drawCarpet() {
         this.carpetContainer.removeAll(true);
