@@ -2804,7 +2804,7 @@ class LeaderboardUI {
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
-        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `carpets/carpet${i}.png`);
+        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
         this.load.on('loaderror', (file) => console.warn('Не загрузилось:', file.key, file.src));
         const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w / 2, h / 2 - 50, t('loading'), TEXT_STYLES.title()).setOrigin(0.5);
