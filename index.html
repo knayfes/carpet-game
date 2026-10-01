@@ -7,10 +7,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Phaser 4 -->
     <script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js"></script>
-    <!-- SDK для Яндекс.Игр — на GitHub Pages не нужен, закомментирован -->
-    <!-- <script src="/sdk.js"></script> -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
@@ -26,9 +23,6 @@
 </head>
 <body>
 <script>
-/* ============================================================
-   FONT & I18N
-   ============================================================ */
 const FONT_HAND = "'Caveat', 'Comic Sans MS', 'Segoe Script', cursive";
 
 const I18N = {
@@ -98,8 +92,6 @@ const I18N = {
         noMoney: 'Не хватает денег!', needMoreFood: '❌ Не хватает еды (нужно {0}🍞)',
         language: '🌐 Язык / Language',
         music: '🎵 Музыка', musicOn: '✅ ВКЛ', musicOff: '❌ ВЫКЛ',
-        weather: '🌤️ Погода', weatherAuto: 'Авто', weatherOff: 'Выкл',
-        mascotHint: '💡 Совет от котика',
         m_hello: ['Мяу! Помоги мне с ковром 🐾', 'Давай начнём! Я подскажу 🐱', 'Мурр~ Тут пыльно!'],
         m_soap: ['Наноси мыло круговыми 💫', 'Побольше пены — грязь сама уйдёт!', 'Мыль-мыль 🧼'],
         m_wash: ['Теперь смывай водичкой 💧', 'Смывай пену — вот так!', 'Буль-буль 💦'],
@@ -109,10 +101,7 @@ const I18N = {
         m_food: ['Еда кончилась 🍞 Купи в магазине!', 'Я голодный... купи еду 🐾', 'Не забудь поесть!'],
         m_prestige: ['Ты готов к престижу 👑', 'Пора начинать заново! 🔥', 'Наследие ждёт!'],
         m_money: ['Богатей-богатей 💰', 'Денежки капают ✨', 'Купи что-нибудь в магазине 🛒'],
-        m_idle: ['Мяу?', 'Мурр~', 'Как дела? 🐾', 'Почистим ещё?', 'Звёздочки лови ✨', 'Не забудь про задания 📅'],
-        m_weather_rain: ['Дождик за окном ☔', 'Уютно! Дождь идёт 🌧️'],
-        m_weather_snow: ['Снежок ❄️', 'Зимняя сказка ✨'],
-        m_weather_leaves: ['Осень 🍂', 'Листья падают 🍁']
+        m_idle: ['Мяу?', 'Мурр~', 'Как дела? 🐾', 'Почистим ещё?', 'Звёздочки лови ✨', 'Не забудь про задания 📅']
     },
     en: {
         title: 'Clean Carpets', loading: 'Loading...',
@@ -180,8 +169,6 @@ const I18N = {
         noMoney: 'Not enough money!', needMoreFood: '❌ Not enough food (need {0}🍞)',
         language: '🌐 Language',
         music: '🎵 Music', musicOn: '✅ ON', musicOff: '❌ OFF',
-        weather: '🌤️ Weather', weatherAuto: 'Auto', weatherOff: 'Off',
-        mascotHint: '💡 Kitty tip',
         m_hello: ['Meow! Help me with the carpet 🐾', 'Let\'s start! I\'ll help 🐱', 'Purr~ So dusty here!'],
         m_soap: ['Apply soap in circles 💫', 'More foam — dirt goes away!', 'Soap it 🧼'],
         m_wash: ['Now rinse with water 💧', 'Wash the foam off!', 'Splash 💦'],
@@ -191,10 +178,7 @@ const I18N = {
         m_food: ['Food is gone 🍞 Buy in shop!', 'I\'m hungry... buy food 🐾', 'Don\'t forget to eat!'],
         m_prestige: ['You\'re ready for prestige 👑', 'Time to start over! 🔥', 'Legacy awaits!'],
         m_money: ['Get richer 💰', 'Money flows ✨', 'Buy something in shop 🛒'],
-        m_idle: ['Meow?', 'Purr~', 'How are you? 🐾', 'Clean more?', 'Catch stars ✨', 'Check the quests 📅'],
-        m_weather_rain: ['Rain outside ☔', 'Cozy! It\'s raining 🌧️'],
-        m_weather_snow: ['Snow ❄️', 'Winter magic ✨'],
-        m_weather_leaves: ['Autumn 🍂', 'Leaves falling 🍁']
+        m_idle: ['Meow?', 'Purr~', 'How are you? 🐾', 'Clean more?', 'Catch stars ✨', 'Check the quests 📅']
     }
 };
 
@@ -232,9 +216,6 @@ function tArr(key) {
     return Array.isArray(arr) ? arr : [key];
 }
 
-/* ============================================================
-   BALANCE
-   ============================================================ */
 const BALANCE = {
     startMoney: 0, startFood: 3, startToolLevel: 1,
     totalCarpets: 5,
@@ -275,7 +256,7 @@ const BALANCE = {
     musicVolume: 0.18
 };
 
-const SAVE_KEY = 'carpetGameStats_v11';
+const SAVE_KEY = 'carpetGameStats_v12';
 
 const LEGACY_UPGRADES = [
     { id: 'money_flow',  icon: '💰', name: { ru: 'Денежный поток', en: 'Money Flow' },       desc: { ru: '+15% к деньгам навсегда', en: '+15% money forever' }, cost: 1,  maxLevel: 5 },
@@ -328,7 +309,7 @@ const QUEST_POOL = [
 ];
 
 const ROOM_SKINS = [
-    { id: 'classic', icon: '🏠', name: { ru: 'Классика', en: 'Classic' }, price: 0 },
+    { id: 'classic', icon: '🏔️', name: { ru: 'Зимний домик', en: 'Winter Cabin' }, price: 0 },
     { id: 'neon',    icon: '🌆', name: { ru: 'Неон', en: 'Neon' }, price: 3000 },
     { id: 'beach',   icon: '🏝️', name: { ru: 'Пляж', en: 'Beach' }, price: 7000 },
     { id: 'space',   icon: '🌌', name: { ru: 'Космос', en: 'Space' }, price: 15000 },
@@ -351,43 +332,40 @@ const PETS = [
 ];
 
 const DAILY_REWARDS = [
-    { money: 200, food: 0, icon: '💰' },
-    { money: 300, food: 0, icon: '💰' },
-    { money: 500, food: 0, icon: '💰' },
-    { money: 300, food: 1, icon: '🍞' },
-    { money: 800, food: 0, icon: '💰' },
-    { money: 1000, food: 0, icon: '💰' },
+    { money: 200, food: 0, icon: '💰' }, { money: 300, food: 0, icon: '💰' },
+    { money: 500, food: 0, icon: '💰' }, { money: 300, food: 1, icon: '🍞' },
+    { money: 800, food: 0, icon: '💰' }, { money: 1000, food: 0, icon: '💰' },
     { money: 5000, food: 1, icon: '👑' }
 ];
 
 const CARPET_TUTORIALS = {
     1: [
-        { text: { ru: 'Веди пальцем по ковру с 🧼 МЫЛОМ,\nчтобы нанести пену.', en: 'Swipe over the carpet with 🧼 SOAP\nto apply lather.' }, check: 'soap', need: 3 },
+        { text: { ru: 'Веди пальцем по ковру с 🧼 МЫЛОМ,\nчтобы нанести пену.', en: 'Swipe with 🧼 SOAP\nto apply lather.' }, check: 'soap', need: 3 },
         { text: { ru: 'Переключись на 💧 СМЫТЬ\nи смывай пену.', en: 'Switch to 💧 RINSE\nand wash off the foam.' }, check: 'wash', need: 3 },
-        { text: { ru: 'Когда грязь почти уйдёт —\nсобирай ⭐ звёзды тапом!', en: 'When dirt is almost gone —\ntap ⭐ stars to collect them!' }, check: 'auto', need: 0 },
+        { text: { ru: 'Когда грязь почти уйдёт —\nсобирай ⭐ звёзды тапом!', en: 'Tap ⭐ stars when dirt is gone!' }, check: 'auto', need: 0 },
         { text: { ru: 'Ковёр чист на 100%?\nЖми «ПОЛУЧИТЬ ДЕНЬГИ».', en: 'Carpet 100% clean?\nTap "GET MONEY".' }, check: 'finish', need: 1 }
     ],
     2: [
-        { text: { ru: '🐛 Жуки на ковре!\nВозьми 🪰 МУХОБОЙКУ.', en: '🐛 Bugs on the carpet!\nTake the 🪰 SWATTER.' }, check: 'auto', need: 0 },
-        { text: { ru: 'Тапни по жукам — пока все не убиты,\nчистить нельзя.', en: 'Tap bugs — while any are alive,\nyou can\'t clean.' }, check: 'killBugs', need: 3 },
-        { text: { ru: 'Прокачивай мухобойку:\nбыстрее, шире, +💰 за жука.', en: 'Upgrade the swatter:\nfaster, wider, +💰 per bug.' }, check: 'auto', need: 0 }
+        { text: { ru: '🐛 Жуки на ковре!\nВозьми 🪰 МУХОБОЙКУ.', en: '🐛 Bugs!\nTake the 🪰 SWATTER.' }, check: 'auto', need: 0 },
+        { text: { ru: 'Тапни по жукам — пока все не убиты,\nчистить нельзя.', en: 'Tap bugs — you can\'t clean\nwhile they\'re alive.' }, check: 'killBugs', need: 3 },
+        { text: { ru: 'Прокачивай мухобойку:\nбыстрее, шире, +💰 за жука.', en: 'Upgrade the swatter.' }, check: 'auto', need: 0 }
     ],
     3: [
-        { text: { ru: '🧽 Новый инструмент — СКРЕБОК.\nИм снимаются засохшие корки.', en: '🧽 New tool — SCRAPER.\nIt removes dried crusts.' }, check: 'auto', need: 0 },
-        { text: { ru: 'Проведи 🧽 скребком по корке —\nона превратится в пыль.', en: 'Swipe 🧽 scraper over crust —\nit turns to dust.' }, check: 'scrape', need: 2 },
-        { text: { ru: 'После скребка смывай пыль 💧.\nКомбинируй все 3 инструмента!', en: 'After scraping, rinse 💧 dust.\nCombine all 3 tools!' }, check: 'auto', need: 0 }
+        { text: { ru: '🧽 Новый инструмент — СКРЕБОК.\nИм снимаются засохшие корки.', en: '🧽 New tool — SCRAPER.' }, check: 'auto', need: 0 },
+        { text: { ru: 'Проведи 🧽 скребком по корке.', en: 'Swipe 🧽 scraper over crust.' }, check: 'scrape', need: 2 },
+        { text: { ru: 'После скребка смывай пыль 💧.', en: 'After scraping, rinse 💧.' }, check: 'auto', need: 0 }
     ],
     4: [
-        { text: { ru: '🔥 Новый инструмент — ПАР.\nОн полностью убирает грязь.', en: '🔥 New tool — STEAM.\nIt fully removes all dirt.' }, check: 'auto', need: 0 },
-        { text: { ru: 'На 4-м ковре нет мыла и смыва.\nТолько скребок и пар!', en: 'On carpet 4 there is no soap or rinse.\nOnly scraper and steam!' }, check: 'auto', need: 0 },
-        { text: { ru: 'Проведи паром по ковру.\nСледи за полоской топлива!', en: 'Swipe steam over the carpet.\nWatch the fuel bar!' }, check: 'steam', need: 2 },
-        { text: { ru: 'Сначала скребком снимай корки,\nзатем паром убирай всё остальное.', en: 'First scrape the crusts,\nthen steam-clean everything else.' }, check: 'auto', need: 0 }
+        { text: { ru: '🔥 Новый инструмент — ПАР.', en: '🔥 New tool — STEAM.' }, check: 'auto', need: 0 },
+        { text: { ru: 'На 4-м ковре нет мыла и смыва.', en: 'Carpet 4 has no soap/rinse.' }, check: 'auto', need: 0 },
+        { text: { ru: 'Проведи паром по ковру.', en: 'Swipe steam over the carpet.' }, check: 'steam', need: 2 },
+        { text: { ru: 'Сначала скребок, затем пар.', en: 'First scrape, then steam.' }, check: 'auto', need: 0 }
     ],
     5: [
-        { text: { ru: '🧴 Новый инструмент — ПЯТНОВЫВОДИТЕЛЬ.\nУбирает цветные пятна.', en: '🧴 New tool — STAIN REMOVER.\nRemoves colored stains.' }, check: 'auto', need: 0 },
-        { text: { ru: 'На 5-м ковре 4 инструмента:\nскребок, пар, пятновыводитель, мухобойка.', en: 'On carpet 5 there are 4 tools:\nscraper, steam, remover, swatter.' }, check: 'auto', need: 0 },
-        { text: { ru: 'Проведи пятновыводителем\nпо цветному пятну.', en: 'Swipe the remover\nover a colored stain.' }, check: 'stain', need: 2 },
-        { text: { ru: '⚠️ Плесень распространяется!\nУбирай её быстро — паром или пятновыводителем.', en: '⚠️ Mold spreads!\nRemove it fast with steam or remover.' }, check: 'auto', need: 0 }
+        { text: { ru: '🧴 Новый инструмент — ПЯТНОВЫВОДИТЕЛЬ.', en: '🧴 New — STAIN REMOVER.' }, check: 'auto', need: 0 },
+        { text: { ru: 'На 5-м ковре 4 инструмента.', en: 'Carpet 5 has 4 tools.' }, check: 'auto', need: 0 },
+        { text: { ru: 'Проведи пятновыводителем по пятну.', en: 'Swipe remover over a stain.' }, check: 'stain', need: 2 },
+        { text: { ru: '⚠️ Плесень распространяется!', en: '⚠️ Mold spreads!' }, check: 'auto', need: 0 }
     ]
 };
 
@@ -420,10 +398,6 @@ const TEXT_STYLES = {
         stroke: '#000000', strokeThickness: 5,
         shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true },
         align: 'center', wordWrap: { width: 640 }
-    }),
-    hand: (color = '#FFFFFF', size = 22) => ({
-        fontSize: size + 'px', fill: color, fontFamily: FONT_HAND,
-        stroke: '#000000', strokeThickness: 4, align: 'center'
     })
 };
 
@@ -445,9 +419,6 @@ function getTimeOfDay() {
     return 'night';
 }
 
-/* ============================================================
-   UI KIT — пилюли, press-feedback, glow
-   ============================================================ */
 function makePill(scene, x, y, w, h, opts = {}) {
     const r = opts.radius ?? Math.min(w, h) / 2;
     const cont = scene.add.container(x, y).setDepth(opts.depth ?? 10);
@@ -475,39 +446,20 @@ function makePill(scene, x, y, w, h, opts = {}) {
         tap() {
             scene.tweens.killTweensOf(cont); cont.setScale(1);
             scene.tweens.add({ targets: cont, scaleX: 0.92, scaleY: 0.92, duration: 70, yoyo: true, ease: 'Quad.easeOut' });
-        },
-        pulse(scale = 1.05, ms = 700) {
-            scene.tweens.killTweensOf(cont); cont.setScale(1);
-            scene.tweens.add({ targets: cont, scaleX: scale, scaleY: scale, duration: ms, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-        },
-        glow(color = 0xFFFFFF, thickness = 6, ms = 1100) {
-            const glow = scene.add.graphics().setDepth((opts.depth ?? 10) - 1);
-            glow.lineStyle(thickness, color, 0.9);
-            glow.strokeRoundedRect(x - w / 2 - 4, y - h / 2 - 4, w + 8, h + 8, r + 4);
-            glow.setAlpha(0);
-            scene.tweens.add({ targets: glow, alpha: { from: 0.85, to: 0 },
-                scaleX: { from: 1, to: 1.12 }, scaleY: { from: 1, to: 1.12 },
-                duration: ms, repeat: -1, ease: 'Cubic.easeOut' });
-            return glow;
         }
     };
     api.redraw();
     return api;
 }
 
-/* ============================================================
-   AMBIENT MUSIC — генеративная фоновая мелодия
-   ============================================================ */
 class AmbientMusic {
     constructor() {
         this.ctx = null; this.master = null; this.bus = null;
         this.enabled = true; this._playing = false;
         this._chordTimer = null; this._chimeTimer = null; this._chordIdx = 0;
         this._chords = [
-            [220.00, 261.63, 329.63],
-            [174.61, 220.00, 261.63],
-            [130.81, 164.81, 196.00],
-            [196.00, 246.94, 293.66]
+            [220.00, 261.63, 329.63], [174.61, 220.00, 261.63],
+            [130.81, 164.81, 196.00], [196.00, 246.94, 293.66]
         ];
         this._chimeScale = [523.25, 587.33, 659.25, 783.99, 880.00];
     }
@@ -564,10 +516,7 @@ class AmbientMusic {
             this.master.gain.linearRampToValueAtTime(0, t + 1);
         }
     }
-    setEnabled(v) {
-        this.enabled = !!v;
-        if (v) this.start(); else this.stop();
-    }
+    setEnabled(v) { this.enabled = !!v; if (v) this.start(); else this.stop(); }
     _scheduleChord() {
         if (!this._playing) return;
         const chord = this._chords[this._chordIdx % this._chords.length];
@@ -584,93 +533,14 @@ class AmbientMusic {
     }
 }
 
-/* ============================================================
-   WEATHER — погодные слои
-   ============================================================ */
-class WeatherSystem {
-    constructor(scene) {
-        this.scene = scene;
-        this.current = 'none';
-        this.emitters = {};
-        this._ensureTextures();
-    }
-    _ensureTextures() {
-        const s = this.scene;
-        if (!s.textures.exists('wx_rain')) {
-            const g = s.add.graphics();
-            g.fillStyle(0x9AD6FF, 0.9); g.fillRect(0, 0, 3, 18);
-            g.generateTexture('wx_rain', 4, 20); g.destroy();
-        }
-        if (!s.textures.exists('wx_snow')) {
-            const g = s.add.graphics();
-            g.fillStyle(0xFFFFFF, 0.95); g.fillCircle(4, 4, 3.5);
-            g.generateTexture('wx_snow', 8, 8); g.destroy();
-        }
-        if (!s.textures.exists('wx_leaf')) {
-            const g = s.add.graphics();
-            g.fillStyle(0xD97706, 1);
-            g.fillEllipse(8, 8, 14, 8);
-            g.lineStyle(1, 0x7C3A12, 1); g.lineBetween(2, 8, 14, 8);
-            g.generateTexture('wx_leaf', 16, 16); g.destroy();
-        }
-    }
-    _clear() {
-        for (const k in this.emitters) { try { this.emitters[k].destroy(); } catch {} }
-        this.emitters = {};
-    }
-    set(type, opts = {}) {
-        if (type === this.current) return;
-        this._clear();
-        this.current = type;
-        if (type === 'none') return;
-        const W = 720;
-        const depth = opts.depth ?? 7;
-        if (type === 'rain') {
-            this.emitters.rain = this.scene.add.particles(0, -20, 'wx_rain', {
-                x: { min: -50, max: W + 50 }, quantity: 3, frequency: 45,
-                lifespan: 2200, speedY: { min: 400, max: 550 }, speedX: { min: -30, max: 30 },
-                scale: { start: 1.2, end: 0.8 }, alpha: { start: 0.75, end: 0.25 },
-                rotate: -8, blendMode: 'ADD'
-            }).setDepth(depth);
-        } else if (type === 'snow') {
-            this.emitters.snow = this.scene.add.particles(0, -20, 'wx_snow', {
-                x: { min: -50, max: W + 50 }, quantity: 2, frequency: 90,
-                lifespan: 6500, speedY: { min: 40, max: 90 }, speedX: { min: -30, max: 30 },
-                scale: { start: 1, end: 0.6 }, alpha: { start: 0.9, end: 0.4 },
-                rotate: { min: 0, max: 360 }
-            }).setDepth(depth);
-        } else if (type === 'leaves') {
-            this.emitters.leaves = this.scene.add.particles(0, -20, 'wx_leaf', {
-                x: { min: -50, max: W + 50 }, quantity: 1, frequency: 220,
-                lifespan: 9000, speedY: { min: 40, max: 80 }, speedX: { min: -60, max: 60 },
-                scale: { start: 1, end: 0.9 }, alpha: { start: 0.9, end: 0.5 },
-                rotate: { min: 0, max: 360 }, accelerationX: { min: -15, max: 15 }
-            }).setDepth(depth);
-        }
-    }
-    cycleByTimeOfDay(timeOfDay) {
-        let type = 'none';
-        const r = Math.random();
-        if (timeOfDay === 'morning') type = r < 0.45 ? 'leaves' : 'none';
-        else if (timeOfDay === 'day') type = r < 0.25 ? 'leaves' : 'none';
-        else if (timeOfDay === 'evening') type = r < 0.55 ? 'rain' : 'none';
-        else if (timeOfDay === 'night') type = r < 0.6 ? 'snow' : (r < 0.8 ? 'rain' : 'none');
-        this.set(type);
-        return type;
-    }
-}
-
-/* ============================================================
-   MASCOT — котёнок с комментариями
-   ============================================================ */
 class Mascot {
     constructor(scene) {
         this.scene = scene;
         this.x = 640; this.y = 1160;
         this.container = scene.add.container(this.x, this.y).setDepth(50);
         this._buildKitten();
-        this.bubble = null; this.bubbleTween = null;
-        this._idleTimer = null; this._lastSaid = 0;
+        this.bubble = null;
+        this._idleTimer = null;
         this._cooldownKeys = {};
         this._scheduleIdle();
     }
@@ -703,7 +573,6 @@ class Mascot {
     say(text, ms = 3200) {
         if (!text) return;
         if (this.bubble) { try { this.bubble.destroy(); } catch {} this.bubble = null; }
-        if (this.bubbleTween) { try { this.bubbleTween.remove(); } catch {} this.bubbleTween = null; }
         const bx = this.x - 200, by = this.y - 80;
         const bubble = this.scene.add.container(bx, by).setDepth(51);
         const bg = this.scene.add.graphics();
@@ -713,8 +582,6 @@ class Mascot {
         bg.strokeRoundedRect(-160, -46, 220, 70, 18);
         bg.fillStyle(0xFFFFFF, 0.96);
         bg.fillTriangle(40, 20, 74, 40, 40, 40);
-        bg.lineStyle(3, 0x4A90D9, 1);
-        bg.beginPath(); bg.moveTo(40, 24); bg.lineTo(74, 40); bg.strokePath();
         bubble.add(bg);
         const txt = this.scene.add.text(-50, -10, text, {
             fontSize: '22px', fill: '#1A1A1A', fontFamily: FONT_HAND,
@@ -724,7 +591,6 @@ class Mascot {
         bubble.setAlpha(0).setScale(0.85);
         this.bubble = bubble;
         this.scene.tweens.add({ targets: bubble, alpha: 1, scaleX: 1, scaleY: 1, duration: 220, ease: 'Back.easeOut' });
-        this.scene.tweens.add({ targets: bubble, y: by - 6, duration: 1400, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
         this.scene.time.delayedCall(ms, () => {
             if (!bubble.active) return;
             this.scene.tweens.add({ targets: bubble, alpha: 0, scaleX: 0.9, scaleY: 0.9, duration: 250,
@@ -740,20 +606,13 @@ class Mascot {
     }
     _scheduleIdle() {
         const loop = () => {
-            if (!this.bubble) {
-                const pool = tArr('m_idle');
-                this.say(pick(pool), 2600);
-            }
+            if (!this.bubble) this.say(pick(tArr('m_idle')), 2600);
             this._idleTimer = setTimeout(loop, 22000 + Math.random() * 20000);
         };
         this._idleTimer = setTimeout(loop, 30000);
     }
-    destroy() { clearTimeout(this._idleTimer); }
 }
 
-/* ============================================================
-   GAMESTATE
-   ============================================================ */
 class GameState {
     constructor() {
         this.money = BALANCE.startMoney;
@@ -774,7 +633,7 @@ class GameState {
         this.questCounters = { cleanToday: 0, killBugsToday: 0, fastCleanToday: 0, soapUsesToday: 0, moneyEarnedToday: 0, petActionsToday: 0, starsToday: 0 };
         this.lastAdTime = 0; this.tutorialDone = false;
         this.pets = { cat: { owned: false, level: 1 }, dog: { owned: false, level: 1 }, hamster: { owned: false, level: 1 }, parrot: { owned: false, level: 1 } };
-        this.settings = { vibration: true, lang: null, music: true, weather: true };
+        this.settings = { vibration: true, lang: null, music: true };
         this.dailyBonus = { lastClaimDate: '', streakDay: 0 };
         this.leaderboardBestMoney = 0; this.leaderboardBestPrestige = 0;
     }
@@ -813,9 +672,7 @@ class GameState {
         return Math.pow(mult, this.prestigeLevel);
     }
     getPrestigeTitle() {
-        const titles = LANG === 'ru'
-            ? ['Новичок', 'Профи', 'Мастер', 'Гуру ковров', 'Легенда']
-            : ['Novice', 'Pro', 'Master', 'Carpet Guru', 'Legend'];
+        const titles = LANG === 'ru' ? ['Новичок','Профи','Мастер','Гуру ковров','Легенда'] : ['Novice','Pro','Master','Carpet Guru','Legend'];
         return titles[Math.min(this.prestigeLevel, titles.length - 1)];
     }
     getPetsOwned() { return Object.values(this.pets).filter(p => p.owned).length; }
@@ -1135,9 +992,6 @@ class GameState {
     }
 }
 
-/* ============================================================
-   SAVE / ADS / LEADERBOARD
-   ============================================================ */
 class SaveSystem {
     constructor(state) { this.state = state; this.ysdk = null; this.useLocal = false; this._saving = false; }
     async init() {
@@ -1181,11 +1035,9 @@ class SaveSystem {
             const fresh = new GameState();
             const savedLang = this.state.settings.lang;
             const savedMusic = this.state.settings.music;
-            const savedWeather = this.state.settings.weather;
             this.state.fromSaveObject(fresh.toSaveObject());
             this.state.settings.lang = savedLang;
             this.state.settings.music = savedMusic;
-            this.state.settings.weather = savedWeather;
             try { localStorage.removeItem(SAVE_KEY); } catch {}
             const data = this.state.toSaveObject();
             if (!this.useLocal && this.ysdk) { try { await this.ysdk.player.setStats(data); } catch {} }
@@ -1272,9 +1124,6 @@ class LeaderboardSystem {
     }
 }
 
-/* ============================================================
-   EFFECTS
-   ============================================================ */
 class Effects {
     constructor(scene) {
         this.scene = scene;
@@ -1297,23 +1146,6 @@ class Effects {
             g.fillStyle(0x9AD6FF, 1); g.fillCircle(4, 5, 4); g.fillTriangle(0, 5, 8, 5, 4, 0);
             g.generateTexture('fx_drop', 8, 10); g.destroy();
         }
-        if (!s.textures.exists('fx_star')) {
-            const g = s.add.graphics();
-            g.fillStyle(0xFFD700, 1);
-            const pts = [];
-            for (let i = 0; i < 10; i++) {
-                const r = i % 2 === 0 ? 7 : 3;
-                const a = -Math.PI / 2 + i * Math.PI / 5;
-                pts.push({ x: 8 + Math.cos(a) * r, y: 8 + Math.sin(a) * r });
-            }
-            g.fillPoints(pts, true);
-            g.generateTexture('fx_star', 16, 16); g.destroy();
-        }
-        if (!s.textures.exists('fx_spark')) {
-            const g = s.add.graphics();
-            g.fillStyle(0xFFFFFF, 1); g.fillCircle(3, 3, 2.5);
-            g.generateTexture('fx_spark', 6, 6); g.destroy();
-        }
     }
     _emitter(key, x, y, cfg) {
         const em = this.scene.add.particles(x, y, key, Object.assign({
@@ -1326,57 +1158,53 @@ class Effects {
     bubbles(x, y) {
         if (this._fxCount >= this._fxMax) return;
         if (Math.random() > BALANCE.bubbleChance) return;
-        this._fxCount++;
         this._emitter('fx_bubble', x, y, { quantity: 2, lifespan: 700, speed: { min: 30, max: 70 }, scale: { start: 0.9, end: 1.4 }, alpha: { start: 0.9, end: 0 } });
-        this._fxCount--;
     }
     splash(x, y) {
         if (this._fxCount >= this._fxMax) return;
         if (Math.random() > BALANCE.splashChance) return;
-        this._fxCount++;
         this._emitter('fx_drop', x, y, { quantity: 3, lifespan: 550, speed: { min: 50, max: 130 }, angle: { min: 0, max: 360 }, scale: { start: 1.1, end: 0.2 } });
-        this._fxCount--;
     }
     star(x, y) {
         if (this._fxCount >= this._fxMax) return;
         if (Math.random() > BALANCE.starChance) return;
         this._fxCount++;
-        const t = this.scene.add.text(x, y, Math.random() > 0.5 ? '⭐' : '✨', { fontSize: (18 + Math.random() * 15) + 'px' }).setOrigin(0.5).setDepth(5);
+        const tt = this.scene.add.text(x, y, Math.random() > 0.5 ? '⭐' : '✨', { fontSize: (18 + Math.random() * 15) + 'px' }).setOrigin(0.5).setDepth(5);
         const a = Math.random() * Math.PI * 2, d = 30 + Math.random() * 60;
-        this.scene.tweens.add({ targets: t, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d - 40,
+        this.scene.tweens.add({ targets: tt, x: x + Math.cos(a) * d, y: y + Math.sin(a) * d - 40,
             alpha: { from: 1, to: 0 }, scale: { from: 1, to: 0.3 },
             duration: BALANCE.starLifetime, ease: 'Cubic.easeOut',
-            onComplete: () => { this._fxCount--; t.destroy(); } });
+            onComplete: () => { this._fxCount--; tt.destroy(); } });
     }
     starBurst(x, y, count = 3) { for (let i = 0; i < count; i++) { if (this._fxCount >= this._fxMax) return; this.star(x, y); } }
     moneyPopup(x, y, amount, color = '#FFD700') {
         if (this._fxCount >= this._fxMax) return;
         this._fxCount++;
-        const t = this.scene.add.text(x, y, `+${amount}💰`, { fontSize: '28px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(30);
-        this.scene.tweens.add({ targets: t, y: y - 70, alpha: { from: 1, to: 0 }, scale: { from: 1, to: 1.4 }, duration: 900, ease: 'Cubic.easeOut',
-            onComplete: () => { this._fxCount--; t.destroy(); } });
+        const tt = this.scene.add.text(x, y, `+${amount}💰`, { fontSize: '28px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(30);
+        this.scene.tweens.add({ targets: tt, y: y - 70, alpha: { from: 1, to: 0 }, scale: { from: 1, to: 1.4 }, duration: 900, ease: 'Cubic.easeOut',
+            onComplete: () => { this._fxCount--; tt.destroy(); } });
     }
     petAction(x, y, icon) {
         if (this._fxCount >= this._fxMax) return;
         this._fxCount++;
-        const t = this.scene.add.text(x, y, icon, { fontSize: '42px' }).setOrigin(0.5).setDepth(21);
-        this.scene.tweens.add({ targets: t, y: y - 60, alpha: { from: 1, to: 0 }, scale: { from: 0.8, to: 1.3 }, duration: 800, ease: 'Back.easeOut',
-            onComplete: () => { this._fxCount--; t.destroy(); } });
+        const tt = this.scene.add.text(x, y, icon, { fontSize: '42px' }).setOrigin(0.5).setDepth(21);
+        this.scene.tweens.add({ targets: tt, y: y - 60, alpha: { from: 1, to: 0 }, scale: { from: 0.8, to: 1.3 }, duration: 800, ease: 'Back.easeOut',
+            onComplete: () => { this._fxCount--; tt.destroy(); } });
     }
     swatEffect(x, y) {
         if (this._fxCount >= this._fxMax) return;
         this._fxCount++;
-        const t = this.scene.add.text(x, y, '💥', { fontSize: '60px' }).setOrigin(0.5).setDepth(20);
-        this.scene.tweens.add({ targets: t, alpha: 0, scale: 1.8, duration: 400, ease: 'Cubic.easeOut',
-            onComplete: () => { this._fxCount--; t.destroy(); } });
+        const tt = this.scene.add.text(x, y, '💥', { fontSize: '60px' }).setOrigin(0.5).setDepth(20);
+        this.scene.tweens.add({ targets: tt, alpha: 0, scale: 1.8, duration: 400, ease: 'Cubic.easeOut',
+            onComplete: () => { this._fxCount--; tt.destroy(); } });
     }
     steamEffect(x, y) {
         if (this._fxCount >= this._fxMax) return;
         this._fxCount++;
         const s = ['☁️','💨','🌫️'][Math.floor(Math.random() * 3)];
-        const t = this.scene.add.text(x, y, s, { fontSize: '40px' }).setOrigin(0.5).setDepth(9).setAlpha(0.7);
-        this.scene.tweens.add({ targets: t, y: y - 40, alpha: { from: 0.7, to: 0 }, scale: { from: 1, to: 1.4 }, duration: 500, ease: 'Cubic.easeOut',
-            onComplete: () => { this._fxCount--; t.destroy(); } });
+        const tt = this.scene.add.text(x, y, s, { fontSize: '40px' }).setOrigin(0.5).setDepth(9).setAlpha(0.7);
+        this.scene.tweens.add({ targets: tt, y: y - 40, alpha: { from: 0.7, to: 0 }, scale: { from: 1, to: 1.4 }, duration: 500, ease: 'Cubic.easeOut',
+            onComplete: () => { this._fxCount--; tt.destroy(); } });
     }
     drawSwatterCursor(x, y) {
         const g = this.gfxSwatter;
@@ -1392,29 +1220,20 @@ class Effects {
         const sym = ['⭐','✨','🌟','💫'];
         for (let i = 0; i < BALANCE.finishStarCount; i++) {
             const sx = Math.random() * W, sy = Math.random() * H;
-            const t = this.scene.add.text(sx, sy, sym[Math.floor(Math.random() * 4)], { fontSize: (25 + Math.random() * 30) + 'px' }).setOrigin(0.5).setDepth(15);
+            const tt = this.scene.add.text(sx, sy, sym[Math.floor(Math.random() * 4)], { fontSize: (25 + Math.random() * 30) + 'px' }).setOrigin(0.5).setDepth(15);
             const a = Math.random() * Math.PI * 2, d = 60 + Math.random() * 150;
-            this.scene.tweens.add({ targets: t, x: sx + Math.cos(a) * d, y: sy + Math.sin(a) * d,
+            this.scene.tweens.add({ targets: tt, x: sx + Math.cos(a) * d, y: sy + Math.sin(a) * d,
                 alpha: { from: 0, to: 1 }, scale: { from: 0.3, to: 1.2 },
                 delay: Math.random() * 600, duration: BALANCE.finishStarDuration * 0.4, ease: 'Back.easeOut',
-                onComplete: () => this.scene.tweens.add({ targets: t, alpha: 0, scale: 0.2, y: t.y - 60,
-                    duration: BALANCE.finishStarDuration * 0.6, ease: 'Cubic.easeIn', onComplete: () => t.destroy() }) });
+                onComplete: () => this.scene.tweens.add({ targets: tt, alpha: 0, scale: 0.2, y: tt.y - 60,
+                    duration: BALANCE.finishStarDuration * 0.6, ease: 'Cubic.easeIn', onComplete: () => tt.destroy() }) });
         }
-    }
-    fadeIn(container, ms = 220) {
-        container.setAlpha(0);
-        this.scene.tweens.add({ targets: container, alpha: 1, duration: ms, ease: 'Cubic.easeOut' });
-    }
-    fadeOut(container, onDone, ms = 180) {
-        this.scene.tweens.add({ targets: container, alpha: 0, duration: ms, ease: 'Cubic.easeIn', onComplete: () => onDone && onDone() });
     }
 }
 </script>
 
 <script>
-/* ============================================================
-   FINISH STARS (с glow)
-   ============================================================ */
+/* FINISH STARS */
 class FinishStarsSystem {
     constructor(scene, cleaning, state, effects) {
         this.scene = scene; this.cleaning = cleaning; this.state = state; this.effects = effects;
@@ -1456,7 +1275,6 @@ class FinishStarsSystem {
             let icon = '⭐';
             if (c.hasStain) icon = '🧴';
             else if (c.hasCrust) icon = '🧱';
-
             const glow = this.scene.add.graphics().setDepth(23);
             glow.fillStyle(0xFFD700, 0.35);
             glow.fillCircle(c.x, c.y, 42);
@@ -1464,12 +1282,10 @@ class FinishStarsSystem {
             this.scene.tweens.add({ targets: glow, alpha: { from: 0.15, to: 0.7 },
                 scaleX: { from: 0.85, to: 1.15 }, scaleY: { from: 0.85, to: 1.15 },
                 duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-
             const star = this.scene.add.text(c.x, c.y, icon, { fontSize: '44px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(24);
             star.setScale(0);
             this.scene.tweens.add({ targets: star, scale: 1, duration: 350, ease: 'Back.easeOut' });
             this.scene.tweens.add({ targets: star, scaleX: 1.15, scaleY: 1.15, duration: 700, yoyo: true, repeat: -1, delay: 350, ease: 'Sine.easeInOut' });
-
             const hit = this.scene.add.circle(c.x, c.y, 45, 0x000000, 0.001).setDepth(25).setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.popStar(c));
             this.stars.push({ star, hit, glow, cells: c.cells });
@@ -1516,9 +1332,6 @@ class FinishStarsSystem {
     get count() { return this.stars.length; }
 }
 
-/* ============================================================
-   CLEANING
-   ============================================================ */
 class CleaningSystem {
     constructor(scene, bounds, state) {
         this.scene = scene; this.bounds = bounds; this.state = state;
@@ -1747,9 +1560,6 @@ class CleaningSystem {
     }
 }
 
-/* ============================================================
-   BUGS
-   ============================================================ */
 class BugSystem {
     constructor(scene, bounds, state, opts = {}) {
         this.scene = scene; this.bounds = bounds; this.state = state;
@@ -1843,16 +1653,13 @@ class BugSystem {
     }
 }
 
-/* ============================================================
-   ROOM
-   ============================================================ */
+/* ROOM — уютная зимняя хижина */
 class RoomRenderer {
     constructor(scene) {
         this.scene = scene;
         this.gfx = scene.add.graphics().setDepth(-10);
-        this.tintRect = scene.add.rectangle(360, 640, 720, 1280, 0x000000, 0).setDepth(-5);
     }
-    draw(skinId, level = 0, timeOfDay = 'day') {
+    draw(skinId) {
         const W = 720, H = 1280, g = this.gfx;
         g.clear();
         switch (skinId) {
@@ -1860,38 +1667,169 @@ class RoomRenderer {
             case 'beach': this.drawBeach(g, W, H); break;
             case 'space': this.drawSpace(g, W, H); break;
             case 'candy': this.drawCandy(g, W, H); break;
-            default: this.drawClassic(g, W, H, level);
+            default: this.drawCozyCabin(g, W, H);
         }
-        this.applyTimeOfDay(timeOfDay);
     }
-    applyTimeOfDay(time) {
-        let color = 0x000000, alpha = 0;
-        if (time === 'morning') { color = 0xFFDD88; alpha = 0.06; }
-        else if (time === 'evening') { color = 0xFF6622; alpha = 0.18; }
-        else if (time === 'night') { color = 0x0a0a2a; alpha = 0.35; }
-        this.tintRect.setFillStyle(color, alpha);
-    }
-    drawClassic(g, W, H, level) {
-        const isCozy = (level % 2 === 0);
-        if (isCozy) {
-            const colors = [0xE8D5B7, 0xD4B896, 0xC9A87C, 0xB89A6A, 0xA8895A];
-            g.fillStyle(colors[level % colors.length], 1); g.fillRect(0, 0, W, 900);
-            for (let x = 0; x < W; x += 60) { g.fillStyle(0x000000, 0.05); g.fillRect(x, 0, 30, 900); }
-            g.fillStyle(0x8B5A2B, 1); g.fillRect(0, 900, W, H - 900);
-            for (let y = 900; y < H; y += 40) { g.fillStyle(0x000000, 0.15); g.fillRect(0, y, W, 3); }
-            g.fillStyle(0x5C3A1E, 1); g.fillRect(0, 880, W, 20);
-            g.fillStyle(0xFFFFFF, 1); g.fillRect(80, 150, 200, 250);
-            g.lineStyle(8, 0x5C3A1E, 1); g.strokeRect(80, 150, 200, 250);
-            g.fillStyle(0xFFEB3B, 0.8); g.fillCircle(240, 200, 35);
-        } else {
-            const colors = [0x2C3E50, 0x34495E, 0x1A252F, 0x3D5A80, 0x293241];
-            g.fillStyle(colors[level % colors.length], 1); g.fillRect(0, 0, W, 900);
-            g.fillStyle(0x00E5FF, 0.5); g.fillRect(0, 400, W, 4);
-            g.fillStyle(0xFF00E5, 0.5); g.fillRect(0, 500, W, 4);
-            g.fillStyle(0x1a1a1a, 1); g.fillRect(0, 900, W, H - 900);
-            g.lineStyle(3, 0x00E5FF, 0.6); g.strokeCircle(600, 250, 80);
-            g.lineStyle(3, 0xFF00E5, 0.6); g.strokeRect(100, 180, 120, 120);
+    drawCozyCabin(g, W, H) {
+        // === Стена — тёмное дерево ===
+        g.fillStyle(0x2a1a10, 1); g.fillRect(0, 0, W, H);
+        for (let y = 0; y < 1000; y += 26) {
+            g.fillStyle(0x1a0f06, 0.5); g.fillRect(0, y, W, 2);
         }
+        // Вертикальные тёмные балки
+        g.fillStyle(0x1a0f06, 0.75);
+        g.fillRect(0, 0, 55, 1000);
+        g.fillRect(W - 55, 0, 55, 1000);
+
+        // === Окно ===
+        const wx = 75, wy = 55, ww = W - 150, wh = 520;
+        // Внешняя рамка
+        g.fillStyle(0x4a2c14, 1); g.fillRect(wx - 18, wy - 18, ww + 36, wh + 36);
+        g.fillStyle(0x2a1a0e, 1); g.fillRect(wx - 10, wy - 10, ww + 20, wh + 20);
+
+        // Небо (градиент)
+        for (let i = 0; i < wh; i++) {
+            const tt = i / wh;
+            const r = Math.floor(0x14 + (0x28 - 0x14) * tt);
+            const gg = Math.floor(0x1e + (0x32 - 0x1e) * tt);
+            const b = Math.floor(0x3a + (0x52 - 0x3a) * tt);
+            g.fillStyle((r << 16) | (gg << 8) | b, 1);
+            g.fillRect(wx, wy + i, ww, 1);
+        }
+        // Звёзды
+        for (let i = 0; i < 70; i++) {
+            const sx = wx + Math.random() * ww;
+            const sy = wy + Math.random() * wh * 0.5;
+            g.fillStyle(0xffffff, 0.4 + Math.random() * 0.5);
+            g.fillCircle(sx, sy, 0.7 + Math.random() * 1);
+        }
+        // Луна
+        g.fillStyle(0xf5f0d8, 0.9); g.fillCircle(wx + ww * 0.78, wy + wh * 0.18, 26);
+        g.fillStyle(0x2a3455, 1); g.fillCircle(wx + ww * 0.78 - 8, wy + wh * 0.18 - 4, 22);
+
+        // Дальние горы (тёмно-синие)
+        g.fillStyle(0x2c3a55, 1);
+        g.beginPath();
+        g.moveTo(wx, wy + wh * 0.68);
+        g.lineTo(wx + ww * 0.12, wy + wh * 0.5);
+        g.lineTo(wx + ww * 0.24, wy + wh * 0.6);
+        g.lineTo(wx + ww * 0.42, wy + wh * 0.36);
+        g.lineTo(wx + ww * 0.58, wy + wh * 0.55);
+        g.lineTo(wx + ww * 0.72, wy + wh * 0.42);
+        g.lineTo(wx + ww * 0.88, wy + wh * 0.58);
+        g.lineTo(wx + ww, wy + wh * 0.5);
+        g.lineTo(wx + ww, wy + wh);
+        g.lineTo(wx, wy + wh);
+        g.closePath(); g.fillPath();
+        // Снежные шапки
+        g.fillStyle(0xdde8f5, 0.95);
+        g.fillTriangle(wx + ww * 0.42, wy + wh * 0.36, wx + ww * 0.36, wy + wh * 0.44, wx + ww * 0.48, wy + wh * 0.44);
+        g.fillTriangle(wx + ww * 0.12, wy + wh * 0.5, wx + ww * 0.07, wy + wh * 0.56, wx + ww * 0.17, wy + wh * 0.56);
+        g.fillTriangle(wx + ww * 0.72, wy + wh * 0.42, wx + ww * 0.68, wy + wh * 0.48, wx + ww * 0.76, wy + wh * 0.48);
+
+        // Передние горы (сине-серые)
+        g.fillStyle(0x3a4d6b, 1);
+        g.beginPath();
+        g.moveTo(wx, wy + wh * 0.82);
+        g.lineTo(wx + ww * 0.18, wy + wh * 0.62);
+        g.lineTo(wx + ww * 0.35, wy + wh * 0.78);
+        g.lineTo(wx + ww * 0.55, wy + wh * 0.58);
+        g.lineTo(wx + ww * 0.75, wy + wh * 0.75);
+        g.lineTo(wx + ww, wy + wh * 0.68);
+        g.lineTo(wx + ww, wy + wh);
+        g.lineTo(wx, wy + wh);
+        g.closePath(); g.fillPath();
+        // Снег на передних
+        g.fillStyle(0xc8d4e4, 0.7);
+        g.fillTriangle(wx + ww * 0.55, wy + wh * 0.58, wx + ww * 0.51, wy + wh * 0.63, wx + ww * 0.59, wy + wh * 0.63);
+
+        // Снежный «пол» в окне
+        g.fillStyle(0xb8c8dc, 0.55);
+        g.fillRect(wx, wy + wh * 0.88, ww, wh * 0.12);
+
+        // Ёлки (силуэты)
+        for (let i = 0; i < 9; i++) {
+            const tx = wx + 25 + i * (ww / 9) + (Math.random() * 20 - 10);
+            const ty = wy + wh * 0.78 + Math.random() * 40;
+            const th = 50 + Math.random() * 40;
+            g.fillStyle(0x101a26, 0.95);
+            for (let layer = 0; layer < 3; layer++) {
+                const ly = ty + layer * th * 0.28;
+                const lw = 26 - layer * 5;
+                g.fillTriangle(tx - lw, ly, tx + lw, ly, tx, ly - th * 0.42);
+            }
+        }
+
+        // Снежинки
+        for (let i = 0; i < 180; i++) {
+            const sx = wx + Math.random() * ww;
+            const sy = wy + Math.random() * wh;
+            g.fillStyle(0xffffff, 0.5 + Math.random() * 0.5);
+            g.fillCircle(sx, sy, 0.5 + Math.random() * 1.6);
+        }
+
+        // Переплёт окна (крест)
+        g.fillStyle(0x4a2c14, 1);
+        g.fillRect(wx + ww / 2 - 6, wy, 12, wh);
+        g.fillRect(wx, wy + wh / 2 - 6, ww, 12);
+        // Декоративная рама
+        g.lineStyle(4, 0x6a4220, 1);
+        g.strokeRect(wx - 6, wy - 6, ww + 12, wh + 12);
+
+        // === Пол — тёплое дерево ===
+        g.fillStyle(0x4a2e18, 1); g.fillRect(0, 950, W, H - 950);
+        for (let y = 950; y < H; y += 24) {
+            g.fillStyle(0x2a1a0e, 0.45); g.fillRect(0, y, W, 3);
+        }
+        for (let x = 0; x < W; x += 80) {
+            g.fillStyle(0x2a1a0e, 0.25); g.fillRect(x, 950, 2, H - 950);
+        }
+        // Плинтус
+        g.fillStyle(0x1a0f06, 1); g.fillRect(0, 940, W, 12);
+
+        // === Камин (справа) ===
+        const fx = W - 95, fy = 1060;
+        // Каменный портал
+        g.fillStyle(0x3a2a1e, 1); g.fillRect(fx - 95, fy - 105, 190, 170);
+        g.fillStyle(0x2a1a12, 1); g.fillRect(fx - 85, fy - 95, 170, 150);
+        // Топка
+        g.fillStyle(0x0a0505, 1); g.fillRect(fx - 68, fy - 68, 136, 110);
+        // Дрова
+        g.fillStyle(0x3a2210, 1);
+        g.fillRect(fx - 60, fy + 20, 120, 14);
+        g.fillRect(fx - 50, fy + 10, 100, 12);
+        // Свечение огня (радиальный)
+        g.fillStyle(0xff4400, 0.15); g.fillCircle(fx, fy - 20, 90);
+        g.fillStyle(0xff6622, 0.25); g.fillCircle(fx, fy - 20, 65);
+        g.fillStyle(0xff8833, 0.35); g.fillCircle(fx, fy - 20, 42);
+        g.fillStyle(0xffaa44, 0.5); g.fillCircle(fx, fy - 20, 26);
+        // Языки пламени
+        g.fillStyle(0xff5522, 1);
+        g.fillTriangle(fx - 38, fy + 40, fx - 18, fy - 25, fx + 2, fy + 40);
+        g.fillTriangle(fx - 8, fy + 40, fx + 10, fy - 10, fx + 30, fy + 40);
+        g.fillStyle(0xffaa33, 1);
+        g.fillTriangle(fx - 25, fy + 40, fx - 8, fy - 15, fx + 10, fy + 40);
+        g.fillTriangle(fx + 5, fy + 40, fx + 22, fy - 5, fx + 35, fy + 40);
+        g.fillStyle(0xffdd66, 1);
+        g.fillTriangle(fx - 12, fy + 40, fx, fy - 10, fx + 14, fy + 40);
+        g.fillTriangle(fx + 8, fy + 40, fx + 18, fy + 0, fx + 28, fy + 40);
+        // Тёплый отсвет от камина
+        g.fillStyle(0xff6622, 0.12); g.fillCircle(fx, fy + 30, 320);
+        g.fillStyle(0xffaa44, 0.08); g.fillCircle(fx, fy + 30, 200);
+
+        // === Лампа слева ===
+        g.fillStyle(0x3a2210, 1); g.fillRect(60, 850, 8, 100);
+        g.fillStyle(0x5a3a18, 1); g.fillRect(40, 830, 48, 30);
+        g.fillStyle(0xffaa44, 0.9); g.fillCircle(64, 845, 12);
+        g.fillStyle(0xff8833, 0.35); g.fillCircle(64, 845, 60);
+        g.fillStyle(0xffcc66, 0.2); g.fillCircle(64, 845, 110);
+        g.fillStyle(0xffaa44, 0.1); g.fillCircle(64, 845, 180);
+
+        // === Ковёр на полу (тёплое пятно) ===
+        g.fillStyle(0x6a3a1e, 0.5);
+        g.fillEllipse(W / 2, 1180, 620, 100);
+        g.fillStyle(0x8a4a26, 0.35);
+        g.fillEllipse(W / 2, 1180, 500, 70);
     }
     drawNeon(g, W, H) {
         g.fillStyle(0x0a0a1a, 1); g.fillRect(0, 0, W, 900);
@@ -1934,9 +1872,6 @@ class RoomRenderer {
     }
 }
 
-/* ============================================================
-   PETS
-   ============================================================ */
 class PetSystem {
     constructor(scene, cleaning, bugs, effects, state) {
         this.scene = scene; this.cleaning = cleaning; this.bugs = bugs; this.effects = effects; this.state = state;
@@ -1948,8 +1883,8 @@ class PetSystem {
         const order = ['cat', 'dog', 'hamster', 'parrot'];
         const ownedPets = order.filter(id => this.state.pets[id].owned);
         if (ownedPets.length === 0) return;
-        const rowH = 55, padTop = 20, padBottom = 20;
-        const boxH = ownedPets.length * rowH + padTop + padBottom - 20;
+        const rowH = 55;
+        const boxH = ownedPets.length * rowH + 20;
         const firstIconY = 240, lastIconY = 240 + (ownedPets.length - 1) * rowH;
         const centerY = (firstIconY + lastIconY) / 2;
         this.iconsBg = this.scene.add.rectangle(670, centerY, 120, boxH, 0x000000, 0.75)
@@ -2021,9 +1956,6 @@ class PetSystem {
     }
 }
 
-/* ============================================================
-   TUTORIAL
-   ============================================================ */
 class CarpetTutorial {
     constructor(scene, carpetIndex) {
         this.scene = scene; this.carpetIndex = carpetIndex;
@@ -2141,12 +2073,13 @@ class CarpetTutorial {
 
 <script>
 /* ============================================================
-   HELPER: fade-UI
+   UI: SHOP (крупные шрифты + закрытие после покупки)
    ============================================================ */
 class FadeGroup {
-    constructor(scene) { this.scene = scene; this.elements = []; this.isOpen = false; this._closing = false; }
+    constructor(scene) { this.scene = scene; this.elements = []; this._closing = false; }
     push(el) { this.elements.push(el); return el; }
-    openFade() { this._closing = false; this.elements.forEach(e => { if (e.setAlpha) e.setAlpha(0); });
+    openFade() { this._closing = false;
+        this.elements.forEach(e => { if (e.setAlpha) e.setAlpha(0); });
         this.scene.tweens.add({ targets: this.elements.filter(e => e.setAlpha), alpha: 1, duration: 200, ease: 'Cubic.easeOut' }); }
     closeFade(onDone) {
         if (this._closing) return;
@@ -2159,9 +2092,6 @@ class FadeGroup {
     _destroyAll() { this.elements.forEach(e => { try { e.destroy(); } catch {} }); this.elements = []; }
 }
 
-/* ============================================================
-   SHOP UI
-   ============================================================ */
 class ShopUI {
     constructor(scene, state, ads) {
         this.scene = scene; this.state = state; this.ads = ads;
@@ -2170,15 +2100,23 @@ class ShopUI {
         this.onPrestige = null; this.onSkinChange = null; this.onPetBought = null;
         this.onLegacyBuy = null; this.onOpen = null; this.onClose = null;
     }
-    get elements() { return this.group.elements; }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
     close() {
         if (!this.isOpen) return;
         this.isOpen = false;
-        const done = () => this.onClose?.();
-        this.group.closeFade(done);
+        this.group.closeFade(() => this.onClose?.());
     }
     refresh() { if (!this.isOpen) return; this.group._destroyAll(); this.render(); }
+    // Покупка → сообщение + закрытие
+    async _afterBuy() {
+        await this.onChanged?.();
+        this.close();
+    }
+    // Выбор скина (не покупка) → только перерисовка
+    async _afterSelect() {
+        await this.onChanged?.();
+        this.refresh();
+    }
     render() {
         const s = this.scene, W = 720, H = 1280;
         const push = (el) => this.group.push(el);
@@ -2205,16 +2143,16 @@ class ShopUI {
             { id: 'legacy', label: '👑' + (st.legacyPoints > 0 ? st.legacyPoints : '') },
             { id: 'prestige', label: '🔥' }
         ];
-        const tabW = 120, tabH = 55;
+        const tabW = 128, tabH = 62;
         const totalW = tabs.length * tabW + (tabs.length - 1) * 6;
         const startX = 360 - totalW / 2 + tabW / 2;
         tabs.forEach((tab, i) => {
-            const x = startX + i * (tabW + 6), y = 175;
+            const x = startX + i * (tabW + 6), y = 180;
             const active = this.activeTab === tab.id;
-            const pill = makePill(s, x, y, tabW, tabH, { radius: 18, fill: active ? 0xFFD700 : 0x444444, stroke: active ? 0xFFFFFF : 0x666666, strokeW: 3, depth: 41 });
+            const pill = makePill(s, x, y, tabW, tabH, { radius: 20, fill: active ? 0xFFD700 : 0x444444, stroke: active ? 0xFFFFFF : 0x666666, strokeW: 3, depth: 41 });
             push(pill.cont);
             pill.hit.on('pointerdown', () => { pill.tap(); this.activeTab = tab.id; this.refresh(); });
-            push(s.add.text(x, y, tab.label, { fontSize: '24px', fill: active ? '#000000' : '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(x, y, tab.label, { fontSize: '30px', fill: active ? '#000000' : '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
         });
     }
     _renderUpgrades(push) {
@@ -2223,38 +2161,38 @@ class ShopUI {
             const canBuy = st.money >= price && !opts.disabled;
             const fill = opts.disabled ? 0x2a2a2a : (canBuy ? 0x3a4a3a : 0x2a2a2a);
             const stroke = opts.disabled ? 0x555555 : (canBuy ? 0x00FF00 : 0x666666);
-            const pill = makePill(s, 360, y, 620, 56, { radius: 20, fill, stroke, strokeW: 2, depth: 41 });
+            const pill = makePill(s, 360, y, 620, 68, { radius: 22, fill, stroke, strokeW: 2, depth: 41 });
             push(pill.cont);
-            push(s.add.text(70, y, sublabel, { fontSize: '14px', fill: opts.disabled ? '#888888' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(70, y, sublabel, { fontSize: '20px', fill: opts.disabled ? '#888888' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
             const priceStr = opts.priceLabel || `${price}💰`;
-            push(s.add.text(630, y, priceStr, { fontSize: '18px', fill: opts.disabled ? '#666666' : (canBuy ? '#00FF00' : '#FF6666'), fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+            push(s.add.text(630, y, priceStr, { fontSize: '26px', fill: opts.disabled ? '#666666' : (canBuy ? '#00FF00' : '#FF6666'), fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
             pill.hit.on('pointerdown', async () => {
                 pill.tap();
                 if (opts.disabled) return;
-                if (canBuy) { await onBuy(); } else { await this._offerAd(push, price - st.money); }
+                if (canBuy) { onBuy(); } else { await this._offerAd(push, price - st.money); }
             });
         };
-        let y = 240;
-        item(y, `🍞 ${t('buyFood')} (+1)`, BALANCE.foodPrice, async () => { st.buyFood(); await this._afterBuy(); }); y += 62;
+        let y = 250;
+        item(y, `🍞 ${t('buyFood')} (+1)`, BALANCE.foodPrice, async () => { st.buyFood(); await this._afterBuy(); }); y += 76;
         const bulkPrice = Math.floor(BALANCE.foodPrice * BALANCE.foodBulkCount * BALANCE.foodBulkDiscount);
-        item(y, `🍞 ${t('foodBulk', BALANCE.foodBulkCount)}`, bulkPrice, async () => { st.buyFoodBulk(); await this._afterBuy(); }); y += 62;
+        item(y, `🍞 ${t('foodBulk', BALANCE.foodBulkCount)}`, bulkPrice, async () => { st.buyFoodBulk(); await this._afterBuy(); }); y += 76;
         item(y, st.autoFoodEnabled ? `✅ ${t('autoFoodOn')}` : `🍞 ${t('autoFood')} (${st.getAutoFoodPrice()}💰)`, st.getAutoFoodPrice(),
-            async () => { st.buyAutoFood(); await this._afterBuy(); }, { disabled: st.autoFoodEnabled }); y += 62;
+            async () => { st.buyAutoFood(); await this._afterBuy(); }, { disabled: st.autoFoodEnabled }); y += 76;
         const curR = st.getCurrentRadius();
         const nextR = Math.floor(BALANCE.brushRadius * (1 + st.toolLevel * BALANCE.toolRadiusBonus)) + (st.legacyUpgrades.brush_master || 0) * 5;
         const curM = Math.round(st.getToolMoneyMultiplier() * 100);
         const nextM = Math.round((1 + st.toolLevel * BALANCE.toolMoneyBonus) * 100);
         item(y, `🧹 ${t('brush')} ${st.toolLevel}  ${curR}→${nextR}  ${curM}%→${nextM}%💰`, st.getToolUpgradePrice(),
-            async () => { st.upgradeTool(); await this._afterBuy(); }); y += 62;
+            async () => { st.upgradeTool(); await this._afterBuy(); }); y += 76;
         if (st.carpetIndex <= 3) {
             const curSoap = (st.getSoapPower() * 100).toFixed(0);
             const nextSoap = ((st.getSoapPower() + BALANCE.soapPower * 0.40) * 100).toFixed(0);
             item(y, `🧼 ${t('soap2')} ${st.soapLevel}  ${curSoap}%→${nextSoap}%`, st.getSoapUpgradePrice(),
-                async () => { st.upgradeSoap(); await this._afterBuy(); }); y += 62;
+                async () => { st.upgradeSoap(); await this._afterBuy(); }); y += 76;
             const curWash = (st.getWashStrength() * 100).toFixed(0);
             const nextWash = ((st.getWashStrength() + BALANCE.washStrength * 0.35) * 100).toFixed(0);
             item(y, `💧 ${t('wash2')} ${st.washLevel}  ${curWash}%→${nextWash}%`, st.getWashUpgradePrice(),
-                async () => { st.upgradeWash(); await this._afterBuy(); }); y += 62;
+                async () => { st.upgradeWash(); await this._afterBuy(); }); y += 76;
         }
         if (st.carpetIndex >= 2) {
             const curCd = st.getSwatterCooldown();
@@ -2264,16 +2202,16 @@ class ShopUI {
             const curBonus = st.getSwatterRewardBonus();
             const nextBonus = curBonus + BALANCE.swatterBonusPerLevel;
             item(y, `🪰 ${t('swatter2')} ${st.swatterLevel}  ${curCd}→${nextCd}мс  ${curRad}→${nextRad}  +${curBonus}→+${nextBonus}💰`,
-                st.getSwatterUpgradePrice(), async () => { st.upgradeSwatter(); await this._afterBuy(); }); y += 62;
+                st.getSwatterUpgradePrice(), async () => { st.upgradeSwatter(); await this._afterBuy(); }); y += 76;
             if (st.doubleBugReward) {
                 item(y, `💰 ${t('doubleBugOn')}`, 0, () => {}, { disabled: true, priceLabel: '✅' });
             } else {
                 item(y, `💰 ${t('doubleBug')} (+${BALANCE.bugRewardPerKill}💰)`, BALANCE.doubleBugPrice,
                     async () => { st.buyDoubleBug(); await this._afterBuy(); });
             }
-            y += 62;
+            y += 76;
         }
-        this._renderAdBlock(push, y); y += 90;
+        this._renderAdBlock(push, y); y += 100;
         this._renderNewCarpetSection(push, y);
     }
     _renderAdBlock(push, y) {
@@ -2281,17 +2219,17 @@ class ShopUI {
         const cooldown = this.ads.getCooldownRemaining();
         const available = cooldown <= 0;
         const label = available ? t('adWatch', BALANCE.adRewardMoney) : t('adWait', Math.ceil(cooldown / 1000));
-        const pill = makePill(s, 360, y, 620, 60, { radius: 20, fill: available ? 0x4a3a10 : 0x2a2a2a, stroke: available ? 0xFFD700 : 0x666666, strokeW: 3, depth: 41 });
+        const pill = makePill(s, 360, y, 620, 70, { radius: 22, fill: available ? 0x4a3a10 : 0x2a2a2a, stroke: available ? 0xFFD700 : 0x666666, strokeW: 3, depth: 41 });
         push(pill.cont);
-        push(s.add.text(360, y, label, { fontSize: '15px', fill: available ? '#FFD700' : '#888888', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, y, label, { fontSize: '20px', fill: available ? '#FFD700' : '#888888', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
         if (available) pill.hit.on('pointerdown', async () => { pill.tap(); await this._showAdAndRefresh(); });
     }
     _renderNewCarpetSection(push, y) {
         const s = this.scene, st = this.state;
         const hasNext = st.carpetIndex < BALANCE.totalCarpets;
         if (!hasNext) {
-            push(s.add.rectangle(360, y, 620, 70, 0x2a2010).setDepth(41).setStrokeStyle(3, 0xFFD700, 0.8));
-            push(s.add.text(360, y, '🏆 ' + t('allCarpets'), { fontSize: '20px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+            push(s.add.rectangle(360, y, 620, 80, 0x2a2010).setDepth(41).setStrokeStyle(3, 0xFFD700, 0.8));
+            push(s.add.text(360, y, '🏆 ' + t('allCarpets'), { fontSize: '22px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
             return;
         }
         const price = st.getNewCarpetPrice();
@@ -2303,25 +2241,25 @@ class ShopUI {
         if (canBuy) { fill = 0x205020; stroke = 0x00FF00; textColor = '#00FF00'; label = t('buyNewCarpet', st.carpetIndex + 1, price); hint = t('clickToBuy'); }
         else if (!radiusOk) { fill = 0x2a1010; stroke = 0xFF6666; textColor = '#FF8888'; label = t('needRadius', reqR, curR); hint = t('upgradeBrush'); }
         else { fill = 0x2a2010; stroke = 0xFFD700; textColor = '#FFD700'; label = t('needMoney', st.carpetIndex + 1, price, st.money); hint = t('noMoneyHint'); }
-        const pill = makePill(s, 360, y, 620, 80, { radius: 22, fill, stroke, strokeW: 3, depth: 41 });
+        const pill = makePill(s, 360, y, 620, 90, { radius: 24, fill, stroke, strokeW: 3, depth: 41 });
         push(pill.cont);
-        push(s.add.text(360, y - 14, label, { fontSize: '17px', fill: textColor, fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
-        push(s.add.text(360, y + 14, hint, { fontSize: '12px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, y - 15, label, { fontSize: '22px', fill: textColor, fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, y + 18, hint, { fontSize: '16px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
         if (canBuy) pill.hit.on('pointerdown', async () => { pill.tap(); await this.onBuyCarpet?.(); this.close(); });
     }
     async _offerAd(push, missing) {
         const s = this.scene;
         const el = [];
         const ov = s.add.rectangle(360, 640, 720, 1280, 0x000000, 0.7).setDepth(50); ov.setInteractive(); el.push(ov);
-        el.push(s.add.rectangle(360, 640, 560, 380, 0x1a1a1a).setDepth(51).setStrokeStyle(4, 0xFFD700));
-        el.push(s.add.text(360, 540, LANG === 'ru'
+        el.push(s.add.rectangle(360, 640, 560, 400, 0x1a1a1a).setDepth(51).setStrokeStyle(4, 0xFFD700));
+        el.push(s.add.text(360, 530, LANG === 'ru'
             ? `Не хватает ${missing}💰\n\nПосмотреть рекламу\nи получить +${BALANCE.adRewardMoney}💰?`
             : `Missing ${missing}💰\n\nWatch ad\nfor +${BALANCE.adRewardMoney}💰?`,
-            { ...TEXT_STYLES.shopInfo('#FFFFFF', 22), align: 'center' }).setOrigin(0.5).setDepth(52));
-        const yes = s.add.text(260, 700, LANG === 'ru' ? '📺 СМОТРЕТЬ' : '📺 WATCH', {
+            { ...TEXT_STYLES.shopInfo('#FFFFFF', 24), align: 'center' }).setOrigin(0.5).setDepth(52));
+        const yes = s.add.text(260, 710, LANG === 'ru' ? '📺 СМОТРЕТЬ' : '📺 WATCH', {
             fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(52).setInteractive({ useHandCursor: true });
-        const no = s.add.text(460, 700, LANG === 'ru' ? '❌ ОТМЕНА' : '❌ CANCEL', {
+        const no = s.add.text(460, 710, LANG === 'ru' ? '❌ ОТМЕНА' : '❌ CANCEL', {
             fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#444444', padding: { x: 25, y: 12 }
         }).setOrigin(0.5).setDepth(52).setInteractive({ useHandCursor: true });
         el.push(yes, no);
@@ -2334,17 +2272,16 @@ class ShopUI {
         if (ok) { this.state.addMoney(BALANCE.adRewardMoney); await this.onChanged?.(); this.onMessage?.(t('adReward', BALANCE.adRewardMoney)); this.refresh(); }
         else this.onMessage?.(t('adUnavailable'));
     }
-    async _afterBuy() { await this.onChanged?.(); this.refresh(); }
     _renderSkins(push) {
         const s = this.scene;
-        push(s.add.text(360, 235, t('skinsRooms'), { ...TEXT_STYLES.shop('#FFFFFF', 20) }).setOrigin(0.5).setDepth(42));
-        this._renderSkinGrid(push, ROOM_SKINS, 295, 'room');
-        push(s.add.text(360, 520, t('skinsBrushes'), { ...TEXT_STYLES.shop('#FFFFFF', 20) }).setOrigin(0.5).setDepth(42));
-        this._renderSkinGrid(push, BRUSH_SKINS, 580, 'brush');
+        push(s.add.text(360, 245, t('skinsRooms'), { ...TEXT_STYLES.shop('#FFFFFF', 24) }).setOrigin(0.5).setDepth(42));
+        this._renderSkinGrid(push, ROOM_SKINS, 320, 'room');
+        push(s.add.text(360, 540, t('skinsBrushes'), { ...TEXT_STYLES.shop('#FFFFFF', 24) }).setOrigin(0.5).setDepth(42));
+        this._renderSkinGrid(push, BRUSH_SKINS, 615, 'brush');
     }
     _renderSkinGrid(push, list, startY, kind) {
         const s = this.scene, st = this.state;
-        const cardW = 110, cardH = 140, gap = 8;
+        const cardW = 118, cardH = 150, gap = 6;
         const totalW = list.length * cardW + (list.length - 1) * gap;
         const startX = 360 - totalW / 2 + cardW / 2;
         list.forEach((skin, i) => {
@@ -2353,39 +2290,39 @@ class ShopUI {
             const selected = kind === 'room' ? st.selectedRoom === skin.id : st.selectedBrush === skin.id;
             const fill = selected ? 0x2a5020 : (unlocked ? 0x2a2a2a : 0x1a1a1a);
             const stroke = selected ? 0x00FF00 : (unlocked ? 0x888888 : 0x444444);
-            const pill = makePill(s, x, y, cardW, cardH, { radius: 16, fill, stroke, strokeW: selected ? 4 : 2, depth: 41 });
+            const pill = makePill(s, x, y, cardW, cardH, { radius: 18, fill, stroke, strokeW: selected ? 4 : 2, depth: 41 });
             push(pill.cont);
-            push(s.add.text(x, y - 30, skin.icon, { fontSize: '46px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(x, y + 15, loc(skin.name), { fontSize: '13px', fill: unlocked ? '#FFFFFF' : '#888888', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
-            const priceY = y + 45;
-            if (selected) push(s.add.text(x, priceY, t('selected'), { fontSize: '12px', fill: '#00FF00', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
-            else if (unlocked) push(s.add.text(x, priceY, t('select'), { fontSize: '12px', fill: '#00E5FF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
-            else push(s.add.text(x, priceY, `${skin.price}💰`, { fontSize: '14px', fill: st.money >= skin.price ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(x, y - 32, skin.icon, { fontSize: '48px' }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(x, y + 16, loc(skin.name), { fontSize: '15px', fill: unlocked ? '#FFFFFF' : '#888888', fontStyle: 'bold', fontFamily: FONT_HAND, wordWrap: { width: cardW - 10 }, align: 'center' }).setOrigin(0.5).setDepth(42));
+            const priceY = y + 50;
+            if (selected) push(s.add.text(x, priceY, t('selected'), { fontSize: '14px', fill: '#00FF00', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+            else if (unlocked) push(s.add.text(x, priceY, t('select'), { fontSize: '14px', fill: '#00E5FF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+            else push(s.add.text(x, priceY, `${skin.price}💰`, { fontSize: '17px', fill: st.money >= skin.price ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
             pill.hit.on('pointerdown', async () => {
                 pill.tap();
                 if (selected) return;
-                if (unlocked) { if (kind === 'room') st.selectRoomSkin(skin.id); else st.selectBrushSkin(skin.id); await this._afterBuy(); this.onSkinChange?.(kind); }
-                else if (st.money >= skin.price) { if (kind === 'room') st.buyRoomSkin(skin.id); else st.buyBrushSkin(skin.id); await this._afterBuy(); this.onMessage?.(t('bought', loc(skin.name))); }
+                if (unlocked) { if (kind === 'room') st.selectRoomSkin(skin.id); else st.selectBrushSkin(skin.id); await this._afterSelect(); this.onSkinChange?.(kind); }
+                else if (st.money >= skin.price) { if (kind === 'room') st.buyRoomSkin(skin.id); else st.buyBrushSkin(skin.id); this.onMessage?.(t('bought', loc(skin.name))); await this._afterBuy(); this.onSkinChange?.(kind); }
                 else await this._offerAd(push, skin.price - st.money);
             });
         });
     }
     _renderPets(push) {
         const s = this.scene, st = this.state;
-        push(s.add.text(360, 220, t('pets'), { ...TEXT_STYLES.shop('#FFD700', 26) }).setOrigin(0.5).setDepth(42));
-        push(s.add.text(360, 252, t('petsSubtitle'), { ...TEXT_STYLES.shopInfo('#AAAAAA', 14) }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, 230, t('pets'), { ...TEXT_STYLES.shop('#FFD700', 28) }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, 264, t('petsSubtitle'), { ...TEXT_STYLES.shopInfo('#AAAAAA', 16) }).setOrigin(0.5).setDepth(42));
         PETS.forEach((pet, i) => {
-            const y = 305 + i * 115;
+            const y = 320 + i * 122;
             const pdata = st.pets[pet.id];
             const owned = pdata.owned, level = pdata.level;
             const maxed = level >= BALANCE.petMaxLevel;
             const upgradeCost = st.getPetUpgradeCost(pet.id);
             const canUpgrade = st.canUpgradePet(pet.id);
             const canBuy = st.money >= pet.price;
-            const pill = makePill(s, 360, y, 620, 105, { radius: 22, fill: owned ? 0x2a4020 : 0x252525, stroke: owned ? 0x00FF00 : 0x666666, strokeW: 3, depth: 41 });
+            const pill = makePill(s, 360, y, 620, 112, { radius: 24, fill: owned ? 0x2a4020 : 0x252525, stroke: owned ? 0x00FF00 : 0x666666, strokeW: 3, depth: 41 });
             push(pill.cont);
-            push(s.add.text(75, y, pet.icon, { fontSize: '50px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(120, y - 30, loc(pet.name) + (owned ? `  ${level}` : ''), { fontSize: '20px', fill: owned ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(75, y, pet.icon, { fontSize: '54px' }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(120, y - 32, loc(pet.name) + (owned ? `  ${level}` : ''), { fontSize: '22px', fill: owned ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
             let desc = '';
             if (!owned) desc = loc(pet.desc);
             else if (maxed) desc = t('maxed');
@@ -2393,22 +2330,22 @@ class ShopUI {
             else if (pet.id === 'dog') { const bugs = Math.round(st.getDogBugsPerAction()); const nextBugs = Math.round(BALANCE.petDogCountBase + level * BALANCE.petDogCountPerLevel); const interval = (st.getDogInterval() / 1000).toFixed(1); desc = `${bugs} / ${interval}s  →  ${nextBugs}`; }
             else if (pet.id === 'hamster') { const food = Math.round(st.getHamsterFoodPerAction()); const nextFood = Math.round(BALANCE.petHamsterCountBase + level * BALANCE.petHamsterCountPerLevel); const interval = (st.getHamsterInterval() / 1000).toFixed(1); desc = `+${food}🍞 / ${interval}s  →  +${nextFood}`; }
             else if (pet.id === 'parrot') { const cur = Math.round(st.getParrotBonus() * 100); const next = Math.round((st.getParrotBonus() + BALANCE.petParrotBonusPerLevel) * 100); desc = `+${cur}%💰  →  +${next}%💰`; }
-            push(s.add.text(120, y + 8, desc, { fontSize: '12px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(120, y + 10, desc, { fontSize: '15px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
             if (!owned) {
-                push(s.add.text(600, y, `${pet.price}💰`, { fontSize: '22px', fill: canBuy ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+                push(s.add.text(600, y, `${pet.price}💰`, { fontSize: '26px', fill: canBuy ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
                 pill.hit.on('pointerdown', async () => {
                     pill.tap();
-                    if (canBuy) { if (st.buyPet(pet.id)) { await this._afterBuy(); this.onMessage?.(t('bought', loc(pet.name))); this.onPetBought?.(pet.id); } }
+                    if (canBuy) { if (st.buyPet(pet.id)) { this.onMessage?.(t('bought', loc(pet.name))); this.onPetBought?.(pet.id); await this._afterBuy(); } }
                     else await this._offerAd(push, pet.price - st.money);
                 });
             } else if (maxed) {
-                push(s.add.text(600, y, t('max'), { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+                push(s.add.text(600, y, t('max'), { fontSize: '22px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
             } else {
-                push(s.add.text(600, y - 15, `🍞 ${upgradeCost}`, { fontSize: '20px', fill: canUpgrade ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
-                push(s.add.text(600, y + 15, t('lvlUp'), { fontSize: '13px', fill: '#00E5FF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+                push(s.add.text(600, y - 16, `🍞 ${upgradeCost}`, { fontSize: '24px', fill: canUpgrade ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+                push(s.add.text(600, y + 16, t('lvlUp'), { fontSize: '16px', fill: '#00E5FF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
                 pill.hit.on('pointerdown', async () => {
                     pill.tap();
-                    if (st.upgradePet(pet.id)) { await this._afterBuy(); this.onMessage?.(t('bought', loc(pet.name))); this.onPetBought?.(pet.id); }
+                    if (st.upgradePet(pet.id)) { this.onMessage?.(t('bought', loc(pet.name))); this.onPetBought?.(pet.id); await this._afterBuy(); }
                     else this.onMessage?.(t('notEnoughFood', upgradeCost));
                 });
             }
@@ -2416,25 +2353,25 @@ class ShopUI {
     }
     _renderLegacy(push) {
         const s = this.scene, st = this.state;
-        push(s.add.text(360, 220, t('legacy'), { ...TEXT_STYLES.shop('#FFD700', 28) }).setOrigin(0.5).setDepth(42));
-        push(s.add.text(360, 258, t('legacyPoints', st.legacyPoints, st.prestigeLevel), { ...TEXT_STYLES.shopInfo('#FFFFFF', 16) }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, 230, t('legacy'), { ...TEXT_STYLES.shop('#FFD700', 30) }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, 270, t('legacyPoints', st.legacyPoints, st.prestigeLevel), { ...TEXT_STYLES.shopInfo('#FFFFFF', 18) }).setOrigin(0.5).setDepth(42));
         LEGACY_UPGRADES.forEach((up, i) => {
-            const y = 310 + i * 80;
+            const y = 325 + i * 84;
             const lvl = st.getLegacyUpgradeLevel(up.id);
             const maxed = lvl >= up.maxLevel;
             const cost = st.getLegacyUpgradeCost(up.id);
             const canBuy = st.canBuyLegacy(up.id);
-            const pill = makePill(s, 360, y, 620, 70, { radius: 20, fill: maxed ? 0x2a4020 : 0x252525, stroke: maxed ? 0x00FF00 : (canBuy ? 0xFFD700 : 0x555555), strokeW: 3, depth: 41 });
+            const pill = makePill(s, 360, y, 620, 76, { radius: 20, fill: maxed ? 0x2a4020 : 0x252525, stroke: maxed ? 0x00FF00 : (canBuy ? 0xFFD700 : 0x555555), strokeW: 3, depth: 41 });
             push(pill.cont);
-            push(s.add.text(75, y, up.icon, { fontSize: '36px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(110, y - 12, `${loc(up.name)}  ${lvl}/${up.maxLevel}`, { fontSize: '16px', fill: maxed ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
-            push(s.add.text(110, y + 14, loc(up.desc), { fontSize: '12px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
-            if (maxed) push(s.add.text(600, y, '✅', { fontSize: '24px', fill: '#00FF00', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+            push(s.add.text(70, y, up.icon, { fontSize: '38px' }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(105, y - 14, `${loc(up.name)}  ${lvl}/${up.maxLevel}`, { fontSize: '19px', fill: maxed ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(105, y + 16, loc(up.desc), { fontSize: '14px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            if (maxed) push(s.add.text(600, y, '✅', { fontSize: '26px', fill: '#00FF00', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
             else {
-                push(s.add.text(600, y, `👑 ${cost}`, { fontSize: '18px', fill: canBuy ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+                push(s.add.text(600, y, `👑 ${cost}`, { fontSize: '22px', fill: canBuy ? '#FFD700' : '#FF6666', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
                 pill.hit.on('pointerdown', async () => {
                     pill.tap();
-                    if (st.buyLegacy(up.id)) { await this._afterBuy(); this.onMessage?.(`👑 ${loc(up.name)}!`); this.onLegacyBuy?.(up.id); }
+                    if (st.buyLegacy(up.id)) { this.onMessage?.(`👑 ${loc(up.name)}!`); this.onLegacyBuy?.(up.id); await this._afterBuy(); }
                     else this.onMessage?.(`❌ 👑 ${cost}`);
                 });
             }
@@ -2443,12 +2380,12 @@ class ShopUI {
     _renderPrestige(push) {
         const s = this.scene, st = this.state;
         if (!st.canPrestige()) {
-            push(s.add.text(360, 640, t('prestigeLocked'), { ...TEXT_STYLES.shopInfo('#AAAAAA', 24), align: 'center' }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(360, 640, t('prestigeLocked'), { ...TEXT_STYLES.shopInfo('#AAAAAA', 26), align: 'center' }).setOrigin(0.5).setDepth(42));
             return;
         }
         const cy = 640;
-        push(s.add.rectangle(360, cy, 620, 500, 0x1a0a1a).setDepth(41).setStrokeStyle(3, 0xFFD700, 0.7));
-        push(s.add.text(360, cy - 200, t('prestigeAvailable'), { ...TEXT_STYLES.shop('#FFD700', 28) }).setOrigin(0.5).setDepth(42));
+        push(s.add.rectangle(360, cy, 620, 520, 0x1a0a1a).setDepth(41).setStrokeStyle(3, 0xFFD700, 0.7));
+        push(s.add.text(360, cy - 210, t('prestigeAvailable'), { ...TEXT_STYLES.shop('#FFD700', 30) }).setOrigin(0.5).setDepth(42));
         const curMult = st.getPrestigeMultiplier();
         const nextMult = curMult * 2.0;
         const gain = st.prestigeLevel === 0 ? BALANCE.legacyPerPrestige1 : BALANCE.legacyPerPrestigeN;
@@ -2461,11 +2398,11 @@ class ShopUI {
             (st.legacyUpgrades.pet_friends ? (LANG === 'ru' ? 'Питомцы\n' : 'Pets\n') : (LANG === 'ru' ? 'Питомцы СБРОСЯТСЯ\n' : 'Pets will RESET\n')) +
             `\n${t('willReset')}\n` +
             (LANG === 'ru' ? 'Деньги, ковры, щётка, автоеда' : 'Money, carpets, brush, auto-food');
-        push(s.add.text(360, cy - 20, info, { ...TEXT_STYLES.shopInfo('#FFFFFF', 14), align: 'center', lineSpacing: 4 }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, cy - 20, info, { ...TEXT_STYLES.shopInfo('#FFFFFF', 17), align: 'center', lineSpacing: 4 }).setOrigin(0.5).setDepth(42));
         let confirmPending = false;
         const btnLabel = t('prestigeBtn', gain);
-        const btn = push(s.add.text(360, cy + 200, btnLabel, {
-            fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 30, y: 15 }
+        const btn = push(s.add.text(360, cy + 210, btnLabel, {
+            fontSize: '24px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 30, y: 15 }
         }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }));
         btn.on('pointerdown', async () => {
             if (!confirmPending) {
@@ -2477,9 +2414,6 @@ class ShopUI {
     }
 }
 
-/* ============================================================
-   ACHIEVEMENTS
-   ============================================================ */
 class AchievementsUI {
     constructor(scene, state) { this.scene = scene; this.state = state; this.group = new FadeGroup(scene); this.isOpen = false; this.onOpen = null; this.onClose = null; }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
@@ -2491,18 +2425,18 @@ class AchievementsUI {
         push(s.add.rectangle(W/2, H/2, 660, 1140, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0xFFD700));
         push(s.add.text(W/2, 110, t('achievementsTitle'), TEXT_STYLES.title('#FFD700')).setOrigin(0.5).setDepth(42));
         const done = Object.keys(st.achievements).length;
-        push(s.add.text(W/2, 165, t('achievementsOpened', done, ACHIEVEMENTS.length), { ...TEXT_STYLES.shopInfo('#FFFFFF', 20) }).setOrigin(0.5).setDepth(42));
-        const startY = 200, itemH = 44, gap = 4;
+        push(s.add.text(W/2, 165, t('achievementsOpened', done, ACHIEVEMENTS.length), { ...TEXT_STYLES.shopInfo('#FFFFFF', 22) }).setOrigin(0.5).setDepth(42));
+        const startY = 205, itemH = 46, gap = 4;
         ACHIEVEMENTS.forEach((a, i) => {
             const y = startY + i * (itemH + gap) + itemH / 2;
             const unlocked = !!st.achievements[a.id];
             const val = st.getAchievementValue(a.type);
             const current = a.type === 'bestTime' ? (val > 0 ? formatTime(val) : '—') : Math.min(val, a.target);
             push(s.add.rectangle(W/2, y, 620, itemH, unlocked ? 0x2a4020 : 0x252525).setDepth(41).setStrokeStyle(2, unlocked ? 0x00FF00 : 0x555555, unlocked ? 0.7 : 0.4));
-            push(s.add.text(W/2 - 285, y, a.icon, { fontSize: '26px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(W/2 - 250, y - 8, loc(a.name), { fontSize: '13px', fill: unlocked ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
-            push(s.add.text(W/2 - 250, y + 9, unlocked ? `✅ +${a.reward}💰` : loc(a.desc), { fontSize: '10px', fill: unlocked ? '#88FF88' : '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
-            if (!unlocked && a.type !== 'bestTime') push(s.add.text(W/2 + 285, y, `${current}/${a.target}`, { fontSize: '12px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
+            push(s.add.text(W/2 - 285, y, a.icon, { fontSize: '28px' }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(W/2 - 248, y - 9, loc(a.name), { fontSize: '15px', fill: unlocked ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(W/2 - 248, y + 10, unlocked ? `✅ +${a.reward}💰` : loc(a.desc), { fontSize: '12px', fill: unlocked ? '#88FF88' : '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            if (!unlocked && a.type !== 'bestTime') push(s.add.text(W/2 + 285, y, `${current}/${a.target}`, { fontSize: '13px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
         });
         push(s.add.text(620, 110, '✖', { fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
@@ -2510,9 +2444,6 @@ class AchievementsUI {
     }
 }
 
-/* ============================================================
-   QUESTS
-   ============================================================ */
 class QuestsUI {
     constructor(scene, state) { this.scene = scene; this.state = state; this.group = new FadeGroup(scene); this.isOpen = false; this.onClaim = null; this.onOpen = null; this.onClose = null; }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
@@ -2524,26 +2455,26 @@ class QuestsUI {
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(40)); ov.setInteractive();
         push(s.add.rectangle(W/2, H/2, 660, 1140, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0x00E5FF));
         push(s.add.text(W/2, 130, t('questsTitle'), TEXT_STYLES.title('#00E5FF')).setOrigin(0.5).setDepth(42));
-        push(s.add.text(W/2, 190, t('questsUpdate'), { ...TEXT_STYLES.shopInfo('#AAAAAA', 16) }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(W/2, 195, t('questsUpdate'), { ...TEXT_STYLES.shopInfo('#AAAAAA', 18) }).setOrigin(0.5).setDepth(42));
         if (st.quests.length === 0) {
             push(s.add.text(W/2, 640, '...', { ...TEXT_STYLES.shopInfo('#FFFFFF', 22) }).setOrigin(0.5).setDepth(42));
         } else {
             st.quests.forEach((q, i) => {
-                const y = 320 + i * 260;
+                const y = 330 + i * 270;
                 const val = st.getQuestValue(q);
                 const done = val >= q.target;
                 const claimed = st.questClaimed[q.id];
                 const progress = Math.min(1, val / q.target);
-                push(s.add.rectangle(W/2, y, 600, 220, 0x252525).setDepth(41).setStrokeStyle(3, claimed ? 0x555555 : (done ? 0x00FF00 : 0x00E5FF), 0.6));
-                push(s.add.text(W/2 - 260, y - 70, q.icon, { fontSize: '50px' }).setOrigin(0.5).setDepth(42));
-                push(s.add.text(W/2 - 200, y - 70, loc(q.text), { fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, wordWrap: { width: 400 } }).setOrigin(0, 0.5).setDepth(42));
-                push(s.add.rectangle(W/2, y + 10, 500, 30, 0x111111).setDepth(41));
-                push(s.add.rectangle(W/2 - 250, y + 10, 500 * progress, 30, done ? 0x00FF00 : 0x00E5FF).setOrigin(0, 0.5).setDepth(42));
-                push(s.add.text(W/2, y + 10, `${Math.min(val, q.target)} / ${q.target}`, { fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(43));
-                const btnY = y + 70;
-                if (claimed) push(s.add.text(W/2, btnY, t('claimed'), { fontSize: '20px', fill: '#00AA00', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
-                else if (done) push(s.add.text(W/2, btnY, t('claim', q.reward), { fontSize: '22px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 30, y: 12 } }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }).on('pointerdown', async () => { if (st.claimQuest(q)) { await this.onClaim?.(); this.refresh(); } }));
-                else push(s.add.text(W/2, btnY, t('reward', q.reward), { fontSize: '18px', fill: '#FFD700', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+                push(s.add.rectangle(W/2, y, 600, 230, 0x252525).setDepth(41).setStrokeStyle(3, claimed ? 0x555555 : (done ? 0x00FF00 : 0x00E5FF), 0.6));
+                push(s.add.text(W/2 - 260, y - 75, q.icon, { fontSize: '54px' }).setOrigin(0.5).setDepth(42));
+                push(s.add.text(W/2 - 200, y - 75, loc(q.text), { fontSize: '24px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, wordWrap: { width: 400 } }).setOrigin(0, 0.5).setDepth(42));
+                push(s.add.rectangle(W/2, y + 10, 500, 32, 0x111111).setDepth(41));
+                push(s.add.rectangle(W/2 - 250, y + 10, 500 * progress, 32, done ? 0x00FF00 : 0x00E5FF).setOrigin(0, 0.5).setDepth(42));
+                push(s.add.text(W/2, y + 10, `${Math.min(val, q.target)} / ${q.target}`, { fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(43));
+                const btnY = y + 75;
+                if (claimed) push(s.add.text(W/2, btnY, t('claimed'), { fontSize: '22px', fill: '#00AA00', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+                else if (done) push(s.add.text(W/2, btnY, t('claim', q.reward), { fontSize: '24px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 30, y: 12 } }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }).on('pointerdown', async () => { if (st.claimQuest(q)) { await this.onClaim?.(); this.refresh(); } }));
+                else push(s.add.text(W/2, btnY, t('reward', q.reward), { fontSize: '20px', fill: '#FFD700', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
             });
         }
         push(s.add.text(620, 130, '✖', { fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
@@ -2552,9 +2483,6 @@ class QuestsUI {
     }
 }
 
-/* ============================================================
-   MUSEUM
-   ============================================================ */
 class MuseumUI {
     constructor(scene, state) { this.scene = scene; this.state = state; this.group = new FadeGroup(scene); this.isOpen = false; this.onOpen = null; this.onClose = null; }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
@@ -2565,10 +2493,10 @@ class MuseumUI {
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(40)); ov.setInteractive();
         push(s.add.rectangle(W/2, H/2, 660, 1140, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0xFFD700));
         push(s.add.text(W/2, 110, t('museumTitle'), TEXT_STYLES.title('#FFD700')).setOrigin(0.5).setDepth(42));
-        push(s.add.text(W/2, 180, t('museumInfo', st.getPrestigeTitle(), st.prestigeLevel, st.carpetsCleaned, st.bugsKilledTotal, st.starsPopped), {
-            ...TEXT_STYLES.shopInfo('#FFD700', 16), backgroundColor: '#000000', padding: { x: 20, y: 10 }
+        push(s.add.text(W/2, 185, t('museumInfo', st.getPrestigeTitle(), st.prestigeLevel, st.carpetsCleaned, st.bugsKilledTotal, st.starsPopped), {
+            ...TEXT_STYLES.shopInfo('#FFD700', 18), backgroundColor: '#000000', padding: { x: 20, y: 10 }
         }).setOrigin(0.5).setDepth(42));
-        const startY = 250, cardH = 130, gap = 10;
+        const startY = 260, cardH = 130, gap = 10;
         for (let i = 1; i <= BALANCE.totalCarpets; i++) {
             const y = startY + (i - 1) * (cardH + gap) + cardH / 2;
             const stat = st.carpetStats[i] || { cleanings: 0, bestTime: 0 };
@@ -2586,12 +2514,12 @@ class MuseumUI {
                 g.fillRect(previewX - 60, y - 50, 120, 100);
                 push(g);
             }
-            push(s.add.text(previewX, y + 58, t('carpetN', i), { ...TEXT_STYLES.shopInfo('#FFFFFF', 12) }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(previewX, y + 58, t('carpetN', i), { ...TEXT_STYLES.shopInfo('#FFFFFF', 14) }).setOrigin(0.5).setDepth(42));
             const infoX = W/2 - 80;
             if (unlocked) {
-                push(s.add.text(infoX, y - 28, `✅ ${stat.cleanings}`, { ...TEXT_STYLES.shopInfo('#00FF00', 17) }).setOrigin(0, 0.5).setDepth(42));
-                push(s.add.text(infoX, y + 5, t('bestTime', formatTime(stat.bestTime)), { ...TEXT_STYLES.shopInfo('#87CEEB', 17) }).setOrigin(0, 0.5).setDepth(42));
-            } else push(s.add.text(infoX, y, t('locked'), { ...TEXT_STYLES.shopInfo('#888888', 18) }).setOrigin(0, 0.5).setDepth(42));
+                push(s.add.text(infoX, y - 28, `✅ ${stat.cleanings}`, { ...TEXT_STYLES.shopInfo('#00FF00', 20) }).setOrigin(0, 0.5).setDepth(42));
+                push(s.add.text(infoX, y + 5, t('bestTime', formatTime(stat.bestTime)), { ...TEXT_STYLES.shopInfo('#87CEEB', 20) }).setOrigin(0, 0.5).setDepth(42));
+            } else push(s.add.text(infoX, y, t('locked'), { ...TEXT_STYLES.shopInfo('#888888', 20) }).setOrigin(0, 0.5).setDepth(42));
         }
         push(s.add.text(620, 110, '✖', { fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
@@ -2599,9 +2527,6 @@ class MuseumUI {
     }
 }
 
-/* ============================================================
-   DAILY BONUS
-   ============================================================ */
 class DailyBonusUI {
     constructor(scene, state) { this.scene = scene; this.state = state; this.group = new FadeGroup(scene); this.isOpen = false; this.onClaim = null; this.onOpen = null; this.onClose = null; }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
@@ -2613,7 +2538,7 @@ class DailyBonusUI {
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.85).setDepth(60)); ov.setInteractive();
         push(s.add.rectangle(W/2, H/2, 660, 940, 0x1e1e28).setDepth(61).setStrokeStyle(5, 0xFFD700));
         push(s.add.text(W/2, 280, t('dailyTitle'), TEXT_STYLES.title('#FFD700')).setOrigin(0.5).setDepth(62));
-        push(s.add.text(W/2, 340, t('dailyDay', status.nextDay), { ...TEXT_STYLES.shopInfo('#FFFFFF', 20) }).setOrigin(0.5).setDepth(62));
+        push(s.add.text(W/2, 340, t('dailyDay', status.nextDay), { ...TEXT_STYLES.shopInfo('#FFFFFF', 22) }).setOrigin(0.5).setDepth(62));
         const cardW = 130, cardH = 130, gap = 12;
         for (let i = 0; i < 7; i++) {
             const row = i < 4 ? 0 : 1;
@@ -2629,22 +2554,22 @@ class DailyBonusUI {
             let bg = 0x252525, border = 0x555555;
             if (isToday) { bg = 0x4a3a10; border = 0xFFD700; } else if (isPast) { bg = 0x2a4020; border = 0x00AA00; }
             push(s.add.rectangle(x, y, cardW, cardH, bg).setDepth(62).setStrokeStyle(isToday ? 4 : 2, border, 0.9));
-            push(s.add.text(x, y - 40, DAILY_REWARDS[i].icon, { fontSize: '34px' }).setOrigin(0.5).setDepth(63));
-            push(s.add.text(x, y - 5, `${LANG === 'ru' ? 'День' : 'Day'} ${i + 1}`, { fontSize: '13px', fill: isFuture ? '#888888' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
+            push(s.add.text(x, y - 40, DAILY_REWARDS[i].icon, { fontSize: '36px' }).setOrigin(0.5).setDepth(63));
+            push(s.add.text(x, y - 5, `${LANG === 'ru' ? 'День' : 'Day'} ${i + 1}`, { fontSize: '15px', fill: isFuture ? '#888888' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
             const rewardText = DAILY_REWARDS[i].food > 0 ? `${DAILY_REWARDS[i].money}💰\n+${DAILY_REWARDS[i].food}🍞` : `${DAILY_REWARDS[i].money}💰`;
-            push(s.add.text(x, y + 30, rewardText, { fontSize: '13px', fill: isFuture ? '#888888' : '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, align: 'center' }).setOrigin(0.5).setDepth(63));
-            if (isToday) push(s.add.text(x, y + 55, t('dailyNow'), { fontSize: '10px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
-            else if (isPast) push(s.add.text(x, y + 55, '✅', { fontSize: '14px' }).setOrigin(0.5).setDepth(63));
+            push(s.add.text(x, y + 30, rewardText, { fontSize: '15px', fill: isFuture ? '#888888' : '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, align: 'center' }).setOrigin(0.5).setDepth(63));
+            if (isToday) push(s.add.text(x, y + 55, t('dailyNow'), { fontSize: '12px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
+            else if (isPast) push(s.add.text(x, y + 55, '✅', { fontSize: '16px' }).setOrigin(0.5).setDepth(63));
         }
         if (status.canClaim) {
-            const btn = push(s.add.text(W/2, 900, t('dailyClaim'), { fontSize: '26px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 45, y: 18 } }).setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }));
+            const btn = push(s.add.text(W/2, 900, t('dailyClaim'), { fontSize: '28px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 45, y: 18 } }).setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }));
             btn.on('pointerdown', async () => {
                 const reward = this.state.claimDailyBonus();
                 if (reward) { await this.onClaim?.(); this.close(); this.scene.showMessage(`+${reward.money}💰${reward.food ? ` +${reward.food}🍞` : ''}`); }
             });
         } else {
-            push(s.add.text(W/2, 900, t('dailyDone'), { fontSize: '20px', fill: '#00AA00', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#1a1a1a', padding: { x: 30, y: 15 } }).setOrigin(0.5).setDepth(63));
-            push(s.add.text(W/2, 960, t('dailyComeBack'), { fontSize: '16px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
+            push(s.add.text(W/2, 900, t('dailyDone'), { fontSize: '22px', fill: '#00AA00', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#1a1a1a', padding: { x: 30, y: 15 } }).setOrigin(0.5).setDepth(63));
+            push(s.add.text(W/2, 960, t('dailyComeBack'), { fontSize: '18px', fill: '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
         }
         push(s.add.text(640, 260, '✖', { fontSize: '44px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
@@ -2652,9 +2577,6 @@ class DailyBonusUI {
     }
 }
 
-/* ============================================================
-   SETTINGS
-   ============================================================ */
 class SettingsUI {
     constructor(scene, state, saveSystem, onReset) {
         this.scene = scene; this.state = state; this.saveSystem = saveSystem;
@@ -2669,55 +2591,48 @@ class SettingsUI {
         const s = this.scene, W = 720, H = 1280, st = this.state;
         const push = (el) => this.group.push(el);
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.9).setDepth(60)); ov.setInteractive();
-        push(s.add.rectangle(W/2, H/2, 640, 1000, 0x1e1e28).setDepth(61).setStrokeStyle(5, 0x00E5FF));
-        push(s.add.text(W/2, 240, t('settingsTitle'), TEXT_STYLES.title('#00E5FF')).setOrigin(0.5).setDepth(62));
+        push(s.add.rectangle(W/2, H/2, 640, 900, 0x1e1e28).setDepth(61).setStrokeStyle(5, 0x00E5FF));
+        push(s.add.text(W/2, 300, t('settingsTitle'), TEXT_STYLES.title('#00E5FF')).setOrigin(0.5).setDepth(62));
 
         const row = (y, label, rightLabel, rightColor, onTap) => {
-            const pill = makePill(s, W/2, y, 560, 60, { radius: 20, fill: 0x252525, stroke: 0x666666, strokeW: 2, depth: 62 });
+            const pill = makePill(s, W/2, y, 560, 70, { radius: 22, fill: 0x252525, stroke: 0x666666, strokeW: 2, depth: 62 });
             push(pill.cont);
-            push(s.add.text(120, y, label, { fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(63));
-            push(s.add.text(540, y, rightLabel, { fontSize: '16px', fill: rightColor, fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(63));
+            push(s.add.text(120, y, label, { fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(63));
+            push(s.add.text(540, y, rightLabel, { fontSize: '20px', fill: rightColor, fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(63));
             pill.hit.on('pointerdown', () => { pill.tap(); onTap(); });
         };
 
-        row(330, t('language'), LANG === 'ru' ? '🇷🇺 Русский' : '🇬🇧 English', '#00FF88', async () => {
+        row(390, t('language'), LANG === 'ru' ? '🇷🇺 Русский' : '🇬🇧 English', '#00FF88', async () => {
             LANG = LANG === 'ru' ? 'en' : 'ru';
             st.settings.lang = LANG;
             await this.saveSystem.save();
             this.scene.scene.restart();
         });
-        row(400, t('music'), st.settings.music ? t('musicOn') : t('musicOff'), st.settings.music ? '#00FF00' : '#FF6666', async () => {
+        row(470, t('music'), st.settings.music ? t('musicOn') : t('musicOff'), st.settings.music ? '#00FF00' : '#FF6666', async () => {
             st.settings.music = !st.settings.music;
             await this.saveSystem.save();
             this.scene.ambientMusic?.setEnabled(st.settings.music);
             this.refresh();
         });
-        row(470, t('weather'), st.settings.weather ? t('weatherAuto') : t('weatherOff'), st.settings.weather ? '#00FF00' : '#FF6666', async () => {
-            st.settings.weather = !st.settings.weather;
-            await this.saveSystem.save();
-            if (!st.settings.weather) this.scene.weather?.set('none');
-            else this.scene.weather?.cycleByTimeOfDay(this.scene.currentTimeOfDay);
-            this.refresh();
-        });
-        row(540, t('vibration'), st.settings.vibration ? t('vibOn') : t('vibOff'), st.settings.vibration ? '#00FF00' : '#FF6666', async () => {
+        row(550, t('vibration'), st.settings.vibration ? t('vibOn') : t('vibOff'), st.settings.vibration ? '#00FF00' : '#FF6666', async () => {
             st.settings.vibration = !st.settings.vibration;
             await this.saveSystem.save();
             if (st.settings.vibration) { try { navigator.vibrate?.(BALANCE.vibrationMs); } catch {} }
             this.refresh();
         });
-        row(610, t('exportSave'), t('exportBtn'), '#00E5FF', () => {
+        row(630, t('exportSave'), t('exportBtn'), '#00E5FF', () => {
             const data = JSON.stringify(st.toSaveObject());
             try { navigator.clipboard.writeText(data); this.scene.showMessage(t('saveCopied')); }
             catch { try { const ta = document.createElement('textarea'); ta.value = data; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); this.scene.showMessage(t('saveCopied')); } catch {} }
         });
-        row(680, t('importSave'), t('importBtn'), '#00E5FF', async () => {
+        row(710, t('importSave'), t('importBtn'), '#00E5FF', async () => {
             try {
                 const text = await navigator.clipboard.readText();
                 const data = JSON.parse(text);
                 if (data && typeof data === 'object') {
-                    const savedLang = st.settings.lang, savedMusic = st.settings.music, savedWeather = st.settings.weather;
+                    const savedLang = st.settings.lang, savedMusic = st.settings.music;
                     st.fromSaveObject(data);
-                    st.settings.lang = savedLang; st.settings.music = savedMusic; st.settings.weather = savedWeather;
+                    st.settings.lang = savedLang; st.settings.music = savedMusic;
                     await this.saveSystem.save();
                     this.scene.showMessage(t('saveLoaded'));
                     this.scene.scene.restart();
@@ -2726,8 +2641,8 @@ class SettingsUI {
         });
 
         let confirmPending = false;
-        const rstBtn = push(s.add.text(W/2, 770, t('resetProgress'), {
-            fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#550000', padding: { x: 25, y: 14 }
+        const rstBtn = push(s.add.text(W/2, 800, t('resetProgress'), {
+            fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#550000', padding: { x: 25, y: 14 }
         }).setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }));
         rstBtn.on('pointerdown', async () => {
             if (!confirmPending) {
@@ -2735,15 +2650,12 @@ class SettingsUI {
                 s.time.delayedCall(3000, () => { if (confirmPending && rstBtn.active) { confirmPending = false; rstBtn.setText(t('resetProgress')); rstBtn.setBackgroundColor('#550000'); } });
             } else { confirmPending = false; await this.onReset?.(); }
         });
-        push(s.add.text(620, 220, '✖', { fontSize: '44px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
+        push(s.add.text(620, 280, '✖', { fontSize: '44px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
         this.group.openFade();
     }
 }
 
-/* ============================================================
-   LEADERBOARD
-   ============================================================ */
 class LeaderboardUI {
     constructor(scene, state, lb) {
         this.scene = scene; this.state = state; this.lb = lb;
@@ -2764,9 +2676,9 @@ class LeaderboardUI {
         tabs.forEach((tab, i) => {
             const x = 200 + i * 160, y = 270;
             const active = this.currentBoard === tab.id;
-            push(s.add.rectangle(x, y, 150, 45, active ? 0xFFD700 : 0x444444).setDepth(62).setStrokeStyle(2, active ? 0xFFFFFF : 0x666666)
+            push(s.add.rectangle(x, y, 150, 50, active ? 0xFFD700 : 0x444444).setDepth(62).setStrokeStyle(2, active ? 0xFFFFFF : 0x666666)
                 .setInteractive({ useHandCursor: true }).on('pointerdown', () => { this.currentBoard = tab.id; this.loadAndRender(); }));
-            push(s.add.text(x, y, tab.label, { fontSize: '15px', fill: active ? '#000000' : '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
+            push(s.add.text(x, y, tab.label, { fontSize: '18px', fill: active ? '#000000' : '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
         });
         const loadingText = push(s.add.text(W/2, 640, t('loadingRecords'), { ...TEXT_STYLES.shopInfo('#FFFFFF', 22) }).setOrigin(0.5).setDepth(62));
         if (this.loading) { this.group.openFade(); return; }
@@ -2785,9 +2697,9 @@ class LeaderboardUI {
                 const y = 340 + i * 60;
                 const rankColor = e.rank === 1 ? '#FFD700' : e.rank === 2 ? '#C0C0C0' : e.rank === 3 ? '#CD7F32' : '#FFFFFF';
                 push(s.add.rectangle(W/2, y, 600, 52, e.isMe ? 0x205020 : 0x252525).setDepth(62).setStrokeStyle(2, e.isMe ? 0x00FF00 : 0x555555, 0.6));
-                push(s.add.text(140, y, `${e.rank}.`, { fontSize: '22px', fill: rankColor, fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
-                push(s.add.text(200, y, e.name.substring(0, 18), { fontSize: '18px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(63));
-                push(s.add.text(620, y, `${e.score}`, { fontSize: '22px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(63));
+                push(s.add.text(140, y, `${e.rank}.`, { fontSize: '24px', fill: rankColor, fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(63));
+                push(s.add.text(200, y, e.name.substring(0, 18), { fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(63));
+                push(s.add.text(620, y, `${e.score}`, { fontSize: '24px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(63));
             });
         }
         push(s.add.text(620, 200, '✖', { fontSize: '44px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
@@ -2798,13 +2710,10 @@ class LeaderboardUI {
 </script>
 
 <script>
-/* ============================================================
-   PRELOAD + MAIN
-   ============================================================ */
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
-        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
+        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `carpets/carpet${i}.png`);
         this.load.on('loaderror', (file) => console.warn('Не загрузилось:', file.key, file.src));
         const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w / 2, h / 2 - 50, t('loading'), TEXT_STYLES.title()).setOrigin(0.5);
@@ -2856,11 +2765,7 @@ class MainScene extends Phaser.Scene {
         window.addEventListener('keydown', this._startMusicOnce);
 
         this.room = new RoomRenderer(this);
-        this.currentTimeOfDay = getTimeOfDay();
-        this.room.draw(this.state.selectedRoom, this.state.carpetLevel, this.currentTimeOfDay);
-
-        this.weather = new WeatherSystem(this);
-        if (this.state.settings.weather) this.weather.cycleByTimeOfDay(this.currentTimeOfDay);
+        this.room.draw(this.state.selectedRoom);
 
         this.carpetContainer = this.add.container(0, 0).setDepth(0);
         this.drawCarpet();
@@ -2893,7 +2798,7 @@ class MainScene extends Phaser.Scene {
         this.shop.onPrestige = async () => this.doPrestige();
         this.shop.onPetBought = () => this.pets.refreshIndicators();
         this.shop.onSkinChange = (kind) => {
-            if (kind === 'room') this.room.draw(this.state.selectedRoom, this.state.carpetLevel, this.currentTimeOfDay);
+            if (kind === 'room') this.room.draw(this.state.selectedRoom);
             if (kind === 'brush') this.updateBrushIcon();
         };
         this.museum = new MuseumUI(this, this.state);
@@ -2933,18 +2838,7 @@ class MainScene extends Phaser.Scene {
         this.time.delayedCall(400, () => this.startCarpetTutorial());
         this.leaderboard.submitScores();
         this.time.addEvent({ delay: 60000, loop: true, callback: () => {
-            const nt = getTimeOfDay();
-            if (nt !== this.currentTimeOfDay) {
-                this.currentTimeOfDay = nt;
-                this.room.draw(this.state.selectedRoom, this.state.carpetLevel, this.currentTimeOfDay);
-                this.updateDayNightText();
-                if (this.state.settings.weather) {
-                    const w = this.weather.cycleByTimeOfDay(nt);
-                    if (w === 'rain') this.mascot?.react('weather_rain');
-                    else if (w === 'snow') this.mascot?.react('weather_snow');
-                    else if (w === 'leaves') this.mascot?.react('weather_leaves');
-                }
-            }
+            this.updateDayNightText();
         }});
         this._onVisibilityChange = () => {
             if (document.hidden) { try { this.saveSystem.saveSync(); } catch {} this.pauseGame(); }
@@ -3004,12 +2898,10 @@ class MainScene extends Phaser.Scene {
             hit.setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => {
                 this.tweens.add({ targets: [circle, ic], scaleX: 1.12, scaleY: 1.12, duration: 90, yoyo: true, ease: 'Quad.easeOut' });
-                this.tweens.add({ targets: lb, alpha: 0.6, duration: 100, yoyo: true });
                 onClick();
             });
         };
-        const c1 = 445, c2 = 550, c3 = 655;
-        const r1 = 45, r2 = 130;
+        const c1 = 445, c2 = 550, c3 = 655, r1 = 45, r2 = 130;
         makeBtn(c1, r1, '🏛️', t('museum'),     () => this.museum.open(), '#FFD700');
         makeBtn(c2, r1, '🏆', t('achievements'), () => this.achievementsUI.open(), '#FFD700');
         makeBtn(c3, r1, '📅', t('quests'),   () => this.questsUI.open(), '#FFD700');
@@ -3025,9 +2917,6 @@ class MainScene extends Phaser.Scene {
         if (ds.canClaim && this.state.tutorialDone) {
             const dailyBg = this.add.circle(360, 100, 24, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
             const dailyIcon = this.add.text(360, 100, '🎁', { fontSize: '28px' }).setOrigin(0.5).setDepth(15);
-            const dailyGlow = this.add.graphics().setDepth(13);
-            dailyGlow.fillStyle(0xFFD700, 0.4); dailyGlow.fillCircle(360, 100, 34);
-            this.tweens.add({ targets: dailyGlow, alpha: { from: 0.3, to: 0.9 }, scaleX: { from: 0.9, to: 1.15 }, scaleY: { from: 0.9, to: 1.15 }, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
             this.tweens.add({ targets: [dailyBg, dailyIcon], scale: { from: 1, to: 1.15 }, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
             const hit = this.add.circle(360, 100, 30, 0x000000, 0.001).setDepth(16).setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.dailyUI.open());
@@ -3037,7 +2926,6 @@ class MainScene extends Phaser.Scene {
         this.add.rectangle(W / 2, 230, 400, 30, 0x333333).setDepth(10);
         this.progressBar = this.add.rectangle(W / 2 - 200, 230, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
         this.progressText = this.add.text(W / 2, 230, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
-
         this.progressGlow = this.add.graphics().setDepth(9).setVisible(false);
 
         this.steamBg = this.add.rectangle(W / 2, 265, 200, 14, 0x111111).setDepth(10).setVisible(false);
@@ -3230,7 +3118,6 @@ class MainScene extends Phaser.Scene {
         await this.saveSystem.save();
         this.showMessage(`+${reward} 💰!  ⏱ ${formatTime(timeSec)}`);
         this.mascot?.react('finish');
-        this.mascot?.react('money');
         if (this.tutorial) this.tutorial.reportAction('finish');
         this.bugs.clear();
         this.cleaning.reset(this.state.carpetIndex);
@@ -3262,7 +3149,7 @@ class MainScene extends Phaser.Scene {
         this.unlockInput();
         this.shop.close();
         this.refreshHUD();
-        this.room.draw(this.state.selectedRoom, this.state.carpetLevel, this.currentTimeOfDay);
+        this.room.draw(this.state.selectedRoom);
         this.drawCarpet();
         this.cleaning.reset(this.state.carpetIndex);
         this.stars.clear();
@@ -3299,7 +3186,7 @@ class MainScene extends Phaser.Scene {
         this.unlockInput();
         this.shop.close();
         this.refreshHUD();
-        this.room.draw(this.state.selectedRoom, this.state.carpetLevel, this.currentTimeOfDay);
+        this.room.draw(this.state.selectedRoom);
         this.drawCarpet();
         this.cleaning.reset(this.state.carpetIndex);
         this.stars.clear();
@@ -3367,7 +3254,7 @@ class MainScene extends Phaser.Scene {
         if (this.noFoodText) { if (this.noFoodTween) this.noFoodTween.remove(); this.noFoodText.destroy(); this.noFoodText = null; }
         this.noFoodText = this.add.text(360, 640, t('noFood'), {
             fontSize: '52px', fill: '#FF0000', fontStyle: 'bold', fontFamily: FONT_HAND, align: 'center',
-            stroke: '#000000', strokeThickness: 8, shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, fill: true }
+            stroke: '#000000', strokeThickness: 8
         }).setOrigin(0.5).setDepth(80).setAlpha(0);
         this.tweens.add({ targets: this.noFoodText, alpha: 1, duration: 200, ease: 'Cubic.easeOut' });
         this.noFoodTween = this.tweens.add({ targets: this.noFoodText, alpha: { from: 1, to: 0.2 }, duration: 400, yoyo: true, repeat: 4, delay: 200,
@@ -3380,7 +3267,7 @@ class MainScene extends Phaser.Scene {
         if (this.bugWarningText) { if (this.bugWarningTween) this.bugWarningTween.remove(); this.bugWarningText.destroy(); this.bugWarningText = null; }
         this.bugWarningText = this.add.text(360, 640, t('bugsFirst'), {
             fontSize: '42px', fill: '#FF4444', fontStyle: 'bold', fontFamily: FONT_HAND, align: 'center',
-            stroke: '#000000', strokeThickness: 8, shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, fill: true }
+            stroke: '#000000', strokeThickness: 8
         }).setOrigin(0.5).setDepth(80).setAlpha(0);
         this.tweens.add({ targets: this.bugWarningText, alpha: 1, duration: 200, ease: 'Cubic.easeOut' });
         this.bugWarningTween = this.tweens.add({ targets: this.bugWarningText, alpha: { from: 1, to: 0.2 }, duration: 400, yoyo: true, repeat: 4, delay: 200,
