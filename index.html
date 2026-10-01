@@ -7,8 +7,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
-    <script src="/sdk.js"></script>
-    <script src="phaser.min.js"></script>
+    <!-- Phaser 4 -->
+    <script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js"></script>
+    <!-- SDK для Яндекс.Игр — на GitHub Pages не нужен, закомментирован -->
+    <!-- <script src="/sdk.js"></script> -->
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         html, body {
@@ -98,7 +100,6 @@ const I18N = {
         music: '🎵 Музыка', musicOn: '✅ ВКЛ', musicOff: '❌ ВЫКЛ',
         weather: '🌤️ Погода', weatherAuto: 'Авто', weatherOff: 'Выкл',
         mascotHint: '💡 Совет от котика',
-        // Реплики маскота
         m_hello: ['Мяу! Помоги мне с ковром 🐾', 'Давай начнём! Я подскажу 🐱', 'Мурр~ Тут пыльно!'],
         m_soap: ['Наноси мыло круговыми 💫', 'Побольше пены — грязь сама уйдёт!', 'Мыль-мыль 🧼'],
         m_wash: ['Теперь смывай водичкой 💧', 'Смывай пену — вот так!', 'Буль-буль 💦'],
@@ -503,10 +504,10 @@ class AmbientMusic {
         this.enabled = true; this._playing = false;
         this._chordTimer = null; this._chimeTimer = null; this._chordIdx = 0;
         this._chords = [
-            [220.00, 261.63, 329.63],  // Am
-            [174.61, 220.00, 261.63],  // F
-            [130.81, 164.81, 196.00],  // C
-            [196.00, 246.94, 293.66]   // G
+            [220.00, 261.63, 329.63],
+            [174.61, 220.00, 261.63],
+            [130.81, 164.81, 196.00],
+            [196.00, 246.94, 293.66]
         ];
         this._chimeScale = [523.25, 587.33, 659.25, 783.99, 880.00];
     }
@@ -520,7 +521,6 @@ class AmbientMusic {
             this.master.gain.value = 0.0;
             const lp = this.ctx.createBiquadFilter();
             lp.type = 'lowpass'; lp.frequency.value = 1000; lp.Q.value = 0.3;
-            // легкое "эхо"
             const dly = this.ctx.createDelay(); dly.delayTime.value = 0.28;
             const fb = this.ctx.createGain(); fb.gain.value = 0.28;
             const wet = this.ctx.createGain(); wet.gain.value = 0.35;
@@ -676,37 +676,28 @@ class Mascot {
     }
     _buildKitten() {
         const g = this.scene.add.graphics();
-        // тело
         g.fillStyle(0xF3A44B, 1); g.fillEllipse(0, 22, 72, 60);
-        // грудка
         g.fillStyle(0xFFE5C2, 1); g.fillEllipse(0, 28, 40, 36);
-        // голова
         g.fillStyle(0xF3A44B, 1); g.fillCircle(0, -12, 38);
-        // ушки
         g.fillStyle(0xF3A44B, 1);
         g.fillTriangle(-34, -30, -18, -60, -6, -34);
         g.fillTriangle( 34, -30,  18, -60,  6, -34);
         g.fillStyle(0xFFC9A0, 1);
         g.fillTriangle(-30, -33, -18, -52, -10, -35);
         g.fillTriangle( 30, -33,  18, -52,  10, -35);
-        // глаза
         g.fillStyle(0x1A1A1A, 1);
         g.fillCircle(-13, -14, 4.5); g.fillCircle(13, -14, 4.5);
         g.fillStyle(0xFFFFFF, 1);
         g.fillCircle(-12, -15, 1.6); g.fillCircle(14, -15, 1.6);
-        // нос + рот
         g.fillStyle(0xFF7A7A, 1); g.fillTriangle(-3, -2, 3, -2, 0, 2);
         g.lineStyle(1.5, 0x1A1A1A, 1);
         g.beginPath(); g.moveTo(0, 2); g.lineTo(-4, 6); g.moveTo(0, 2); g.lineTo(4, 6); g.strokePath();
-        // усы
         g.lineStyle(1.2, 0x1A1A1A, 0.8);
         g.lineBetween(-30, -6, -12, -3); g.lineBetween(-30, 2, -12, 0);
         g.lineBetween( 30, -6,  12, -3); g.lineBetween( 30, 2,  12, 0);
-        // лапки
         g.fillStyle(0xF3A44B, 1);
         g.fillEllipse(-18, 46, 22, 16); g.fillEllipse(18, 46, 22, 16);
         this.container.add(g);
-        // лёгкое покачивание
         this.scene.tweens.add({ targets: this.container, y: this.y - 4, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
     say(text, ms = 3200) {
@@ -720,7 +711,6 @@ class Mascot {
         bg.fillRoundedRect(-160, -46, 220, 70, 18);
         bg.lineStyle(3, 0x4A90D9, 1);
         bg.strokeRoundedRect(-160, -46, 220, 70, 18);
-        // хвостик
         bg.fillStyle(0xFFFFFF, 0.96);
         bg.fillTriangle(40, 20, 74, 40, 40, 40);
         bg.lineStyle(3, 0x4A90D9, 1);
@@ -1411,7 +1401,6 @@ class Effects {
                     duration: BALANCE.finishStarDuration * 0.6, ease: 'Cubic.easeIn', onComplete: () => t.destroy() }) });
         }
     }
-    // fаde-in контейнера (для UI-окон)
     fadeIn(container, ms = 220) {
         container.setAlpha(0);
         this.scene.tweens.add({ targets: container, alpha: 1, duration: ms, ease: 'Cubic.easeOut' });
@@ -1420,7 +1409,9 @@ class Effects {
         this.scene.tweens.add({ targets: container, alpha: 0, duration: ms, ease: 'Cubic.easeIn', onComplete: () => onDone && onDone() });
     }
 }
-    <script>
+</script>
+
+<script>
 /* ============================================================
    FINISH STARS (с glow)
    ============================================================ */
@@ -1466,7 +1457,6 @@ class FinishStarsSystem {
             if (c.hasStain) icon = '🧴';
             else if (c.hasCrust) icon = '🧱';
 
-            // ✨ glow под кластером
             const glow = this.scene.add.graphics().setDepth(23);
             glow.fillStyle(0xFFD700, 0.35);
             glow.fillCircle(c.x, c.y, 42);
@@ -2852,7 +2842,6 @@ class MainScene extends Phaser.Scene {
         this.carpetX = W / 2; this.carpetY = 600;
         this.carpetBounds = new Phaser.Geom.Rectangle(this.carpetX - this.carpetW / 2, this.carpetY - this.carpetH / 2, this.carpetW, this.carpetH);
 
-        // ---- музыка ----
         this.ambientMusic = new AmbientMusic();
         this.ambientMusic.init();
         this._startMusicOnce = () => {
@@ -2870,7 +2859,6 @@ class MainScene extends Phaser.Scene {
         this.currentTimeOfDay = getTimeOfDay();
         this.room.draw(this.state.selectedRoom, this.state.carpetLevel, this.currentTimeOfDay);
 
-        // ---- погода ----
         this.weather = new WeatherSystem(this);
         if (this.state.settings.weather) this.weather.cycleByTimeOfDay(this.currentTimeOfDay);
 
@@ -2895,7 +2883,6 @@ class MainScene extends Phaser.Scene {
         this.bugsRef = this.bugs;
         this.pets = new PetSystem(this, this.cleaning, this.bugs, this.effects, this.state);
 
-        // ---- маскот ----
         this.mascot = new Mascot(this);
         this.time.delayedCall(1500, () => this.mascot.react('hello'));
 
@@ -3038,7 +3025,6 @@ class MainScene extends Phaser.Scene {
         if (ds.canClaim && this.state.tutorialDone) {
             const dailyBg = this.add.circle(360, 100, 24, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
             const dailyIcon = this.add.text(360, 100, '🎁', { fontSize: '28px' }).setOrigin(0.5).setDepth(15);
-            // ✨ glow под кнопкой 🎁
             const dailyGlow = this.add.graphics().setDepth(13);
             dailyGlow.fillStyle(0xFFD700, 0.4); dailyGlow.fillCircle(360, 100, 34);
             this.tweens.add({ targets: dailyGlow, alpha: { from: 0.3, to: 0.9 }, scaleX: { from: 0.9, to: 1.15 }, scaleY: { from: 0.9, to: 1.15 }, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
@@ -3052,7 +3038,6 @@ class MainScene extends Phaser.Scene {
         this.progressBar = this.add.rectangle(W / 2 - 200, 230, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
         this.progressText = this.add.text(W / 2, 230, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
 
-        // ✨ glow полоска при 90%+
         this.progressGlow = this.add.graphics().setDepth(9).setVisible(false);
 
         this.steamBg = this.add.rectangle(W / 2, 265, 200, 14, 0x111111).setDepth(10).setVisible(false);
@@ -3362,7 +3347,6 @@ class MainScene extends Phaser.Scene {
     updateProgressBar(p) {
         this.progressBar.width = 400 * p;
         this.progressText.setText(Math.min(100, Math.floor(p * 100)) + '%');
-        // glow при 90%+
         if (p >= 0.9 && p < 1.0) {
             this.progressGlow.clear();
             this.progressGlow.lineStyle(4, 0x00FF88, 0.85);
