@@ -57,6 +57,7 @@ const I18N = {
         willStay: '✅ ОСТАНЕТСЯ:', willReset: '❌ СБРОСИТСЯ:',
         confirmPrestige: '⚠️ ТОЧНО? ЕЩЁ РАЗ', prestigeBtn: '🔥 ПРЕСТИЖ (+{0} 👑)',
         achievementsTitle: '🏆 ДОСТИЖЕНИЯ', achievementsOpened: 'Открыто: {0} / {1}',
+        page: 'Стр. {0} / {1}',
         questsTitle: '📅 ЗАДАНИЯ', questsUpdate: 'Обновление: каждый день (UTC)',
         claim: '🎁 ЗАБРАТЬ +{0}💰', claimed: '✅ ПОЛУЧЕНО', reward: 'Награда: +{0}💰',
         museumTitle: '🏛️ МУЗЕЙ КОВРОВ',
@@ -81,6 +82,7 @@ const I18N = {
         carpetGrad: 'Ковёр {0} — Шаг {1}/{2}', progress: 'Прогресс: {0} / {1}',
         noFood: '🍞 НЕТ ЕДЫ!\nКУПИ В МАГАЗИНЕ',
         bugsFirst: '🐛 СНАЧАЛА УБЕРИ ЖУКОВ!\n(мухобойка 🪰)',
+        crustFirst: '🧱 СНАЧАЛА СНИМИ КОРКИ!\n(скребок 🧽)',
         carpetDirty: 'Ковёр ещё грязный! Нужно 100%.',
         collectStars: '⭐ Собери все звёзды!', allStars: '⭐ Все звёзды собраны!',
         carpetClean: 'Ковёр чистый! ✨', newQuests: '📅 Новые задания!',
@@ -92,16 +94,17 @@ const I18N = {
         noMoney: 'Не хватает денег!', needMoreFood: '❌ Не хватает еды (нужно {0}🍞)',
         language: '🌐 Язык / Language',
         music: '🎵 Музыка', musicOn: '✅ ВКЛ', musicOff: '❌ ВЫКЛ',
-        m_hello: ['Мяу! Помоги мне с ковром 🐾', 'Давай начнём! Я подскажу 🐱', 'Мурр~ Тут пыльно!'],
-        m_soap: ['Наноси мыло круговыми 💫', 'Побольше пены — грязь сама уйдёт!', 'Мыль-мыль 🧼'],
-        m_wash: ['Теперь смывай водичкой 💧', 'Смывай пену — вот так!', 'Буль-буль 💦'],
-        m_bugs: ['Ой! Жуки 🐛 Возьми мухобойку!', 'Убей жуков сначала 🪰', 'Фу, козявки!'],
-        m_star: ['Лови звёздочки ⭐', 'Собери все ✨', 'Тапай по звёздам!'],
-        m_finish: ['Ура! Ковёр как новый 🎉', 'Чистенько! Держи денежку 💰', 'Мурр~ красота!'],
-        m_food: ['Еда кончилась 🍞 Купи в магазине!', 'Я голодный... купи еду 🐾', 'Не забудь поесть!'],
-        m_prestige: ['Ты готов к престижу 👑', 'Пора начинать заново! 🔥', 'Наследие ждёт!'],
-        m_money: ['Богатей-богатей 💰', 'Денежки капают ✨', 'Купи что-нибудь в магазине 🛒'],
-        m_idle: ['Мяу?', 'Мурр~', 'Как дела? 🐾', 'Почистим ещё?', 'Звёздочки лови ✨', 'Не забудь про задания 📅']
+        m_hello: ['Мррр~ Как я рад тебя видеть! 🐾💖', 'Приветик! Погладь меня скорее 🥰', 'Мяу-мяу! Скучал(а) по тебе! 💕', 'Ой, ты пришёл(ла)! Я так счастлив! 🌟'],
+        m_soap: ['Мыль-мыль! Пузырики такие красивые 🫧✨', 'Ммм... как вкусно пахнет! Мррр~ 💗', 'Пенка-пенка! Обожаю пузырьки! 🧼🫧', 'Так пенисто! Мурр-мурр~ ✨'],
+        m_wash: ['Водичка! Буль-буль~ 💧💙', 'Смывай-смывай, я подскажу! 💦', 'Как свежо! Мурр~ 🫧', 'Люблю водичку! Плескаемся? 💧😻'],
+        m_bugs: ['Ой-ой, жучки! Кыш-кыш! 🐛➡️', 'Фу-фу, убирай их скорее! 🪰💥', 'Бррр, не люблю жучков! Убей их! 🐜⚡', 'Кыш-кыш, противные! 🐛👋'],
+        m_star: ['Звёздочки! Красиво как! ⭐✨', 'Хватай их, хватай! ✨💫', 'Ммм, блестяшки! Обожаю! 🌟💖', 'Звёздочки-конфетки! Ням! ⭐🍬'],
+        m_finish: ['Урааа! Ковёр блестит! 🎉💖', 'Ты настоящий чистюля! Горжусь! 🥰', 'Мурр-мурр! Как красиво получилось! ✨🐾', 'Вот это да! Чистота — красота! 🌟'],
+        m_food: ['Я кушать хочу... 🍞🥺', 'Мяу... проголодался совсем 🐾💧', 'Покорми меня, пожалуйста! 🥺🍞', 'Животик урчит... 🍞😿'],
+        m_prestige: ['Новый старт! Мурр~ 👑✨', 'Ух ты, ты крутой! Погнали! 🔥💪', 'Снова с нуля? Я с тобой! 🐾💖', 'Новое приключение! Мяу! 🌟'],
+        m_money: ['Денежки, денежки! 💰✨', 'Мы разбогатеем! Мррр~ 💖', 'Мррр, как приятно! 💰😻', 'Деньжата капают! 🪙💕'],
+        m_crust: ['Корки-корки! Возьми скребок 🧽🧱', 'Ммм, твёрдые! Сначала скребок! 🧱💪', 'Ой, корки! Скребок спасёт! 🧽✨', 'Царап-царап! Скребком их! 🧱🐾'],
+        m_idle: ['Мррр... 💤', 'Мяу? 🐾', 'Как дела, хозяин? 💕', 'Погладь меня~ 🥺', 'Мурр-мурр 💗', 'Скучно... поиграем? 🎾', 'Я самый милый котик, да? 😸', 'Ты лучший! 💖', 'Мням-мням... 🐟', 'Обнимашки? 🤗', 'Мяу-мяу-мяу! 🎵', 'Хочешь секрет? 🤫', 'Я тебя обожаю! 💝', 'Погладь за ушком~ 🐱']
     },
     en: {
         title: 'Clean Carpets', loading: 'Loading...',
@@ -134,6 +137,7 @@ const I18N = {
         willStay: '✅ WILL STAY:', willReset: '❌ WILL RESET:',
         confirmPrestige: '⚠️ SURE? TAP AGAIN', prestigeBtn: '🔥 PRESTIGE (+{0} 👑)',
         achievementsTitle: '🏆 ACHIEVEMENTS', achievementsOpened: 'Unlocked: {0} / {1}',
+        page: 'Page {0} / {1}',
         questsTitle: '📅 QUESTS', questsUpdate: 'Refresh: every day (UTC)',
         claim: '🎁 CLAIM +{0}💰', claimed: '✅ CLAIMED', reward: 'Reward: +{0}💰',
         museumTitle: '🏛️ CARPET MUSEUM',
@@ -158,6 +162,7 @@ const I18N = {
         carpetGrad: 'Carpet {0} — Step {1}/{2}', progress: 'Progress: {0} / {1}',
         noFood: '🍞 NO FOOD!\nBUY IN SHOP',
         bugsFirst: '🐛 KILL BUGS FIRST!\n(swatter 🪰)',
+        crustFirst: '🧱 REMOVE CRUSTS FIRST!\n(scraper 🧽)',
         carpetDirty: 'Carpet still dirty! Need 100%.',
         collectStars: '⭐ Collect all stars!', allStars: '⭐ All stars collected!',
         carpetClean: 'Carpet is clean! ✨', newQuests: '📅 New quests!',
@@ -169,16 +174,17 @@ const I18N = {
         noMoney: 'Not enough money!', needMoreFood: '❌ Not enough food (need {0}🍞)',
         language: '🌐 Language',
         music: '🎵 Music', musicOn: '✅ ON', musicOff: '❌ OFF',
-        m_hello: ['Meow! Help me with the carpet 🐾', 'Let\'s start! I\'ll help 🐱', 'Purr~ So dusty here!'],
-        m_soap: ['Apply soap in circles 💫', 'More foam — dirt goes away!', 'Soap it 🧼'],
-        m_wash: ['Now rinse with water 💧', 'Wash the foam off!', 'Splash 💦'],
-        m_bugs: ['Oh! Bugs 🐛 Grab the swatter!', 'Kill bugs first 🪰', 'Eww, bugs!'],
-        m_star: ['Catch the stars ⭐', 'Collect them all ✨', 'Tap the stars!'],
-        m_finish: ['Yay! Carpet is like new 🎉', 'So clean! Take money 💰', 'Purr~ beautiful!'],
-        m_food: ['Food is gone 🍞 Buy in shop!', 'I\'m hungry... buy food 🐾', 'Don\'t forget to eat!'],
-        m_prestige: ['You\'re ready for prestige 👑', 'Time to start over! 🔥', 'Legacy awaits!'],
-        m_money: ['Get richer 💰', 'Money flows ✨', 'Buy something in shop 🛒'],
-        m_idle: ['Meow?', 'Purr~', 'How are you? 🐾', 'Clean more?', 'Catch stars ✨', 'Check the quests 📅']
+        m_hello: ['Purr~ So happy to see you! 🐾💖', 'Hi! Pet me please! 🥰', 'Meow! Missed you! 💕', 'You\'re here! Yay! 🌟'],
+        m_soap: ['Soap-soap! Bubbles are pretty! 🫧✨', 'Mmm... smells so good! Purr~ 💗', 'Foam-foam! Love bubbles! 🧼🫧', 'So foamy! Purr-purr~ ✨'],
+        m_wash: ['Water! Splash-splash~ 💧💙', 'Rinse it, I\'ll help! 💦', 'So fresh! Purr~ 🫧', 'Love water! Splash? 💧😻'],
+        m_bugs: ['Oh-oh, bugs! Shoo! 🐛➡️', 'Eww, remove them fast! 🪰💥', 'I don\'t like bugs! Kill them! 🐜⚡', 'Shoo, nasty bugs! 🐛👋'],
+        m_star: ['Stars! So pretty! ⭐✨', 'Catch them, catch! ✨💫', 'Mmm, shinies! Love them! 🌟💖', 'Star-candies! Yum! ⭐🍬'],
+        m_finish: ['Yay! Carpet shines! 🎉💖', 'You\'re a true cleaner! Proud! 🥰', 'Purr-purr! So pretty! ✨🐾', 'Wow! Clean is beautiful! 🌟'],
+        m_food: ['I wanna eat... 🍞🥺', 'Meow... so hungry 🐾💧', 'Feed me please! 🥺🍞', 'Tummy rumbles... 🍞😿'],
+        m_prestige: ['New start! Purr~ 👑✨', 'Wow you\'re cool! Let\'s go! 🔥💪', 'From scratch again? I\'m with you! 🐾💖', 'New adventure! Meow! 🌟'],
+        m_money: ['Money, money! 💰✨', 'We\'ll get rich! Purr~ 💖', 'Purr, so nice! 💰😻', 'Coins dropping! 🪙💕'],
+        m_crust: ['Crusts! Grab the scraper! 🧽🧱', 'Mmm hard! Scraper first! 🧱💪', 'Oh, crusts! Scraper saves! 🧽✨', 'Scratch-scratch! Use scraper! 🧱🐾'],
+        m_idle: ['Purr... 💤', 'Meow? 🐾', 'How are you, human? 💕', 'Pet me~ 🥺', 'Purr-purr 💗', 'Bored... play? 🎾', 'I\'m the cutest cat, right? 😸', 'You\'re the best! 💖', 'Nom-nom... 🐟', 'Hugs? 🤗', 'Meow-meow-meow! 🎵', 'Want a secret? 🤫', 'I adore you! 💝', 'Pet my ear~ 🐱']
     }
 };
 
@@ -256,7 +262,7 @@ const BALANCE = {
     musicVolume: 0.18
 };
 
-const SAVE_KEY = 'carpetGameStats_v12';
+const SAVE_KEY = 'carpetGameStats_v13';
 
 const LEGACY_UPGRADES = [
     { id: 'money_flow',  icon: '💰', name: { ru: 'Денежный поток', en: 'Money Flow' },       desc: { ru: '+15% к деньгам навсегда', en: '+15% money forever' }, cost: 1,  maxLevel: 5 },
@@ -372,18 +378,15 @@ const CARPET_TUTORIALS = {
 const TEXT_STYLES = {
     title: (color = '#FFD700') => ({
         fontSize: '48px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
-        stroke: '#000000', strokeThickness: 6,
-        shadow: { offsetX: 3, offsetY: 3, color: '#000000', blur: 5, fill: true }
+        stroke: '#000000', strokeThickness: 6
     }),
     stat: (color = '#FFFFFF', size = 30) => ({
         fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
-        stroke: '#000000', strokeThickness: 5,
-        shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
+        stroke: '#000000', strokeThickness: 5
     }),
     button: (color = '#FFFFFF', size = 28) => ({
         fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
-        stroke: '#000000', strokeThickness: 5,
-        shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
+        stroke: '#000000', strokeThickness: 5
     }),
     shop: (color = '#FFFFFF', size = 28) => ({
         fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
@@ -396,7 +399,6 @@ const TEXT_STYLES = {
     message: (color = '#FFFF00', size = 26) => ({
         fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
         stroke: '#000000', strokeThickness: 5,
-        shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true },
         align: 'center', wordWrap: { width: 640 }
     })
 };
@@ -536,7 +538,8 @@ class AmbientMusic {
 class Mascot {
     constructor(scene) {
         this.scene = scene;
-        this.x = 640; this.y = 1160;
+        // Кот выше кнопок: кнопки на y=1195 (верх ~1145), кот сдвинут вверх
+        this.x = 640; this.y = 1020;
         this.container = scene.add.container(this.x, this.y).setDepth(50);
         this._buildKitten();
         this.bubble = null;
@@ -1233,7 +1236,7 @@ class Effects {
 </script>
 
 <script>
-/* FINISH STARS */
+/* FINISH STARS (без glow) */
 class FinishStarsSystem {
     constructor(scene, cleaning, state, effects) {
         this.scene = scene; this.cleaning = cleaning; this.state = state; this.effects = effects;
@@ -1275,20 +1278,12 @@ class FinishStarsSystem {
             let icon = '⭐';
             if (c.hasStain) icon = '🧴';
             else if (c.hasCrust) icon = '🧱';
-            const glow = this.scene.add.graphics().setDepth(23);
-            glow.fillStyle(0xFFD700, 0.35);
-            glow.fillCircle(c.x, c.y, 42);
-            glow.setAlpha(0);
-            this.scene.tweens.add({ targets: glow, alpha: { from: 0.15, to: 0.7 },
-                scaleX: { from: 0.85, to: 1.15 }, scaleY: { from: 0.85, to: 1.15 },
-                duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
             const star = this.scene.add.text(c.x, c.y, icon, { fontSize: '44px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(24);
             star.setScale(0);
             this.scene.tweens.add({ targets: star, scale: 1, duration: 350, ease: 'Back.easeOut' });
-            this.scene.tweens.add({ targets: star, scaleX: 1.15, scaleY: 1.15, duration: 700, yoyo: true, repeat: -1, delay: 350, ease: 'Sine.easeInOut' });
             const hit = this.scene.add.circle(c.x, c.y, 45, 0x000000, 0.001).setDepth(25).setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.popStar(c));
-            this.stars.push({ star, hit, glow, cells: c.cells });
+            this.stars.push({ star, hit, cells: c.cells });
         }
     }
     popStar(cluster) {
@@ -1304,8 +1299,8 @@ class FinishStarsSystem {
         this.effects.moneyPopup(cluster.x, cluster.y, reward, '#FFD700');
         this.effects.starBurst(cluster.x, cluster.y, 4);
         entry.star.disableInteractive(); entry.hit.disableInteractive();
-        this.scene.tweens.add({ targets: [entry.star, entry.glow], scale: 2, alpha: 0, angle: 180, duration: 350, ease: 'Cubic.easeOut',
-            onComplete: () => { entry.star.destroy(); try { entry.glow.destroy(); } catch {} } });
+        this.scene.tweens.add({ targets: entry.star, scale: 2, alpha: 0, angle: 180, duration: 350, ease: 'Cubic.easeOut',
+            onComplete: () => { entry.star.destroy(); } });
         entry.hit.destroy();
         const idx = this.stars.indexOf(entry);
         if (idx > -1) this.stars.splice(idx, 1);
@@ -1325,7 +1320,6 @@ class FinishStarsSystem {
         for (const s of this.stars) {
             if (s.star && s.star.active) s.star.destroy();
             if (s.hit && s.hit.active) s.hit.destroy();
-            if (s.glow && s.glow.active) s.glow.destroy();
         }
         this.stars = []; this.active = false;
     }
@@ -1356,6 +1350,12 @@ class CleaningSystem {
         this.onProgress = null; this.onErase = null; this.onSoap = null;
         this.onSteam = null; this.onCrustRemove = null; this.onStainRemove = null;
         this.onCelebrate = null; this.celebrationFired = false;
+    }
+    hasCrustLeft() {
+        for (let i = 0; i < this.crust.length; i++) {
+            if (this.crust[i] > 0.05) return true;
+        }
+        return false;
     }
     reset(carpetIndex) {
         this.dirt.fill(1.0); this.soap.fill(0.0); this.crust.fill(0.0);
@@ -1653,7 +1653,6 @@ class BugSystem {
     }
 }
 
-/* ROOM — уютная зимняя хижина */
 class RoomRenderer {
     constructor(scene) {
         this.scene = scene;
@@ -1671,23 +1670,18 @@ class RoomRenderer {
         }
     }
     drawCozyCabin(g, W, H) {
-        // === Стена — тёмное дерево ===
         g.fillStyle(0x2a1a10, 1); g.fillRect(0, 0, W, H);
         for (let y = 0; y < 1000; y += 26) {
             g.fillStyle(0x1a0f06, 0.5); g.fillRect(0, y, W, 2);
         }
-        // Вертикальные тёмные балки
         g.fillStyle(0x1a0f06, 0.75);
         g.fillRect(0, 0, 55, 1000);
         g.fillRect(W - 55, 0, 55, 1000);
 
-        // === Окно ===
         const wx = 75, wy = 55, ww = W - 150, wh = 520;
-        // Внешняя рамка
         g.fillStyle(0x4a2c14, 1); g.fillRect(wx - 18, wy - 18, ww + 36, wh + 36);
         g.fillStyle(0x2a1a0e, 1); g.fillRect(wx - 10, wy - 10, ww + 20, wh + 20);
 
-        // Небо (градиент)
         for (let i = 0; i < wh; i++) {
             const tt = i / wh;
             const r = Math.floor(0x14 + (0x28 - 0x14) * tt);
@@ -1696,18 +1690,15 @@ class RoomRenderer {
             g.fillStyle((r << 16) | (gg << 8) | b, 1);
             g.fillRect(wx, wy + i, ww, 1);
         }
-        // Звёзды
         for (let i = 0; i < 70; i++) {
             const sx = wx + Math.random() * ww;
             const sy = wy + Math.random() * wh * 0.5;
             g.fillStyle(0xffffff, 0.4 + Math.random() * 0.5);
             g.fillCircle(sx, sy, 0.7 + Math.random() * 1);
         }
-        // Луна
         g.fillStyle(0xf5f0d8, 0.9); g.fillCircle(wx + ww * 0.78, wy + wh * 0.18, 26);
         g.fillStyle(0x2a3455, 1); g.fillCircle(wx + ww * 0.78 - 8, wy + wh * 0.18 - 4, 22);
 
-        // Дальние горы (тёмно-синие)
         g.fillStyle(0x2c3a55, 1);
         g.beginPath();
         g.moveTo(wx, wy + wh * 0.68);
@@ -1721,13 +1712,11 @@ class RoomRenderer {
         g.lineTo(wx + ww, wy + wh);
         g.lineTo(wx, wy + wh);
         g.closePath(); g.fillPath();
-        // Снежные шапки
         g.fillStyle(0xdde8f5, 0.95);
         g.fillTriangle(wx + ww * 0.42, wy + wh * 0.36, wx + ww * 0.36, wy + wh * 0.44, wx + ww * 0.48, wy + wh * 0.44);
         g.fillTriangle(wx + ww * 0.12, wy + wh * 0.5, wx + ww * 0.07, wy + wh * 0.56, wx + ww * 0.17, wy + wh * 0.56);
         g.fillTriangle(wx + ww * 0.72, wy + wh * 0.42, wx + ww * 0.68, wy + wh * 0.48, wx + ww * 0.76, wy + wh * 0.48);
 
-        // Передние горы (сине-серые)
         g.fillStyle(0x3a4d6b, 1);
         g.beginPath();
         g.moveTo(wx, wy + wh * 0.82);
@@ -1739,15 +1728,12 @@ class RoomRenderer {
         g.lineTo(wx + ww, wy + wh);
         g.lineTo(wx, wy + wh);
         g.closePath(); g.fillPath();
-        // Снег на передних
         g.fillStyle(0xc8d4e4, 0.7);
         g.fillTriangle(wx + ww * 0.55, wy + wh * 0.58, wx + ww * 0.51, wy + wh * 0.63, wx + ww * 0.59, wy + wh * 0.63);
 
-        // Снежный «пол» в окне
         g.fillStyle(0xb8c8dc, 0.55);
         g.fillRect(wx, wy + wh * 0.88, ww, wh * 0.12);
 
-        // Ёлки (силуэты)
         for (let i = 0; i < 9; i++) {
             const tx = wx + 25 + i * (ww / 9) + (Math.random() * 20 - 10);
             const ty = wy + wh * 0.78 + Math.random() * 40;
@@ -1760,7 +1746,6 @@ class RoomRenderer {
             }
         }
 
-        // Снежинки
         for (let i = 0; i < 180; i++) {
             const sx = wx + Math.random() * ww;
             const sy = wy + Math.random() * wh;
@@ -1768,15 +1753,12 @@ class RoomRenderer {
             g.fillCircle(sx, sy, 0.5 + Math.random() * 1.6);
         }
 
-        // Переплёт окна (крест)
         g.fillStyle(0x4a2c14, 1);
         g.fillRect(wx + ww / 2 - 6, wy, 12, wh);
         g.fillRect(wx, wy + wh / 2 - 6, ww, 12);
-        // Декоративная рама
         g.lineStyle(4, 0x6a4220, 1);
         g.strokeRect(wx - 6, wy - 6, ww + 12, wh + 12);
 
-        // === Пол — тёплое дерево ===
         g.fillStyle(0x4a2e18, 1); g.fillRect(0, 950, W, H - 950);
         for (let y = 950; y < H; y += 24) {
             g.fillStyle(0x2a1a0e, 0.45); g.fillRect(0, y, W, 3);
@@ -1784,26 +1766,15 @@ class RoomRenderer {
         for (let x = 0; x < W; x += 80) {
             g.fillStyle(0x2a1a0e, 0.25); g.fillRect(x, 950, 2, H - 950);
         }
-        // Плинтус
         g.fillStyle(0x1a0f06, 1); g.fillRect(0, 940, W, 12);
 
-        // === Камин (справа) ===
         const fx = W - 95, fy = 1060;
-        // Каменный портал
         g.fillStyle(0x3a2a1e, 1); g.fillRect(fx - 95, fy - 105, 190, 170);
         g.fillStyle(0x2a1a12, 1); g.fillRect(fx - 85, fy - 95, 170, 150);
-        // Топка
         g.fillStyle(0x0a0505, 1); g.fillRect(fx - 68, fy - 68, 136, 110);
-        // Дрова
         g.fillStyle(0x3a2210, 1);
         g.fillRect(fx - 60, fy + 20, 120, 14);
         g.fillRect(fx - 50, fy + 10, 100, 12);
-        // Свечение огня (радиальный)
-        g.fillStyle(0xff4400, 0.15); g.fillCircle(fx, fy - 20, 90);
-        g.fillStyle(0xff6622, 0.25); g.fillCircle(fx, fy - 20, 65);
-        g.fillStyle(0xff8833, 0.35); g.fillCircle(fx, fy - 20, 42);
-        g.fillStyle(0xffaa44, 0.5); g.fillCircle(fx, fy - 20, 26);
-        // Языки пламени
         g.fillStyle(0xff5522, 1);
         g.fillTriangle(fx - 38, fy + 40, fx - 18, fy - 25, fx + 2, fy + 40);
         g.fillTriangle(fx - 8, fy + 40, fx + 10, fy - 10, fx + 30, fy + 40);
@@ -1813,11 +1784,7 @@ class RoomRenderer {
         g.fillStyle(0xffdd66, 1);
         g.fillTriangle(fx - 12, fy + 40, fx, fy - 10, fx + 14, fy + 40);
         g.fillTriangle(fx + 8, fy + 40, fx + 18, fy + 0, fx + 28, fy + 40);
-        // Тёплый отсвет от камина
-        g.fillStyle(0xff6622, 0.12); g.fillCircle(fx, fy + 30, 320);
-        g.fillStyle(0xffaa44, 0.08); g.fillCircle(fx, fy + 30, 200);
 
-        // === Лампа слева ===
         g.fillStyle(0x3a2210, 1); g.fillRect(60, 850, 8, 100);
         g.fillStyle(0x5a3a18, 1); g.fillRect(40, 830, 48, 30);
         g.fillStyle(0xffaa44, 0.9); g.fillCircle(64, 845, 12);
@@ -1825,7 +1792,6 @@ class RoomRenderer {
         g.fillStyle(0xffcc66, 0.2); g.fillCircle(64, 845, 110);
         g.fillStyle(0xffaa44, 0.1); g.fillCircle(64, 845, 180);
 
-        // === Ковёр на полу (тёплое пятно) ===
         g.fillStyle(0x6a3a1e, 0.5);
         g.fillEllipse(W / 2, 1180, 620, 100);
         g.fillStyle(0x8a4a26, 0.35);
@@ -2072,9 +2038,6 @@ class CarpetTutorial {
 </script>
 
 <script>
-/* ============================================================
-   UI: SHOP (крупные шрифты + закрытие после покупки)
-   ============================================================ */
 class FadeGroup {
     constructor(scene) { this.scene = scene; this.elements = []; this._closing = false; }
     push(el) { this.elements.push(el); return el; }
@@ -2092,6 +2055,7 @@ class FadeGroup {
     _destroyAll() { this.elements.forEach(e => { try { e.destroy(); } catch {} }); this.elements = []; }
 }
 
+/* SHOP: после покупки НЕ закрывается, только refresh */
 class ShopUI {
     constructor(scene, state, ads) {
         this.scene = scene; this.state = state; this.ads = ads;
@@ -2107,14 +2071,9 @@ class ShopUI {
         this.group.closeFade(() => this.onClose?.());
     }
     refresh() { if (!this.isOpen) return; this.group._destroyAll(); this.render(); }
-    // Покупка → сообщение + закрытие
     async _afterBuy() {
         await this.onChanged?.();
-        this.close();
-    }
-    // Выбор скина (не покупка) → только перерисовка
-    async _afterSelect() {
-        await this.onChanged?.();
+        // Не закрываем — просто обновляем
         this.refresh();
     }
     render() {
@@ -2301,8 +2260,18 @@ class ShopUI {
             pill.hit.on('pointerdown', async () => {
                 pill.tap();
                 if (selected) return;
-                if (unlocked) { if (kind === 'room') st.selectRoomSkin(skin.id); else st.selectBrushSkin(skin.id); await this._afterSelect(); this.onSkinChange?.(kind); }
-                else if (st.money >= skin.price) { if (kind === 'room') st.buyRoomSkin(skin.id); else st.buyBrushSkin(skin.id); this.onMessage?.(t('bought', loc(skin.name))); await this._afterBuy(); this.onSkinChange?.(kind); }
+                if (unlocked) {
+                    if (kind === 'room') st.selectRoomSkin(skin.id); else st.selectBrushSkin(skin.id);
+                    await this.onChanged?.();
+                    this.onSkinChange?.(kind);
+                    this.refresh();
+                }
+                else if (st.money >= skin.price) {
+                    if (kind === 'room') st.buyRoomSkin(skin.id); else st.buyBrushSkin(skin.id);
+                    this.onMessage?.(t('bought', loc(skin.name)));
+                    await this._afterBuy();
+                    this.onSkinChange?.(kind);
+                }
                 else await this._offerAd(push, skin.price - st.money);
             });
         });
@@ -2414,31 +2383,63 @@ class ShopUI {
     }
 }
 
+/* ДОСТИЖЕНИЯ: пагинация 7 на страницу, крупные карточки */
 class AchievementsUI {
-    constructor(scene, state) { this.scene = scene; this.state = state; this.group = new FadeGroup(scene); this.isOpen = false; this.onOpen = null; this.onClose = null; }
-    open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
+    constructor(scene, state) {
+        this.scene = scene; this.state = state;
+        this.group = new FadeGroup(scene); this.isOpen = false;
+        this.currentPage = 0;
+        this.onOpen = null; this.onClose = null;
+    }
+    open() { if (this.isOpen) return; this.isOpen = true; this.currentPage = 0; this.onOpen?.(); this.render(); }
     close() { if (!this.isOpen) return; this.isOpen = false; this.group.closeFade(() => this.onClose?.()); }
+    refresh() { if (!this.isOpen) return; this.group._destroyAll(); this.render(); }
     render() {
         const s = this.scene, W = 720, H = 1280, st = this.state;
         const push = (el) => this.group.push(el);
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(40)); ov.setInteractive();
         push(s.add.rectangle(W/2, H/2, 660, 1140, 0x1e1e28).setDepth(41).setStrokeStyle(5, 0xFFD700));
-        push(s.add.text(W/2, 110, t('achievementsTitle'), TEXT_STYLES.title('#FFD700')).setOrigin(0.5).setDepth(42));
+        push(s.add.text(W/2, 100, t('achievementsTitle'), TEXT_STYLES.title('#FFD700')).setOrigin(0.5).setDepth(42));
         const done = Object.keys(st.achievements).length;
-        push(s.add.text(W/2, 165, t('achievementsOpened', done, ACHIEVEMENTS.length), { ...TEXT_STYLES.shopInfo('#FFFFFF', 22) }).setOrigin(0.5).setDepth(42));
-        const startY = 205, itemH = 46, gap = 4;
-        ACHIEVEMENTS.forEach((a, i) => {
-            const y = startY + i * (itemH + gap) + itemH / 2;
+        push(s.add.text(W/2, 152, t('achievementsOpened', done, ACHIEVEMENTS.length), { ...TEXT_STYLES.shopInfo('#FFFFFF', 22) }).setOrigin(0.5).setDepth(42));
+
+        const PAGE_SIZE = 7;
+        const totalPages = Math.ceil(ACHIEVEMENTS.length / PAGE_SIZE);
+        if (this.currentPage >= totalPages) this.currentPage = 0;
+        const start = this.currentPage * PAGE_SIZE;
+        const end = Math.min(start + PAGE_SIZE, ACHIEVEMENTS.length);
+
+        const startY = 200, itemH = 118, gap = 8;
+        for (let i = start; i < end; i++) {
+            const a = ACHIEVEMENTS[i];
+            const y = startY + (i - start) * (itemH + gap) + itemH / 2;
             const unlocked = !!st.achievements[a.id];
             const val = st.getAchievementValue(a.type);
             const current = a.type === 'bestTime' ? (val > 0 ? formatTime(val) : '—') : Math.min(val, a.target);
-            push(s.add.rectangle(W/2, y, 620, itemH, unlocked ? 0x2a4020 : 0x252525).setDepth(41).setStrokeStyle(2, unlocked ? 0x00FF00 : 0x555555, unlocked ? 0.7 : 0.4));
-            push(s.add.text(W/2 - 285, y, a.icon, { fontSize: '28px' }).setOrigin(0.5).setDepth(42));
-            push(s.add.text(W/2 - 248, y - 9, loc(a.name), { fontSize: '15px', fill: unlocked ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
-            push(s.add.text(W/2 - 248, y + 10, unlocked ? `✅ +${a.reward}💰` : loc(a.desc), { fontSize: '12px', fill: unlocked ? '#88FF88' : '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
-            if (!unlocked && a.type !== 'bestTime') push(s.add.text(W/2 + 285, y, `${current}/${a.target}`, { fontSize: '13px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
-        });
-        push(s.add.text(620, 110, '✖', { fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
+            push(s.add.rectangle(W/2, y, 620, itemH, unlocked ? 0x2a4020 : 0x252525).setDepth(41).setStrokeStyle(3, unlocked ? 0x00FF00 : 0x555555, unlocked ? 0.8 : 0.4));
+            push(s.add.text(W/2 - 280, y, a.icon, { fontSize: '54px' }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(W/2 - 230, y - 24, loc(a.name), { fontSize: '24px', fill: unlocked ? '#00FF00' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(W/2 - 230, y + 6, unlocked ? `✅ +${a.reward}💰` : loc(a.desc), { fontSize: '16px', fill: unlocked ? '#88FF88' : '#AAAAAA', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            if (!unlocked && a.type !== 'bestTime') {
+                push(s.add.text(W/2 - 230, y + 32, `${current} / ${a.target}`, { fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            }
+        }
+
+        // Навигация
+        const navY = 1180;
+        const pillPrev = makePill(s, 120, navY, 130, 60, { radius: 22, fill: this.currentPage > 0 ? 0x4a3a10 : 0x2a2a2a, stroke: this.currentPage > 0 ? 0xFFD700 : 0x555555, strokeW: 3, depth: 41 });
+        push(pillPrev.cont);
+        push(s.add.text(120, navY, '⬅️', { fontSize: '28px', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+        if (this.currentPage > 0) pillPrev.hit.on('pointerdown', () => { pillPrev.tap(); this.currentPage--; this.refresh(); });
+
+        push(s.add.text(W/2, navY, t('page', this.currentPage + 1, totalPages), { ...TEXT_STYLES.shopInfo('#FFFFFF', 22) }).setOrigin(0.5).setDepth(42));
+
+        const pillNext = makePill(s, 600, navY, 130, 60, { radius: 22, fill: this.currentPage < totalPages - 1 ? 0x4a3a10 : 0x2a2a2a, stroke: this.currentPage < totalPages - 1 ? 0xFFD700 : 0x555555, strokeW: 3, depth: 41 });
+        push(pillNext.cont);
+        push(s.add.text(600, navY, '➡️', { fontSize: '28px', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
+        if (this.currentPage < totalPages - 1) pillNext.hit.on('pointerdown', () => { pillNext.tap(); this.currentPage++; this.refresh(); });
+
+        push(s.add.text(620, 100, '✖', { fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }).on('pointerdown', () => this.close()));
         this.group.openFade();
     }
@@ -2820,6 +2821,7 @@ class MainScene extends Phaser.Scene {
         this.gameplayStopped = false;
         this.noFoodText = null; this.noFoodTween = null; this.noFoodCooldown = false;
         this.bugWarningText = null; this.bugWarningTween = null; this.bugWarningCooldown = false;
+        this.crustWarningText = null; this.crustWarningTween = null; this.crustWarningCooldown = false;
         this.carpetElapsed = 0;
         this.prestigeText = null; this.dayNightText = null;
         this.steamFuel = BALANCE.steamMaxFuel;
@@ -2837,9 +2839,7 @@ class MainScene extends Phaser.Scene {
         }
         this.time.delayedCall(400, () => this.startCarpetTutorial());
         this.leaderboard.submitScores();
-        this.time.addEvent({ delay: 60000, loop: true, callback: () => {
-            this.updateDayNightText();
-        }});
+        this.time.addEvent({ delay: 60000, loop: true, callback: () => { this.updateDayNightText(); }});
         this._onVisibilityChange = () => {
             if (document.hidden) { try { this.saveSystem.saveSync(); } catch {} this.pauseGame(); }
             else this.resumeGame();
@@ -2866,7 +2866,7 @@ class MainScene extends Phaser.Scene {
         const idx = this.state.carpetIndex;
         const stat = this.state.carpetStats[idx];
         if (!stat || stat.tutorialDone) {
-            if (this.state.tutorialDone && this.state.getDailyStatus().canClaim) this.time.delayedCall(600, () => this.dailyUI.open());
+            if (this.state.getDailyStatus().canClaim) this.time.delayedCall(600, () => this.dailyUI.open());
             return;
         }
         this.tutorial = new CarpetTutorial(this, idx);
@@ -2913,11 +2913,11 @@ class MainScene extends Phaser.Scene {
         this.tweens.add({ targets: this.questBadge, alpha: { from: 1, to: 0.3 }, duration: 700, yoyo: true, repeat: -1 });
         this.updateQuestBadge();
 
+        // Кнопка ежедневного бонуса — теперь показывается всегда при canClaim (без glow)
         const ds = this.state.getDailyStatus();
-        if (ds.canClaim && this.state.tutorialDone) {
+        if (ds.canClaim) {
             const dailyBg = this.add.circle(360, 100, 24, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
             const dailyIcon = this.add.text(360, 100, '🎁', { fontSize: '28px' }).setOrigin(0.5).setDepth(15);
-            this.tweens.add({ targets: [dailyBg, dailyIcon], scale: { from: 1, to: 1.15 }, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
             const hit = this.add.circle(360, 100, 30, 0x000000, 0.001).setDepth(16).setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.dailyUI.open());
         }
@@ -2926,7 +2926,6 @@ class MainScene extends Phaser.Scene {
         this.add.rectangle(W / 2, 230, 400, 30, 0x333333).setDepth(10);
         this.progressBar = this.add.rectangle(W / 2 - 200, 230, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
         this.progressText = this.add.text(W / 2, 230, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
-        this.progressGlow = this.add.graphics().setDepth(9).setVisible(false);
 
         this.steamBg = this.add.rectangle(W / 2, 265, 200, 14, 0x111111).setDepth(10).setVisible(false);
         this.steamBar = this.add.rectangle(W / 2 - 100, 265, 200, 14, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
@@ -3075,11 +3074,18 @@ class MainScene extends Phaser.Scene {
         document.addEventListener('touchend', () => { this.effects.hideSwatterCursor(); }, { passive: true });
         document.addEventListener('mouseup', () => { this.effects.hideSwatterCursor(); });
     }
+    // Новая последовательность: 1. жуки → 2. корки → 3. всё остальное
     applyTool(lx, ly) {
         if (this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen) return;
         if (this.stars.active) return;
         if (this.state.carpetIndex >= 4 && (this.currentTool === 'soap' || this.currentTool === 'wash')) return;
+        // 1. Жуки: пока живы — вообще ничего нельзя
+        if (this.bugs.count > 0) { this.showBugWarning(); this.mascot?.react('bugs'); return; }
+        // 2. Корки: пока есть — только скребок
+        if (this.cleaning.hasCrustLeft() && this.currentTool !== 'scraper') {
+            this.showCrustWarning(); this.mascot?.react('crust'); return;
+        }
         if (this.currentTool === 'steam') {
             if (this.steamFuel <= 0) return;
             this.steamFuel = Math.max(0, this.steamFuel - BALANCE.steamFuelCost);
@@ -3089,7 +3095,6 @@ class MainScene extends Phaser.Scene {
             if (this.state.money < BALANCE.foodPrice) { this.state.food = 1; this.refreshHUD(); this.showMessage(t('foodBonus')); }
             else { this.showNoFoodWarning(); this.mascot?.react('food'); return; }
         }
-        if (this.bugs.count > 0 && this.currentTool !== 'scraper' && this.currentTool !== 'steam') { this.showBugWarning(); this.mascot?.react('bugs'); return; }
         this.cleaning.applyStroke(lx, ly, this.state.getCurrentRadius(), this.currentTool);
         const p = this.cleaning.progress;
         if (!this.stars.active && p >= BALANCE.finishThreshold && p < 1.0) { this.stars.activate(); this.updateStarsCounter(); }
@@ -3234,18 +3239,6 @@ class MainScene extends Phaser.Scene {
     updateProgressBar(p) {
         this.progressBar.width = 400 * p;
         this.progressText.setText(Math.min(100, Math.floor(p * 100)) + '%');
-        if (p >= 0.9 && p < 1.0) {
-            this.progressGlow.clear();
-            this.progressGlow.lineStyle(4, 0x00FF88, 0.85);
-            this.progressGlow.strokeRoundedRect(360 - 202, 230 - 17, 404, 34, 12);
-            this.progressGlow.setVisible(true);
-            if (!this._glowTween) {
-                this._glowTween = this.tweens.add({ targets: this.progressGlow, alpha: { from: 1, to: 0.25 }, duration: 550, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-            }
-        } else {
-            if (this.progressGlow) { this.progressGlow.setVisible(false); this.progressGlow.clear(); }
-            if (this._glowTween) { this._glowTween.remove(); this._glowTween = null; }
-        }
     }
     vibrate() { if (!this.state.settings.vibration) return; try { navigator.vibrate?.(BALANCE.vibrationMs); } catch {} }
     showNoFoodWarning() {
@@ -3273,6 +3266,19 @@ class MainScene extends Phaser.Scene {
         this.bugWarningTween = this.tweens.add({ targets: this.bugWarningText, alpha: { from: 1, to: 0.2 }, duration: 400, yoyo: true, repeat: 4, delay: 200,
             onComplete: () => { if (this.bugWarningText) { this.bugWarningText.destroy(); this.bugWarningText = null; } this.bugWarningTween = null; } });
         this.time.delayedCall(1800, () => { this.bugWarningCooldown = false; });
+    }
+    showCrustWarning() {
+        if (this.crustWarningCooldown) return;
+        this.crustWarningCooldown = true;
+        if (this.crustWarningText) { if (this.crustWarningTween) this.crustWarningTween.remove(); this.crustWarningText.destroy(); this.crustWarningText = null; }
+        this.crustWarningText = this.add.text(360, 640, t('crustFirst'), {
+            fontSize: '42px', fill: '#FFAA44', fontStyle: 'bold', fontFamily: FONT_HAND, align: 'center',
+            stroke: '#000000', strokeThickness: 8
+        }).setOrigin(0.5).setDepth(80).setAlpha(0);
+        this.tweens.add({ targets: this.crustWarningText, alpha: 1, duration: 200, ease: 'Cubic.easeOut' });
+        this.crustWarningTween = this.tweens.add({ targets: this.crustWarningText, alpha: { from: 1, to: 0.2 }, duration: 400, yoyo: true, repeat: 4, delay: 200,
+            onComplete: () => { if (this.crustWarningText) { this.crustWarningText.destroy(); this.crustWarningText = null; } this.crustWarningTween = null; } });
+        this.time.delayedCall(1800, () => { this.crustWarningCooldown = false; });
     }
     showMessage(text) {
         const msg = this.add.text(360, 1000, text, {
