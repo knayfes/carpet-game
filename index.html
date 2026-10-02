@@ -8,7 +8,6 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Yandex Games SDK -->
     <script src="https://yandex.ru/games/sdk/v2"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js"></script>
     <style>
@@ -1515,12 +1514,10 @@ class CleaningSystem {
                         this.onCrustRemove?.(localX + this.originX, localY + this.originY);
                     }
                 } else if (tool === 'steam') {
-                    // Пар снимает корки, но НЕ убирает пятна
                     if (this.crust[i] > 0) { this.crust[i] = 0; crustChanged = true; }
-                    if (this.stainType[i] > 0) continue; // пятна остаются
+                    if (this.stainType[i] > 0) continue;
                     if (this.dirt[i] > 0) { this.dirt[i] = 0; dirtChanged = true; erased = true; }
                 } else if (tool === 'remover') {
-                    // Пятновыводитель эффективен и на обычной грязи
                     if (this.stainType[i] > 0) {
                         this.stainType[i] = 0; stainChanged = true;
                         this.dirt[i] = Math.max(0, this.dirt[i] - BALANCE.stainRemoverPower * falloff);
@@ -3017,8 +3014,7 @@ class MainScene extends Phaser.Scene {
         this.steamFuel = BALANCE.steamMaxFuel;
         this.tutorial = null;
         this.brush = this.add.text(0, 0, this.state.getBrushIcon(), { fontSize: '70px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(3).setVisible(false);
-        this.brushAura = this.add.graphics().setDepth(2).setVisible(false);
-        this.updateBrushAura();
+        this.brushAura = null;
         this.buildHUD(W, H);
         this.buildToolButtons(W, H);
         this.setupInput();
@@ -3065,7 +3061,6 @@ class MainScene extends Phaser.Scene {
         this.tutorial.start();
     }
     buildHUD(W, H) {
-        // Панели сделаны чуть выше, чтобы верхние иконки не подрезались
         const leftPanelBg = this.add.graphics().setDepth(9);
         leftPanelBg.fillStyle(0x000000, 0.78);
         leftPanelBg.fillRoundedRect(12, 15, 325, 195, 18);
@@ -3078,7 +3073,6 @@ class MainScene extends Phaser.Scene {
         rightPanelBg.lineStyle(2, 0x4A90D9, 0.5);
         rightPanelBg.strokeRoundedRect(383, 15, 325, 195, 18);
 
-        // Увеличены размеры шрифтов для читаемости чисел
         this.moneyText = this.add.text(28, 22, '💰 ' + this.state.money, TEXT_STYLES.stat('#FFD700', 34)).setDepth(10);
         this.foodText = this.add.text(28, 66, '🍞 ' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 26)).setDepth(10);
         this.toolText = this.add.text(28, 102, '🧹 ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 20)).setDepth(10);
@@ -3104,7 +3098,6 @@ class MainScene extends Phaser.Scene {
                 onClick();
             });
         };
-        // Кнопки смещены ниже, чтобы верх не подрезался
         const c1 = 445, c2 = 550, c3 = 655, r1 = 62, r2 = 155;
         makeBtn(c1, r1, '🏛️', t('museum'),     () => this.museum.open(), '#FFD700');
         makeBtn(c2, r1, '🏆', t('achievements'), () => this.achievementsUI.open(), '#FFD700');
@@ -3117,7 +3110,6 @@ class MainScene extends Phaser.Scene {
         this.tweens.add({ targets: this.questBadge, alpha: { from: 1, to: 0.3 }, duration: 700, yoyo: true, repeat: -1 });
         this.updateQuestBadge();
 
-        // Иконка ежедневных наград перенесена НАД полоской прогресса и панелями (y=30)
         const ds = this.state.getDailyStatus();
         if (ds.canClaim) {
             const dailyBg = this.add.circle(360, 30, 22, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
@@ -3126,7 +3118,6 @@ class MainScene extends Phaser.Scene {
             hit.on('pointerdown', () => this.dailyUI.open());
         }
 
-        // === Красивый прогресс-бар ===
         const pbW = 420, pbH = 44, pbR = 22;
         const pbX = W/2, pbY = 230;
 
@@ -3161,60 +3152,51 @@ class MainScene extends Phaser.Scene {
         this.steamText = this.add.text(W / 2, 303, t('steams'), { fontSize: '13px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11).setVisible(false);
 
         // ============================================================
-// Кнопка «ПОЛУЧИТЬ ДЕНЬГИ» — обёрнута в контейнер, чтобы scale
-// работал вокруг центра кнопки, а не вокруг (0,0) сцены.
-// ============================================================
-const fbY = 1050;
-const fbW = 380, fbH = 80, fbR = 40;
+        // Кнопка «ПОЛУЧИТЬ ДЕНЬГИ» — обёрнута в контейнер, чтобы scale
+        // работал вокруг центра кнопки, а не вокруг (0,0) сцены.
+        // ============================================================
+        const fbY = 1050;
+        const fbW = 380, fbH = 80, fbR = 40;
 
-const fbContainer = this.add.container(W / 2, fbY).setDepth(10);
+        const fbContainer = this.add.container(W / 2, fbY).setDepth(10);
 
-const fbShadow = this.add.graphics();
-fbShadow.fillStyle(0x000000, 0.45);
-fbShadow.fillRoundedRect(-fbW / 2 + 3, -fbH / 2 + 5, fbW, fbH, fbR);
-fbContainer.add(fbShadow);
+        const fbShadow = this.add.graphics();
+        fbShadow.fillStyle(0x000000, 0.45);
+        fbShadow.fillRoundedRect(-fbW / 2 + 3, -fbH / 2 + 5, fbW, fbH, fbR);
+        fbContainer.add(fbShadow);
 
-const fbBg = this.add.graphics();
-fbBg.fillStyle(0x0a2010, 1);
-fbBg.fillRoundedRect(-fbW / 2, -fbH / 2, fbW, fbH, fbR);
-fbBg.lineStyle(4, 0x00FF88, 1);
-fbBg.strokeRoundedRect(-fbW / 2, -fbH / 2, fbW, fbH, fbR);
-fbBg.lineStyle(2, 0xFFFFFF, 0.35);
-fbBg.strokeRoundedRect(-fbW / 2 + 6, -fbH / 2 + 6, fbW - 12, fbH - 12, fbR - 6);
-fbContainer.add(fbBg);
+        const fbBg = this.add.graphics();
+        fbBg.fillStyle(0x0a2010, 1);
+        fbBg.fillRoundedRect(-fbW / 2, -fbH / 2, fbW, fbH, fbR);
+        fbBg.lineStyle(4, 0x00FF88, 1);
+        fbBg.strokeRoundedRect(-fbW / 2, -fbH / 2, fbW, fbH, fbR);
+        fbBg.lineStyle(2, 0xFFFFFF, 0.35);
+        fbBg.strokeRoundedRect(-fbW / 2 + 6, -fbH / 2 + 6, fbW - 12, fbH - 12, fbR - 6);
+        fbContainer.add(fbBg);
 
-const fbText = this.add.text(0, 0, t('getMoney'), {
-    fontSize: '30px', fill: '#00FF88', fontStyle: 'bold', fontFamily: FONT_HAND,
-    stroke: '#000000', strokeThickness: 5
-}).setOrigin(0.5);
-fbContainer.add(fbText);
+        const fbText = this.add.text(0, 0, t('getMoney'), {
+            fontSize: '30px', fill: '#00FF88', fontStyle: 'bold', fontFamily: FONT_HAND,
+            stroke: '#000000', strokeThickness: 5
+        }).setOrigin(0.5);
+        fbContainer.add(fbText);
 
-const fbHit = this.add.rectangle(0, 0, fbW, fbH, 0x000000, 0.001);
-fbHit.setInteractive({ useHandCursor: true });
-fbContainer.add(fbHit);
+        const fbHit = this.add.rectangle(0, 0, fbW, fbH, 0x000000, 0.001);
+        fbHit.setInteractive({ useHandCursor: true });
+        fbContainer.add(fbHit);
 
-// Плавное нажатие строго вокруг центра кнопки
-fbHit.on('pointerdown', () => {
-    this.tweens.killTweensOf(fbContainer);
-    fbContainer.setScale(0.94);
-    this.tweens.add({
-        targets: fbContainer,
-        scaleX: 1, scaleY: 1,
-        duration: 140,
-        ease: 'Back.easeOut'
-    });
-    this.finishCarpet();
-});
+        fbHit.on('pointerdown', () => {
+            this.tweens.killTweensOf(fbContainer);
+            fbContainer.setScale(0.94);
+            this.tweens.add({
+                targets: fbContainer,
+                scaleX: 1, scaleY: 1,
+                duration: 140,
+                ease: 'Back.easeOut'
+            });
+            this.finishCarpet();
+        });
     }
-    updateBrushAura() {
-        if (!this.brushAura) return;
-        const color = this.state.getBrushColor();
-        this.brushAura.clear();
-        this.brushAura.fillStyle(color, 0.28);
-        this.brushAura.fillCircle(0, 0, 42);
-        this.brushAura.lineStyle(4, color, 0.85);
-        this.brushAura.strokeCircle(0, 0, 42);
-    }
+    updateBrushAura() { /* отключено */ }
     updateDayNightText() {
         if (!this.dayNightText) return;
         const td = getTimeOfDay();
@@ -3231,7 +3213,7 @@ fbHit.on('pointerdown', () => {
         this.updateQuestBadge(); this.updateDayNightText();
     }
     updateQuestBadge() { if (!this.questBadge) return; this.questBadge.setVisible(this.state.quests.some(q => this.state.isQuestComplete(q) && !this.state.questClaimed[q.id])); }
-    updateBrushIcon() { if (this.brushAura) this.updateBrushAura(); }
+    updateBrushIcon() { /* цветная аура отключена */ }
     buildToolButtons(W, H) {
         const btnY = 1195;
         const tools = [];
@@ -3291,12 +3273,8 @@ fbHit.on('pointerdown', () => {
         }
     }
     _setBrushVisible(visible, x, y) {
-        if (x !== undefined) {
-            this.brush.setPosition(x, y);
-            if (this.brushAura) this.brushAura.setPosition(x, y);
-        }
+        if (x !== undefined) this.brush.setPosition(x, y);
         this.brush.setVisible(visible);
-        if (this.brushAura) this.brushAura.setVisible(visible && !!this.brush.text);
     }
     selectTool(tool) {
         if (this.state.carpetIndex >= 4 && (tool === 'soap' || tool === 'wash')) tool = 'scraper';
@@ -3304,7 +3282,6 @@ fbHit.on('pointerdown', () => {
         const iconMap = { soap: '🧼', wash: '🧹', scraper: '🪒', steam: '🔥', remover: '🧴' };
         if (iconMap[tool]) {
             this.brush.setText(iconMap[tool]);
-            this.updateBrushAura();
         } else {
             this._setBrushVisible(false);
         }
@@ -3338,7 +3315,14 @@ fbHit.on('pointerdown', () => {
             if (this.currentTool === 'swatter') { this.effects.drawSwatterCursor(pointer.x, pointer.y); this._setBrushVisible(false); return; }
             this.effects.hideSwatterCursor();
             const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-            this._setBrushVisible(inB, pointer.x, pointer.y);
+
+            // При активной чистке (палец/мышь зажат) — курсор полностью скрыт
+            if (this.isPointerDown) {
+                this._setBrushVisible(false);
+            } else {
+                this._setBrushVisible(inB, pointer.x, pointer.y);
+            }
+
             if (!inB) return;
             const lx = pointer.x - this.carpetBounds.x, ly = pointer.y - this.carpetBounds.y;
             const dx = lx - this.lastLocalX, dy = ly - this.lastLocalY;
@@ -3359,13 +3343,20 @@ fbHit.on('pointerdown', () => {
             }
             this.isPointerDown = true;
             this.lastLocalX = -9999; this.lastLocalY = -9999;
+            // Сразу скрываем курсор при нажатии
+            this._setBrushVisible(false);
             handlePointer(pointer);
         });
         this.input.on('pointermove', (pointer) => {
             if (this.inputLocked || uiOpen() || this.stars.active) return;
             if (this.currentTool !== 'swatter') {
-                const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-                this._setBrushVisible(inB, pointer.x, pointer.y);
+                // Во время драга курсор скрыт, при простом наведении — видим
+                if (this.isPointerDown) {
+                    this._setBrushVisible(false);
+                } else {
+                    const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+                    this._setBrushVisible(inB, pointer.x, pointer.y);
+                }
             }
             if (!pointer.isDown) { this.isPointerDown = false; return; }
             if (this.currentTool === 'swatter') { this.effects.drawSwatterCursor(pointer.x, pointer.y); return; }
@@ -3387,7 +3378,6 @@ fbHit.on('pointerdown', () => {
             this.showCrustWarning(); this.mascot?.react('crust'); return;
         }
         if (this.currentTool === 'steam') {
-            // Требуем полный заряд топлива на штрих (нельзя чистить «на парах»)
             if (this.steamFuel < BALANCE.steamFuelCost) {
                 this.showSteamEmptyWarning();
                 return;
@@ -3698,7 +3688,6 @@ fbHit.on('pointerdown', () => {
         this.pets.update(delta);
         this.cleaning.updateMold(delta);
         this.carpetElapsed += delta;
-        // Регенерация пара — только когда НЕ чистим паром прямо сейчас
         if (this.state.carpetIndex >= 4) {
             const usingSteam = (this.currentTool === 'steam' && this.isPointerDown);
             if (!usingSteam && this.steamFuel < BALANCE.steamMaxFuel) {
