@@ -8,6 +8,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Yandex Games SDK -->
+    <script src="https://yandex.ru/games/sdk/v2"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -95,6 +97,7 @@ const I18N = {
         noMoney: 'Не хватает денег!', needMoreFood: '❌ Не хватает еды (нужно {0}🍞)',
         language: '🌐 Язык / Language',
         music: '🎵 Музыка', musicOn: '✅ ВКЛ', musicOff: '❌ ВЫКЛ',
+        steamEmpty: '🔥 ПАР ПУСТ!',
         m_hello: ['Мррр~ Как я рад тебя видеть! 🐾💖', 'Приветик! Погладь меня скорее 🥰', 'Мяу-мяу! Скучал(а) по тебе! 💕', 'Ой, ты пришёл(ла)! Я так счастлив! 🌟'],
         m_soap: ['Мыль-мыль! Пузырики такие красивые 🫧✨', 'Ммм... как вкусно пахнет! Мррр~ 💗', 'Пенка-пенка! Обожаю пузырьки! 🧼🫧', 'Так пенисто! Мурр-мурр~ ✨'],
         m_wash: ['Водичка! Буль-буль~ 💧💙', 'Смывай-смывай, я подскажу! 💦', 'Как свежо! Мурр~ 🫧', 'Люблю водичку! Плескаемся? 💧😻'],
@@ -176,6 +179,7 @@ const I18N = {
         noMoney: 'Not enough money!', needMoreFood: '❌ Not enough food (need {0}🍞)',
         language: '🌐 Language',
         music: '🎵 Music', musicOn: '✅ ON', musicOff: '❌ OFF',
+        steamEmpty: '🔥 STEAM EMPTY!',
         m_hello: ['Purr~ So happy to see you! 🐾💖', 'Hi! Pet me please! 🥰', 'Meow! Missed you! 💕', 'You\'re here! Yay! 🌟'],
         m_soap: ['Soap-soap! Bubbles are pretty! 🫧✨', 'Mmm... smells so good! Purr~ 💗', 'Foam-foam! Love bubbles! 🧼🫧', 'So foamy! Purr-purr~ ✨'],
         m_wash: ['Water! Splash-splash~ 💧💙', 'Rinse it, I\'ll help! 💦', 'So fresh! Purr~ 🫧', 'Love water! Splash? 💧😻'],
@@ -257,7 +261,7 @@ const BALANCE = {
     petHamsterSpeedStep: 0.10, petHamsterCountBase: 1, petHamsterCountPerLevel: 0.78,
     petParrotBonusPerLevel: 0.055,
     scraperBasePower: 2.0,
-    steamMaxFuel: 100, steamFuelCost: 2.0, steamFuelRegen: 0.4, steamPower: 0.5,
+    steamMaxFuel: 100, steamFuelCost: 4.0, steamFuelRegen: 0.4, steamPower: 0.5,
     stainRemoverPower: 2.0, moldSpreadMs: 10000,
     tutorialPerCarpet: true,
     legacyPerPrestige1: 2, legacyPerPrestigeN: 3,
@@ -335,11 +339,11 @@ const ROOM_SKINS = [
 ];
 
 const BRUSH_SKINS = [
-    { id: 'classic', icon: '🧼', name: { ru: 'Классика', en: 'Classic' }, price: 0 },
-    { id: 'gold',    icon: '✨', name: { ru: 'Золотая', en: 'Gold' }, price: 5000 },
-    { id: 'fire',    icon: '🔥', name: { ru: 'Огненная', en: 'Fire' }, price: 12000 },
-    { id: 'ice',     icon: '❄️', name: { ru: 'Ледяная', en: 'Ice' }, price: 20000 },
-    { id: 'rainbow', icon: '🌈', name: { ru: 'Радужная', en: 'Rainbow' }, price: 30000 }
+    { id: 'classic', icon: '🧼', color: 0xFFFFFF, name: { ru: 'Классика', en: 'Classic' }, price: 0 },
+    { id: 'gold',    icon: '✨', color: 0xFFD700, name: { ru: 'Золотая',  en: 'Gold' },    price: 5000 },
+    { id: 'fire',    icon: '🔥', color: 0xFF5522, name: { ru: 'Огненная', en: 'Fire' },    price: 12000 },
+    { id: 'ice',     icon: '❄️', color: 0x88CCFF, name: { ru: 'Ледяная',  en: 'Ice' },     price: 20000 },
+    { id: 'rainbow', icon: '🌈', color: 0xFF44FF, name: { ru: 'Радужная', en: 'Rainbow' }, price: 30000 }
 ];
 
 const PETS = [
@@ -394,7 +398,7 @@ const TEXT_STYLES = {
     }),
     stat: (color = '#FFFFFF', size = 30) => ({
         fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
-        stroke: '#000000', strokeThickness: 5
+        stroke: '#000000', strokeThickness: 7
     }),
     button: (color = '#FFFFFF', size = 28) => ({
         fontSize: size + 'px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
@@ -634,7 +638,7 @@ class Mascot {
         this._blinkTimer = setTimeout(loop, 3000);
     }
     _buildHitZone() {
-        const hit = this.scene.add.circle(this.x, this.y, 60, 0x000000, 0.001)
+        const hit = this.scene.add.circle(this.x, this.y - 2, 60, 0x000000, 0.001)
             .setDepth(49)
             .setInteractive({ useHandCursor: true });
         hit.on('pointerdown', () => this._onTap());
@@ -753,8 +757,8 @@ class GameState {
     getSwatterRewardBonus() { return this.swatterLevel * BALANCE.swatterBonusPerLevel; }
     getPrestigeMultiplier() {
         let mult = BALANCE.prestigeMultiplier;
-        if (this.legacyUpgrades.double_income) mult = 2.0;
-        if (this.legacyUpgrades.gods_legacy) mult = 3.0;
+        if (this.legacyUpgrades.double_income) mult = Math.max(mult, 2.0);
+        if (this.legacyUpgrades.gods_legacy) mult = Math.max(mult, 3.0);
         return Math.pow(mult, this.prestigeLevel);
     }
     getPrestigeTitle() {
@@ -910,6 +914,7 @@ class GameState {
     }
     selectBrushSkin(id) { if (!this.unlockedBrushes.includes(id)) return false; this.selectedBrush = id; return true; }
     getBrushIcon() { const s = BRUSH_SKINS.find(b => b.id === this.selectedBrush); return s ? s.icon : '🧼'; }
+    getBrushColor() { const s = BRUSH_SKINS.find(b => b.id === this.selectedBrush); return s ? s.color : 0xFFFFFF; }
     getAchievementValue(type) {
         switch (type) {
             case 'carpetsCleaned': return this.carpetsCleaned;
@@ -1510,10 +1515,12 @@ class CleaningSystem {
                         this.onCrustRemove?.(localX + this.originX, localY + this.originY);
                     }
                 } else if (tool === 'steam') {
+                    // Пар снимает корки, но НЕ убирает пятна
                     if (this.crust[i] > 0) { this.crust[i] = 0; crustChanged = true; }
+                    if (this.stainType[i] > 0) continue; // пятна остаются
                     if (this.dirt[i] > 0) { this.dirt[i] = 0; dirtChanged = true; erased = true; }
-                    if (this.stainType[i] > 0) { this.stainType[i] = 0; stainChanged = true; this.onStainRemove?.(localX + this.originX, localY + this.originY); }
                 } else if (tool === 'remover') {
+                    // Пятновыводитель эффективен и на обычной грязи
                     if (this.stainType[i] > 0) {
                         this.stainType[i] = 0; stainChanged = true;
                         this.dirt[i] = Math.max(0, this.dirt[i] - BALANCE.stainRemoverPower * falloff);
@@ -1521,7 +1528,7 @@ class CleaningSystem {
                         dirtChanged = true; erased = true;
                         this.onStainRemove?.(localX + this.originX, localY + this.originY);
                     } else if (this.dirt[i] > 0.01) {
-                        this.dirt[i] = Math.max(0, this.dirt[i] - 0.15 * falloff);
+                        this.dirt[i] = Math.max(0, this.dirt[i] - 0.45 * falloff);
                         if (this.dirt[i] < 0.01) this.dirt[i] = 0;
                         dirtChanged = true;
                     }
@@ -2153,11 +2160,24 @@ class CarpetTutorial {
 
 <script>
 class FadeGroup {
-    constructor(scene) { this.scene = scene; this.elements = []; this._closing = false; }
+    constructor(scene) {
+        this.scene = scene;
+        this.elements = [];
+        this._closing = false;
+        this._instant = false;
+    }
     push(el) { this.elements.push(el); return el; }
-    openFade() { this._closing = false;
-        this.elements.forEach(e => { if (e.setAlpha) e.setAlpha(0); });
-        this.scene.tweens.add({ targets: this.elements.filter(e => e.setAlpha), alpha: 1, duration: 200, ease: 'Cubic.easeOut' }); }
+    openFade() {
+        this._closing = false;
+        const elements = this.elements.filter(e => e && e.setAlpha);
+        if (this._instant) {
+            this._instant = false;
+            elements.forEach(e => { try { e.setAlpha(1); } catch {} });
+            return;
+        }
+        elements.forEach(e => { try { e.setAlpha(0); } catch {} });
+        this.scene.tweens.add({ targets: elements, alpha: 1, duration: 200, ease: 'Cubic.easeOut' });
+    }
     closeFade(onDone) {
         if (this._closing) return;
         this._closing = true;
@@ -2167,6 +2187,7 @@ class FadeGroup {
             onComplete: () => { this._destroyAll(); this._closing = false; onDone && onDone(); } });
     }
     _destroyAll() { this.elements.forEach(e => { try { e.destroy(); } catch {} }); this.elements = []; }
+    reflow() { this._destroyAll(); this._instant = true; }
 }
 
 class ShopUI {
@@ -2192,8 +2213,7 @@ class ShopUI {
     }
     refresh() {
         if (!this.isOpen) return;
-        this._fadeIn = false;
-        this.group._destroyAll();
+        this.group.reflow();
         this.render();
     }
     async _afterBuy() {
@@ -2264,26 +2284,26 @@ class ShopUI {
             });
         };
         let y = 250;
-        item(y, `🍞 ${t('buyFood')} (+1)`, BALANCE.foodPrice, async () => { st.buyFood(); await this._afterBuy(); }); y += 76;
+        item(y, `🍞 ${t('buyFood')} (+1)`, BALANCE.foodPrice, async () => { st.buyFood(); await this._afterBuy(); }); y += 82;
         const bulkPrice = Math.floor(BALANCE.foodPrice * BALANCE.foodBulkCount * BALANCE.foodBulkDiscount);
-        item(y, `🍞 ${t('foodBulk', BALANCE.foodBulkCount)}`, bulkPrice, async () => { st.buyFoodBulk(); await this._afterBuy(); }); y += 76;
+        item(y, `🍞 ${t('foodBulk', BALANCE.foodBulkCount)}`, bulkPrice, async () => { st.buyFoodBulk(); await this._afterBuy(); }); y += 82;
         item(y, st.autoFoodEnabled ? `✅ ${t('autoFoodOn')}` : `🍞 ${t('autoFood')} (${st.getAutoFoodPrice()}💰)`, st.getAutoFoodPrice(),
-            async () => { st.buyAutoFood(); await this._afterBuy(); }, { disabled: st.autoFoodEnabled }); y += 76;
+            async () => { st.buyAutoFood(); await this._afterBuy(); }, { disabled: st.autoFoodEnabled }); y += 82;
         const curR = st.getCurrentRadius();
         const nextR = Math.floor(BALANCE.brushRadius * (1 + st.toolLevel * BALANCE.toolRadiusBonus)) + (st.legacyUpgrades.brush_master || 0) * 5;
         const curM = Math.round(st.getToolMoneyMultiplier() * 100);
         const nextM = Math.round((1 + st.toolLevel * BALANCE.toolMoneyBonus) * 100);
         item(y, `🧹 ${t('brush')} ${st.toolLevel}  ${curR}→${nextR}  ${curM}%→${nextM}%💰`, st.getToolUpgradePrice(),
-            async () => { st.upgradeTool(); await this._afterBuy(); }); y += 76;
+            async () => { st.upgradeTool(); await this._afterBuy(); }); y += 82;
         if (st.carpetIndex <= 3) {
             const curSoap = (st.getSoapPower() * 100).toFixed(0);
             const nextSoap = ((st.getSoapPower() + BALANCE.soapPower * 0.40) * 100).toFixed(0);
             item(y, `🧼 ${t('soap2')} ${st.soapLevel}  ${curSoap}%→${nextSoap}%`, st.getSoapUpgradePrice(),
-                async () => { st.upgradeSoap(); await this._afterBuy(); }); y += 76;
+                async () => { st.upgradeSoap(); await this._afterBuy(); }); y += 82;
             const curWash = (st.getWashStrength() * 100).toFixed(0);
             const nextWash = ((st.getWashStrength() + BALANCE.washStrength * 0.35) * 100).toFixed(0);
             item(y, `🧹 ${t('wash2')} ${st.washLevel}  ${curWash}%→${nextWash}%`, st.getWashUpgradePrice(),
-                async () => { st.upgradeWash(); await this._afterBuy(); }); y += 76;
+                async () => { st.upgradeWash(); await this._afterBuy(); }); y += 82;
         }
         if (st.carpetIndex >= 2) {
             const curCd = st.getSwatterCooldown();
@@ -2293,14 +2313,14 @@ class ShopUI {
             const curBonus = st.getSwatterRewardBonus();
             const nextBonus = curBonus + BALANCE.swatterBonusPerLevel;
             item(y, `🪰 ${t('swatter2')} ${st.swatterLevel}  ${curCd}→${nextCd}мс  ${curRad}→${nextRad}  +${curBonus}→+${nextBonus}💰`,
-                st.getSwatterUpgradePrice(), async () => { st.upgradeSwatter(); await this._afterBuy(); }); y += 76;
+                st.getSwatterUpgradePrice(), async () => { st.upgradeSwatter(); await this._afterBuy(); }); y += 82;
             if (st.doubleBugReward) {
                 item(y, `💰 ${t('doubleBugOn')}`, 0, () => {}, { disabled: true, priceLabel: '✅' });
             } else {
                 item(y, `💰 ${t('doubleBug')} (+${BALANCE.bugRewardPerKill}💰)`, BALANCE.doubleBugPrice,
                     async () => { st.buyDoubleBug(); await this._afterBuy(); });
             }
-            y += 76;
+            y += 82;
         }
         this._renderAdBlock(push, y); y += 100;
         this._renderNewCarpetSection(push, y);
@@ -2410,10 +2430,10 @@ class ShopUI {
     }
     _renderPets(push) {
         const s = this.scene, st = this.state;
-        push(s.add.text(360, 230, t('pets'), { ...TEXT_STYLES.shop('#FFD700', 28) }).setOrigin(0.5).setDepth(42));
-        push(s.add.text(360, 264, t('petsSubtitle'), { ...TEXT_STYLES.shopInfo('#AAAAAA', 16) }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, 222, t('pets'), { ...TEXT_STYLES.shop('#FFD700', 28) }).setOrigin(0.5).setDepth(42));
+        push(s.add.text(360, 256, t('petsSubtitle'), { ...TEXT_STYLES.shopInfo('#AAAAAA', 16) }).setOrigin(0.5).setDepth(42));
         PETS.forEach((pet, i) => {
-            const y = 320 + i * 122;
+            const y = 362 + i * 122;
             const pdata = st.pets[pet.id];
             const owned = pdata.owned, level = pdata.level;
             const maxed = level >= BALANCE.petMaxLevel;
@@ -2524,7 +2544,7 @@ class AchievementsUI {
     }
     open() { if (this.isOpen) return; this.isOpen = true; this.currentPage = 0; this.onOpen?.(); this.render(); }
     close() { if (!this.isOpen) return; this.isOpen = false; this.group.closeFade(() => this.onClose?.()); }
-    refresh() { if (!this.isOpen) return; this.group._destroyAll(); this.render(); }
+    refresh() { if (!this.isOpen) return; this.group.reflow(); this.render(); }
     render() {
         const s = this.scene, W = 720, H = 1280, st = this.state;
         const push = (el) => this.group.push(el);
@@ -2584,7 +2604,7 @@ class QuestsUI {
     constructor(scene, state) { this.scene = scene; this.state = state; this.group = new FadeGroup(scene); this.isOpen = false; this.onClaim = null; this.onOpen = null; this.onClose = null; }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
     close() { if (!this.isOpen) return; this.isOpen = false; this.group.closeFade(() => this.onClose?.()); }
-    refresh() { if (!this.isOpen) return; this.group._destroyAll(); this.render(); }
+    refresh() { if (!this.isOpen) return; this.group.reflow(); this.render(); }
     render() {
         const s = this.scene, W = 720, H = 1280, st = this.state;
         const push = (el) => this.group.push(el);
@@ -2737,7 +2757,7 @@ class SettingsUI {
     }
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
     close() { if (!this.isOpen) return; this.isOpen = false; this.group.closeFade(() => this.onClose?.()); }
-    refresh() { if (!this.isOpen) return; this.group._destroyAll(); this.render(); }
+    refresh() { if (!this.isOpen) return; this.group.reflow(); this.render(); }
     render() {
         const s = this.scene, W = 720, H = 1280, st = this.state;
         const push = (el) => this.group.push(el);
@@ -2822,7 +2842,7 @@ class LeaderboardUI {
     open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.loadAndRender(); }
     close() { if (!this.isOpen) return; this.isOpen = false; this.group.closeFade(() => this.onClose?.()); }
     async loadAndRender() {
-        this.group._destroyAll();
+        this.group.reflow();
         const s = this.scene, W = 720, H = 1280;
         const push = (el) => this.group.push(el);
         const ov = push(s.add.rectangle(W/2, H/2, W, H, 0x000000, 0.92).setDepth(60)); ov.setInteractive();
@@ -2912,7 +2932,7 @@ class MainScene extends Phaser.Scene {
         this.saveSystem.ready();
         const W = 720, H = 1280;
         this.carpetW = 500; this.carpetH = 700;
-        this.carpetX = W / 2; this.carpetY = 600;
+        this.carpetX = W / 2; this.carpetY = 640;
         this.carpetBounds = new Phaser.Geom.Rectangle(this.carpetX - this.carpetW / 2, this.carpetY - this.carpetH / 2, this.carpetW, this.carpetH);
 
         this.ambientMusic = new AmbientMusic();
@@ -2991,11 +3011,14 @@ class MainScene extends Phaser.Scene {
         this.noFoodText = null; this.noFoodTween = null; this.noFoodCooldown = false;
         this.bugWarningText = null; this.bugWarningTween = null; this.bugWarningCooldown = false;
         this.crustWarningText = null; this.crustWarningTween = null; this.crustWarningCooldown = false;
+        this.steamEmptyCooldown = false;
         this.carpetElapsed = 0;
         this.prestigeText = null; this.dayNightText = null;
         this.steamFuel = BALANCE.steamMaxFuel;
         this.tutorial = null;
         this.brush = this.add.text(0, 0, this.state.getBrushIcon(), { fontSize: '70px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(3).setVisible(false);
+        this.brushAura = this.add.graphics().setDepth(2).setVisible(false);
+        this.updateBrushAura();
         this.buildHUD(W, H);
         this.buildToolButtons(W, H);
         this.setupInput();
@@ -3042,29 +3065,31 @@ class MainScene extends Phaser.Scene {
         this.tutorial.start();
     }
     buildHUD(W, H) {
+        // Панели сделаны чуть выше, чтобы верхние иконки не подрезались
         const leftPanelBg = this.add.graphics().setDepth(9);
         leftPanelBg.fillStyle(0x000000, 0.78);
-        leftPanelBg.fillRoundedRect(12, 12, 325, 180, 18);
+        leftPanelBg.fillRoundedRect(12, 15, 325, 195, 18);
         leftPanelBg.lineStyle(2, 0x4A90D9, 0.5);
-        leftPanelBg.strokeRoundedRect(12, 12, 325, 180, 18);
+        leftPanelBg.strokeRoundedRect(12, 15, 325, 195, 18);
 
         const rightPanelBg = this.add.graphics().setDepth(9);
         rightPanelBg.fillStyle(0x000000, 0.78);
-        rightPanelBg.fillRoundedRect(383, 12, 325, 180, 18);
+        rightPanelBg.fillRoundedRect(383, 15, 325, 195, 18);
         rightPanelBg.lineStyle(2, 0x4A90D9, 0.5);
-        rightPanelBg.strokeRoundedRect(383, 12, 325, 180, 18);
+        rightPanelBg.strokeRoundedRect(383, 15, 325, 195, 18);
 
-        this.moneyText = this.add.text(28, 20, '💰 ' + this.state.money, TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
-        this.foodText = this.add.text(28, 62, '🍞 ' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
-        this.toolText = this.add.text(28, 96, '🧹 ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 18)).setDepth(10);
-        this.carpetText = this.add.text(178, 96, '🧽 ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
+        // Увеличены размеры шрифтов для читаемости чисел
+        this.moneyText = this.add.text(28, 22, '💰 ' + this.state.money, TEXT_STYLES.stat('#FFD700', 34)).setDepth(10);
+        this.foodText = this.add.text(28, 66, '🍞 ' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 26)).setDepth(10);
+        this.toolText = this.add.text(28, 102, '🧹 ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 20)).setDepth(10);
+        this.carpetText = this.add.text(188, 102, '🧽 ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 20)).setDepth(10);
 
-        this.soapLvlText = this.add.text(28, 124, `🧼${this.state.soapLevel}  🧹${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
-        this.dayNightText = this.add.text(28, 152, '', { fontSize: '15px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
+        this.soapLvlText = this.add.text(28, 132, `🧼${this.state.soapLevel}  🧹${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 17)).setDepth(10);
+        this.dayNightText = this.add.text(28, 162, '', { fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setDepth(10);
         this.updateDayNightText();
-        this.timerText = this.add.text(320, 152, '⏱ 0:00', { fontSize: '17px', fill: '#FFDD66', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
+        this.timerText = this.add.text(320, 162, '⏱ 0:00', { fontSize: '18px', fill: '#FFDD66', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(1, 0).setDepth(10);
         if (this.state.prestigeLevel > 0 || this.state.legacyPoints > 0) {
-            this.prestigeText = this.add.text(320, 22, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, { fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
+            this.prestigeText = this.add.text(320, 24, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, { fontSize: '17px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
         }
 
         const makeBtn = (x, y, icon, label, onClick, color = '#FFFFFF') => {
@@ -3079,7 +3104,8 @@ class MainScene extends Phaser.Scene {
                 onClick();
             });
         };
-        const c1 = 445, c2 = 550, c3 = 655, r1 = 45, r2 = 132;
+        // Кнопки смещены ниже, чтобы верх не подрезался
+        const c1 = 445, c2 = 550, c3 = 655, r1 = 62, r2 = 155;
         makeBtn(c1, r1, '🏛️', t('museum'),     () => this.museum.open(), '#FFD700');
         makeBtn(c2, r1, '🏆', t('achievements'), () => this.achievementsUI.open(), '#FFD700');
         makeBtn(c3, r1, '📅', t('quests'),   () => this.questsUI.open(), '#FFD700');
@@ -3091,11 +3117,12 @@ class MainScene extends Phaser.Scene {
         this.tweens.add({ targets: this.questBadge, alpha: { from: 1, to: 0.3 }, duration: 700, yoyo: true, repeat: -1 });
         this.updateQuestBadge();
 
+        // Иконка ежедневных наград перенесена НАД полоской прогресса и панелями (y=30)
         const ds = this.state.getDailyStatus();
         if (ds.canClaim) {
-            const dailyBg = this.add.circle(360, 100, 26, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
-            const dailyIcon = this.add.text(360, 100, '🎁', { fontSize: '30px' }).setOrigin(0.5).setDepth(15);
-            const hit = this.add.circle(360, 100, 32, 0x000000, 0.001).setDepth(16).setInteractive({ useHandCursor: true });
+            const dailyBg = this.add.circle(360, 30, 22, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
+            const dailyIcon = this.add.text(360, 30, '🎁', { fontSize: '26px' }).setOrigin(0.5).setDepth(15);
+            const hit = this.add.circle(360, 30, 28, 0x000000, 0.001).setDepth(16).setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.dailyUI.open());
         }
 
@@ -3103,12 +3130,10 @@ class MainScene extends Phaser.Scene {
         const pbW = 420, pbH = 44, pbR = 22;
         const pbX = W/2, pbY = 230;
 
-        // Тень
         const pbShadow = this.add.graphics().setDepth(9);
         pbShadow.fillStyle(0x000000, 0.5);
         pbShadow.fillRoundedRect(pbX - pbW/2 + 2, pbY - pbH/2 + 4, pbW, pbH, pbR);
 
-        // Фон с рамкой
         const pbBgGfx = this.add.graphics().setDepth(10);
         pbBgGfx.fillStyle(0x1a0f06, 0.95);
         pbBgGfx.fillRoundedRect(pbX - pbW/2, pbY - pbH/2, pbW, pbH, pbR);
@@ -3117,29 +3142,24 @@ class MainScene extends Phaser.Scene {
         pbBgGfx.lineStyle(1, 0xFFFFFF, 0.25);
         pbBgGfx.strokeRoundedRect(pbX - pbW/2 + 4, pbY - pbH/2 + 4, pbW - 8, pbH - 8, pbR - 4);
 
-        // Заливка прогресса
         this.progressBarBg = this.add.graphics().setDepth(11);
         this.progressBar = this.progressBarBg;
         this._pbW = pbW; this._pbH = pbH; this._pbR = pbR;
         this._pbX = pbX; this._pbY = pbY;
         this._pbProgress = 0;
 
-        // Блик
         this.progressShine = this.add.graphics().setDepth(12);
 
-        // Текст
         this.progressText = this.add.text(pbX, pbY, '0%', {
             fontSize: '22px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND,
             stroke: '#000000', strokeThickness: 5,
             shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
         }).setOrigin(0.5).setDepth(13);
 
-        // Steam UI (для 4-5 ковров)
         this.steamBg = this.add.rectangle(W / 2, 285, 220, 16, 0x111111, 0.85).setDepth(10).setStrokeStyle(2, 0x8a6a40, 0.6).setVisible(false);
         this.steamBar = this.add.rectangle(W / 2 - 106, 285, 212, 12, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
         this.steamText = this.add.text(W / 2, 303, t('steams'), { fontSize: '13px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11).setVisible(false);
 
-        // Кнопка «ПОЛУЧИТЬ ДЕНЬГИ»
         const fbY = 1050;
         const fbW = 380, fbH = 80, fbR = 40;
         const fbShadow = this.add.graphics().setDepth(9);
@@ -3164,6 +3184,15 @@ class MainScene extends Phaser.Scene {
             this.finishCarpet();
         });
     }
+    updateBrushAura() {
+        if (!this.brushAura) return;
+        const color = this.state.getBrushColor();
+        this.brushAura.clear();
+        this.brushAura.fillStyle(color, 0.28);
+        this.brushAura.fillCircle(0, 0, 42);
+        this.brushAura.lineStyle(4, color, 0.85);
+        this.brushAura.strokeCircle(0, 0, 42);
+    }
     updateDayNightText() {
         if (!this.dayNightText) return;
         const td = getTimeOfDay();
@@ -3180,7 +3209,7 @@ class MainScene extends Phaser.Scene {
         this.updateQuestBadge(); this.updateDayNightText();
     }
     updateQuestBadge() { if (!this.questBadge) return; this.questBadge.setVisible(this.state.quests.some(q => this.state.isQuestComplete(q) && !this.state.questClaimed[q.id])); }
-    updateBrushIcon() { if (this.currentTool === 'soap') this.brush.setText(this.state.getBrushIcon()); }
+    updateBrushIcon() { if (this.brushAura) this.updateBrushAura(); }
     buildToolButtons(W, H) {
         const btnY = 1195;
         const tools = [];
@@ -3239,9 +3268,24 @@ class MainScene extends Phaser.Scene {
             }
         }
     }
+    _setBrushVisible(visible, x, y) {
+        if (x !== undefined) {
+            this.brush.setPosition(x, y);
+            if (this.brushAura) this.brushAura.setPosition(x, y);
+        }
+        this.brush.setVisible(visible);
+        if (this.brushAura) this.brushAura.setVisible(visible && !!this.brush.text);
+    }
     selectTool(tool) {
         if (this.state.carpetIndex >= 4 && (tool === 'soap' || tool === 'wash')) tool = 'scraper';
         this.currentTool = tool;
+        const iconMap = { soap: '🧼', wash: '🧹', scraper: '🪒', steam: '🔥', remover: '🧴' };
+        if (iconMap[tool]) {
+            this.brush.setText(iconMap[tool]);
+            this.updateBrushAura();
+        } else {
+            this._setBrushVisible(false);
+        }
         if (!this.toolBtns) return;
         for (const id in this.toolBtns) {
             const b = this.toolBtns[id];
@@ -3259,12 +3303,6 @@ class MainScene extends Phaser.Scene {
                 if (b.accent) b.accent.setAlpha(0.6);
             }
         }
-        if (tool === 'soap') this.brush.setText(this.state.getBrushIcon());
-        else if (tool === 'wash') this.brush.setText('🧹');
-        else if (tool === 'scraper') this.brush.setText('🪒');
-        else if (tool === 'steam') this.brush.setText('🔥');
-        else if (tool === 'remover') this.brush.setText('🧴');
-        else this.brush.setVisible(false);
         if (tool !== 'swatter') this.effects.hideSwatterCursor();
         this.updateToolLevels();
     }
@@ -3275,11 +3313,10 @@ class MainScene extends Phaser.Scene {
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen;
         const handlePointer = (pointer) => {
             if (this.inputLocked || uiOpen() || this.stars.active) return;
-            if (this.currentTool === 'swatter') { this.effects.drawSwatterCursor(pointer.x, pointer.y); this.brush.setVisible(false); return; }
+            if (this.currentTool === 'swatter') { this.effects.drawSwatterCursor(pointer.x, pointer.y); this._setBrushVisible(false); return; }
             this.effects.hideSwatterCursor();
-            this.brush.setPosition(pointer.x, pointer.y);
             const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-            this.brush.setVisible(inB);
+            this._setBrushVisible(inB, pointer.x, pointer.y);
             if (!inB) return;
             const lx = pointer.x - this.carpetBounds.x, ly = pointer.y - this.carpetBounds.y;
             const dx = lx - this.lastLocalX, dy = ly - this.lastLocalY;
@@ -3305,14 +3342,14 @@ class MainScene extends Phaser.Scene {
         this.input.on('pointermove', (pointer) => {
             if (this.inputLocked || uiOpen() || this.stars.active) return;
             if (this.currentTool !== 'swatter') {
-                this.brush.setPosition(pointer.x, pointer.y);
-                this.brush.setVisible(Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y));
+                const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+                this._setBrushVisible(inB, pointer.x, pointer.y);
             }
             if (!pointer.isDown) { this.isPointerDown = false; return; }
             if (this.currentTool === 'swatter') { this.effects.drawSwatterCursor(pointer.x, pointer.y); return; }
             handlePointer(pointer);
         });
-        const stop = () => { this.isPointerDown = false; this.effects.hideSwatterCursor(); this.brush.setVisible(false); this.lastLocalX = -9999; this.lastLocalY = -9999; };
+        const stop = () => { this.isPointerDown = false; this.effects.hideSwatterCursor(); this._setBrushVisible(false); this.lastLocalX = -9999; this.lastLocalY = -9999; };
         this.input.on('pointerup', stop); this.input.on('pointerout', stop); this.input.on('pointerupoutside', stop);
         window.addEventListener('blur', stop);
         document.addEventListener('touchend', () => { this.effects.hideSwatterCursor(); }, { passive: true });
@@ -3324,11 +3361,15 @@ class MainScene extends Phaser.Scene {
         if (this.stars.active) return;
         if (this.state.carpetIndex >= 4 && (this.currentTool === 'soap' || this.currentTool === 'wash')) return;
         if (this.bugs.count > 0) { this.showBugWarning(); this.mascot?.react('bugs'); return; }
-        if (this.cleaning.hasCrustLeft() && this.currentTool !== 'scraper') {
+        if (this.cleaning.hasCrustLeft() && this.currentTool !== 'scraper' && this.currentTool !== 'steam') {
             this.showCrustWarning(); this.mascot?.react('crust'); return;
         }
         if (this.currentTool === 'steam') {
-            if (this.steamFuel <= 0) return;
+            // Требуем полный заряд топлива на штрих (нельзя чистить «на парах»)
+            if (this.steamFuel < BALANCE.steamFuelCost) {
+                this.showSteamEmptyWarning();
+                return;
+            }
             this.steamFuel = Math.max(0, this.steamFuel - BALANCE.steamFuelCost);
             this.updateSteamBar();
         }
@@ -3457,8 +3498,8 @@ class MainScene extends Phaser.Scene {
         this.updateSteamUI();
         this.selectTool('soap');
         if (this.prestigeText) this.prestigeText.destroy();
-        this.prestigeText = this.add.text(320, 22, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
-            fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4
+        this.prestigeText = this.add.text(320, 24, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
+            fontSize: '17px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4
         }).setOrigin(1, 0).setDepth(10);
         if (this.tutorial) { this.tutorial.isOpen = false; this.tutorial.clearStep(); }
         this.tutorial = null;
@@ -3473,7 +3514,7 @@ class MainScene extends Phaser.Scene {
     unlockInput() {
         this.inputLocked = true; this.isPointerDown = false;
         this.lastLocalX = -9999; this.lastLocalY = -9999;
-        this.brush.setVisible(false);
+        this._setBrushVisible(false);
         this.effects.hideSwatterCursor();
         this.time.delayedCall(BALANCE.inputLockDuration, () => { this.inputLocked = false; });
     }
@@ -3487,23 +3528,18 @@ class MainScene extends Phaser.Scene {
         g.clear();
         if (fillW > 0.5) {
             const r1 = Math.min(R, fillW / 2);
-            // Зелёная заливка
             g.fillStyle(0x00A040, 1);
             g.fillRoundedRect(x, y, fillW, H, r1);
-            // Светлая полоса сверху (стекло)
             g.fillStyle(0x4DE88C, 0.55);
             g.fillRoundedRect(x + 3, y + 3, Math.max(0, fillW - 6), H/2 - 3, Math.max(0, r1 - 2));
-            // Тёмная полоса снизу
             g.fillStyle(0x006020, 0.5);
             g.fillRoundedRect(x + 3, y + H - H/3, Math.max(0, fillW - 6), H/3 - 3, Math.max(0, r1 - 2));
-            // Яркая точка на конце заливки
             if (fillW > R && p < 1.0) {
                 g.fillStyle(0xBBFFCC, 0.9);
                 g.fillCircle(x + fillW - R, y + H/2, 4);
             }
         }
 
-        // Блик бежит по заливке
         const sh = this.progressShine;
         sh.clear();
         if (fillW > 40 && p < 1.0) {
@@ -3516,7 +3552,6 @@ class MainScene extends Phaser.Scene {
 
         this.progressText.setText(Math.min(100, Math.floor(p * 100)) + '%');
 
-        // Вспышка при 100%
         if (p >= 1.0 && !this._pbDone) {
             this._pbDone = true;
             const flash = this.add.graphics().setDepth(14);
@@ -3528,7 +3563,6 @@ class MainScene extends Phaser.Scene {
         }
         if (p < 1.0) this._pbDone = false;
 
-        // Милстоуны 50% и 90%
         [0.5, 0.9].forEach(m => {
             if (p >= m && !this['_milestone_' + m]) {
                 this['_milestone_' + m] = true;
@@ -3552,6 +3586,17 @@ class MainScene extends Phaser.Scene {
         this.noFoodTween = this.tweens.add({ targets: this.noFoodText, alpha: { from: 1, to: 0.2 }, duration: 400, yoyo: true, repeat: 4, delay: 200,
             onComplete: () => { if (this.noFoodText) { this.noFoodText.destroy(); this.noFoodText = null; } this.noFoodTween = null; } });
         this.time.delayedCall(1800, () => { this.noFoodCooldown = false; });
+    }
+    showSteamEmptyWarning() {
+        if (this.steamEmptyCooldown) return;
+        this.steamEmptyCooldown = true;
+        const txt = this.add.text(360, 640, t('steamEmpty'), {
+            fontSize: '44px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND, align: 'center',
+            stroke: '#000000', strokeThickness: 8
+        }).setOrigin(0.5).setDepth(80).setAlpha(0);
+        this.tweens.add({ targets: txt, alpha: 1, duration: 180, ease: 'Cubic.easeOut' });
+        this.tweens.add({ targets: txt, alpha: 0, duration: 300, delay: 700, onComplete: () => txt.destroy() });
+        this.time.delayedCall(1600, () => { this.steamEmptyCooldown = false; });
     }
     showBugWarning() {
         if (this.bugWarningCooldown) return;
@@ -3631,15 +3676,17 @@ class MainScene extends Phaser.Scene {
         this.pets.update(delta);
         this.cleaning.updateMold(delta);
         this.carpetElapsed += delta;
+        // Регенерация пара — только когда НЕ чистим паром прямо сейчас
         if (this.state.carpetIndex >= 4) {
-            if (this.steamFuel < BALANCE.steamMaxFuel) {
-                this.steamFuel = Math.min(BALANCE.steamMaxFuel, this.steamFuel + BALANCE.steamFuelRegen);
+            const usingSteam = (this.currentTool === 'steam' && this.isPointerDown);
+            if (!usingSteam && this.steamFuel < BALANCE.steamMaxFuel) {
+                this.steamFuel = Math.min(BALANCE.steamMaxFuel,
+                    this.steamFuel + BALANCE.steamFuelRegen * (delta / 1000) * 60);
                 this.updateSteamBar();
             }
         }
         const s = Math.floor(this.carpetElapsed / 1000);
         this.timerText.setText(t('timeFormat', formatTime(s)));
-        // Блик прогресс-бара
         if (this.progressShine && this._pbProgress < 1.0 && this._pbProgress > 0) {
             this.updateProgressBar(this._pbProgress);
         }
