@@ -3160,29 +3160,51 @@ class MainScene extends Phaser.Scene {
         this.steamBar = this.add.rectangle(W / 2 - 106, 285, 212, 12, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
         this.steamText = this.add.text(W / 2, 303, t('steams'), { fontSize: '13px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11).setVisible(false);
 
-        const fbY = 1050;
-        const fbW = 380, fbH = 80, fbR = 40;
-        const fbShadow = this.add.graphics().setDepth(9);
-        fbShadow.fillStyle(0x000000, 0.45);
-        fbShadow.fillRoundedRect(W/2 - fbW/2 + 3, fbY - fbH/2 + 5, fbW, fbH, fbR);
-        const fbBg = this.add.graphics().setDepth(10);
-        fbBg.fillStyle(0x0a2010, 1);
-        fbBg.fillRoundedRect(W/2 - fbW/2, fbY - fbH/2, fbW, fbH, fbR);
-        fbBg.lineStyle(4, 0x00FF88, 1);
-        fbBg.strokeRoundedRect(W/2 - fbW/2, fbY - fbH/2, fbW, fbH, fbR);
-        fbBg.lineStyle(2, 0xFFFFFF, 0.35);
-        fbBg.strokeRoundedRect(W/2 - fbW/2 + 6, fbY - fbH/2 + 6, fbW - 12, fbH - 12, fbR - 6);
-        const fbText = this.add.text(W/2, fbY, t('getMoney'), {
-            fontSize: '30px', fill: '#00FF88', fontStyle: 'bold', fontFamily: FONT_HAND,
-            stroke: '#000000', strokeThickness: 5
-        }).setOrigin(0.5).setDepth(11);
-        const fbHit = this.add.rectangle(W/2, fbY, fbW, fbH, 0x000000, 0.001).setDepth(12).setInteractive({ useHandCursor: true });
-        fbHit.on('pointerdown', () => {
-            this.tweens.killTweensOf(fbBg); this.tweens.killTweensOf(fbText); this.tweens.killTweensOf(fbShadow);
-            fbBg.setScale(0.94); fbText.setScale(0.94); fbShadow.setScale(0.94);
-            this.tweens.add({ targets: [fbBg, fbText, fbShadow], scaleX: 1, scaleY: 1, duration: 110, ease: 'Back.easeOut' });
-            this.finishCarpet();
-        });
+        // ============================================================
+// Кнопка «ПОЛУЧИТЬ ДЕНЬГИ» — обёрнута в контейнер, чтобы scale
+// работал вокруг центра кнопки, а не вокруг (0,0) сцены.
+// ============================================================
+const fbY = 1050;
+const fbW = 380, fbH = 80, fbR = 40;
+
+const fbContainer = this.add.container(W / 2, fbY).setDepth(10);
+
+const fbShadow = this.add.graphics();
+fbShadow.fillStyle(0x000000, 0.45);
+fbShadow.fillRoundedRect(-fbW / 2 + 3, -fbH / 2 + 5, fbW, fbH, fbR);
+fbContainer.add(fbShadow);
+
+const fbBg = this.add.graphics();
+fbBg.fillStyle(0x0a2010, 1);
+fbBg.fillRoundedRect(-fbW / 2, -fbH / 2, fbW, fbH, fbR);
+fbBg.lineStyle(4, 0x00FF88, 1);
+fbBg.strokeRoundedRect(-fbW / 2, -fbH / 2, fbW, fbH, fbR);
+fbBg.lineStyle(2, 0xFFFFFF, 0.35);
+fbBg.strokeRoundedRect(-fbW / 2 + 6, -fbH / 2 + 6, fbW - 12, fbH - 12, fbR - 6);
+fbContainer.add(fbBg);
+
+const fbText = this.add.text(0, 0, t('getMoney'), {
+    fontSize: '30px', fill: '#00FF88', fontStyle: 'bold', fontFamily: FONT_HAND,
+    stroke: '#000000', strokeThickness: 5
+}).setOrigin(0.5);
+fbContainer.add(fbText);
+
+const fbHit = this.add.rectangle(0, 0, fbW, fbH, 0x000000, 0.001);
+fbHit.setInteractive({ useHandCursor: true });
+fbContainer.add(fbHit);
+
+// Плавное нажатие строго вокруг центра кнопки
+fbHit.on('pointerdown', () => {
+    this.tweens.killTweensOf(fbContainer);
+    fbContainer.setScale(0.94);
+    this.tweens.add({
+        targets: fbContainer,
+        scaleX: 1, scaleY: 1,
+        duration: 140,
+        ease: 'Back.easeOut'
+    });
+    this.finishCarpet();
+});
     }
     updateBrushAura() {
         if (!this.brushAura) return;
