@@ -1795,14 +1795,7 @@ class RoomRenderer {
         g.fillTriangle(wx + ww * 0.12, wy + wh * 0.5, wx + ww * 0.07, wy + wh * 0.56, wx + ww * 0.17, wy + wh * 0.56);
         g.fillTriangle(wx + ww * 0.72, wy + wh * 0.42, wx + ww * 0.68, wy + wh * 0.48, wx + ww * 0.76, wy + wh * 0.48);
 
-          // Мягкий светлый участок на стене — опущен ниже, до уровня окна
-        g.fillStyle(0x6a4a2a, 0.32); g.fillCircle(90, 950, 140);
-        g.fillStyle(0x7a5a35, 0.25); g.fillCircle(90, 950, 110);
-        g.fillStyle(0x8a6a40, 0.18); g.fillCircle(90, 950, 80);
-        // Плавный переход от пятна к тёмной стене сверху
-        g.fillStyle(0x5a3a20, 0.14); g.fillRect(0, 780, 180, 170);
-        // Лёгкое осветление самой стены слева (не только пятно)
-        g.fillStyle(0x6a4a2a, 0.10); g.fillRect(0, 500, 160, 450);
+        g.fillStyle(0x5a3a20, 0.18); g.fillRect(0, 500, 130, 450);
       
 
         // Передние горы
