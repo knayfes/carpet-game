@@ -2926,6 +2926,7 @@ class MainScene extends Phaser.Scene {
         this.ads = this.registry.get('ads');
         this.leaderboard = this.registry.get('leaderboard');
         if (this.input.mouse) this.input.mouse.disableContextMenu();
+        this.input.setDefaultCursor('none');   // ← системный курсор скрыт на игровом поле
         this.saveSystem.ready();
         const W = 720, H = 1280;
         this.carpetW = 500; this.carpetH = 700;
