@@ -2961,31 +2961,39 @@ class MainScene extends Phaser.Scene {
         this.tutorial.start();
     }
     buildHUD(W, H) {
-        // ===== ЛЕВАЯ ПАНЕЛЬ (статистика) =====
+               // ===== ЛЕВАЯ ПАНЕЛЬ (статистика) =====
         const leftPanel = this.add.graphics().setDepth(9);
         leftPanel.fillStyle(0x1a1008, 0.72);
         leftPanel.fillRoundedRect(12, 12, 325, 180, 22);
         leftPanel.lineStyle(2, 0x8a6a40, 0.6);
         leftPanel.strokeRoundedRect(12, 12, 325, 180, 22);
 
-        this.add.text(28, 22, '💰', { fontSize: '26px' }).setOrigin(0, 0).setDepth(10);
-        this.add.text(28, 66, '🍞', { fontSize: '22px' }).setOrigin(0, 0).setDepth(10);
-        this.add.text(28, 102, '🧹', { fontSize: '18px' }).setOrigin(0, 0).setDepth(10);
-        this.add.text(178, 102, '🧽', { fontSize: '18px' }).setOrigin(0, 0).setDepth(10);
-
-        this.moneyText = this.add.text(62, 22, '0', TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
-        this.foodText = this.add.text(62, 66, '0', TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
-        this.toolText = this.add.text(62, 102, '0', TEXT_STYLES.stat('#87CEEB', 18)).setDepth(10);
-        this.carpetText = this.add.text(210, 102, '0', TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
-
-        this.soapLvlText = this.add.text(28, 138, '', TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
-        this.dayNightText = this.add.text(28, 164, '', { fontSize: '14px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
-        this.updateDayNightText();
-        this.timerText = this.add.text(325, 164, '', { fontSize: '14px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0).setDepth(10);
-
+        // Строка 1: Деньги (большая)
+        this.add.text(28, 20, '💰', { fontSize: '30px' }).setOrigin(0, 0).setDepth(10);
+        this.moneyText = this.add.text(72, 22, '0', TEXT_STYLES.stat('#FFD700', 32)).setDepth(10);
         if (this.state.prestigeLevel > 0 || this.state.legacyPoints > 0) {
             this.prestigeText = this.add.text(325, 22, '', { fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
         }
+
+        // Строка 2: Еда | Радиус
+        this.add.text(28, 68, '🍞', { fontSize: '20px' }).setOrigin(0, 0).setDepth(10);
+        this.foodText = this.add.text(58, 70, '0', TEXT_STYLES.stat('#FFFFFF', 20)).setDepth(10);
+
+        this.add.text(180, 68, '🧹', { fontSize: '20px' }).setOrigin(0, 0).setDepth(10);
+        this.toolText = this.add.text(214, 70, '0', TEXT_STYLES.stat('#87CEEB', 20)).setDepth(10);
+
+        // Строка 3: Ковры | Таймер
+        this.add.text(28, 104, '🏆', { fontSize: '20px' }).setOrigin(0, 0).setDepth(10);
+        this.carpetText = this.add.text(58, 106, '0', TEXT_STYLES.stat('#FFD700', 20)).setDepth(10);
+
+        this.timerText = this.add.text(325, 106, '⏱ 0:00', { fontSize: '16px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0).setDepth(10);
+
+        // Строка 4: Уровни инструментов
+        this.soapLvlText = this.add.text(28, 138, '', TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
+
+        // Строка 5: Время суток
+        this.dayNightText = this.add.text(28, 164, '', { fontSize: '14px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
+        this.updateDayNightText();
 
         // ===== ПРАВАЯ ПАНЕЛЬ (кнопки меню) =====
         const rightPanel = this.add.graphics().setDepth(9);
