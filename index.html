@@ -1795,10 +1795,9 @@ class RoomRenderer {
         g.fillTriangle(wx + ww * 0.12, wy + wh * 0.5, wx + ww * 0.07, wy + wh * 0.56, wx + ww * 0.17, wy + wh * 0.56);
         g.fillTriangle(wx + ww * 0.72, wy + wh * 0.42, wx + ww * 0.68, wy + wh * 0.48, wx + ww * 0.76, wy + wh * 0.48);
 
-                // Мягкий светлый участок на стене (где раньше стояла лампа)
-        g.fillStyle(0x6a4a2a, 0.35); g.fillCircle(64, 900, 90);
-        g.fillStyle(0x7a5a35, 0.28); g.fillCircle(64, 900, 70);
-        g.fillStyle(0x8a6a40, 0.20); g.fillCircle(64, 900, 50);
+          // Осветляем левый угол стены
+        g.fillStyle(0x5a3a20, 0.25); g.fillRect(0, 500, 130, 450);
+        g.fillStyle(0x6a4a2a, 0.18); g.fillRect(0, 500, 130, 450);
       
 
         // Передние горы
