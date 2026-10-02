@@ -2792,7 +2792,7 @@ class LeaderboardUI {
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
-        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `carpets/carpet${i}.png`);
+        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
         for (const id in ROOM_IMAGES) {
             this.load.image('room_' + id, ROOM_IMAGES[id]);
         }
