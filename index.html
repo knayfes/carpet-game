@@ -264,7 +264,7 @@ const BALANCE = {
     musicVolume: 0.18
 };
 
-// Ключ сохранения — оставлен v12 как просили
+// Ключ сохранения — v12 (по просьбе, не меняем)
 const SAVE_KEY = 'carpetGameStats_v12';
 
 // Файлы комнат (если есть — грузятся, если нет — процедурная отрисовка)
@@ -497,15 +497,13 @@ class AmbientMusic {
             this.master.connect(this.ctx.destination);
         } catch {}
     }
-        resume() {
+    resume() {
         try {
             if (!this.ctx) return;
             if (this.ctx.state === 'suspended') {
                 const p = this.ctx.resume();
                 if (p && p.then) {
-                    p.then(() => {
-                        if (this.enabled && !this._playing) this.start();
-                    }).catch(() => {});
+                    p.then(() => { if (this.enabled && !this._playing) this.start(); }).catch(() => {});
                 }
             } else if (this.enabled && !this._playing) {
                 this.start();
@@ -611,8 +609,6 @@ class Mascot {
         const now = Date.now();
         if (now - this._lastTap < 350) return;
         this._lastTap = now;
-
-        // Анимация «поглаживания»
         this.scene.tweens.killTweensOf(this.container);
         this.scene.tweens.add({
             targets: this.container,
@@ -622,8 +618,6 @@ class Mascot {
                 this.scene.tweens.add({ targets: this.container, scaleX: 1, scaleY: 1, duration: 120 });
             }
         });
-
-        // Реплика при поглаживании
         const pool = tArr('m_pet');
         this.say(pick(pool), 2400);
     }
@@ -1707,11 +1701,7 @@ class BugSystem {
     }
 }
 
-/* ROOM RENDERER
-   Логика:
-   1. Если картинка комнаты загружена (rooms/room_{id}.png) — используется она.
-   2. Если нет — процедурная отрисовка (уютная зимняя хижина для classic).
-*/
+/* ROOM RENDERER */
 class RoomRenderer {
     constructor(scene) {
         this.scene = scene;
@@ -1725,13 +1715,11 @@ class RoomRenderer {
 
         const key = 'room_' + skinId;
         if (this.scene.textures.exists(key)) {
-            // Загружена картинка — используем её, растягиваем на весь экран (9:16)
             this.img = this.scene.add.image(W / 2, H / 2, key)
                 .setDisplaySize(W, H)
                 .setDepth(-10);
             return;
         }
-        // Иначе процедурная отрисовка
         switch (skinId) {
             case 'neon': this.drawNeon(g, W, H); break;
             case 'beach': this.drawBeach(g, W, H); break;
@@ -1746,16 +1734,16 @@ class RoomRenderer {
         for (let y = 0; y < 1000; y += 26) {
             g.fillStyle(0x1a0f06, 0.5); g.fillRect(0, y, W, 2);
         }
-        g.fillStyle(0x1a0f06, 0.75);
-        g.fillRect(0, 0, 55, 1000);
-        g.fillRect(W - 55, 0, 55, 1000);
+        // Полупрозрачная балка слева (без резкого выделения)
+        g.fillStyle(0x1a0f06, 0.35); g.fillRect(0, 0, 55, 1000);
+        g.fillStyle(0x1a0f06, 0.75); g.fillRect(W - 55, 0, 55, 1000);
 
-        // Окно
-        const wx = 75, wy = 55, ww = W - 150, wh = 520;
+        // Окно (выше и компактнее)
+        const wx = 75, wy = 30, ww = W - 150, wh = 420;
         g.fillStyle(0x4a2c14, 1); g.fillRect(wx - 18, wy - 18, ww + 36, wh + 36);
         g.fillStyle(0x2a1a0e, 1); g.fillRect(wx - 10, wy - 10, ww + 20, wh + 20);
 
-        // Небо (градиент)
+        // Небо
         for (let i = 0; i < wh; i++) {
             const tt = i / wh;
             const r = Math.floor(0x14 + (0x28 - 0x14) * tt);
@@ -1789,14 +1777,10 @@ class RoomRenderer {
         g.lineTo(wx + ww, wy + wh);
         g.lineTo(wx, wy + wh);
         g.closePath(); g.fillPath();
-        // Снег на горах
         g.fillStyle(0xdde8f5, 0.95);
         g.fillTriangle(wx + ww * 0.42, wy + wh * 0.36, wx + ww * 0.36, wy + wh * 0.44, wx + ww * 0.48, wy + wh * 0.44);
         g.fillTriangle(wx + ww * 0.12, wy + wh * 0.5, wx + ww * 0.07, wy + wh * 0.56, wx + ww * 0.17, wy + wh * 0.56);
         g.fillTriangle(wx + ww * 0.72, wy + wh * 0.42, wx + ww * 0.68, wy + wh * 0.48, wx + ww * 0.76, wy + wh * 0.48);
-
-        g.fillStyle(0x5a3a20, 0.18); g.fillRect(0, 500, 130, 450);
-      
 
         // Передние горы
         g.fillStyle(0x3a4d6b, 1);
@@ -1813,7 +1797,6 @@ class RoomRenderer {
         g.fillStyle(0xc8d4e4, 0.7);
         g.fillTriangle(wx + ww * 0.55, wy + wh * 0.58, wx + ww * 0.51, wy + wh * 0.63, wx + ww * 0.59, wy + wh * 0.63);
 
-        // Снежный пол в окне
         g.fillStyle(0xb8c8dc, 0.55);
         g.fillRect(wx, wy + wh * 0.88, ww, wh * 0.12);
 
@@ -1829,7 +1812,6 @@ class RoomRenderer {
                 g.fillTriangle(tx - lw, ly, tx + lw, ly, tx, ly - th * 0.42);
             }
         }
-
         // Снежинки
         for (let i = 0; i < 180; i++) {
             const sx = wx + Math.random() * ww;
@@ -1837,7 +1819,6 @@ class RoomRenderer {
             g.fillStyle(0xffffff, 0.5 + Math.random() * 0.5);
             g.fillCircle(sx, sy, 0.5 + Math.random() * 1.6);
         }
-
         // Переплёт
         g.fillStyle(0x4a2c14, 1);
         g.fillRect(wx + ww / 2 - 6, wy, 12, wh);
@@ -1863,7 +1844,6 @@ class RoomRenderer {
         g.fillStyle(0x3a2210, 1);
         g.fillRect(fx - 60, fy + 20, 120, 14);
         g.fillRect(fx - 50, fy + 10, 100, 12);
-        // Огонь
         g.fillStyle(0xff5522, 1);
         g.fillTriangle(fx - 38, fy + 40, fx - 18, fy - 25, fx + 2, fy + 40);
         g.fillTriangle(fx - 8, fy + 40, fx + 10, fy - 10, fx + 30, fy + 40);
@@ -1873,6 +1853,10 @@ class RoomRenderer {
         g.fillStyle(0xffdd66, 1);
         g.fillTriangle(fx - 12, fy + 40, fx, fy - 10, fx + 14, fy + 40);
         g.fillTriangle(fx + 8, fy + 40, fx + 18, fy + 0, fx + 28, fy + 40);
+
+        // Лёгкое осветление левого угла (ровным тоном, без пятен)
+        g.fillStyle(0x5a3a20, 0.12); g.fillRect(0, 500, 130, 450);
+
         // Ковёр
         g.fillStyle(0x6a3a1e, 0.5);
         g.fillEllipse(W / 2, 1180, 620, 100);
@@ -2137,7 +2121,7 @@ class FadeGroup {
     _destroyAll() { this.elements.forEach(e => { try { e.destroy(); } catch {} }); this.elements = []; }
 }
 
-/* МАГАЗИН: не сворачивается ни при переключении вкладок, ни при покупке */
+/* МАГАЗИН: не сворачивается при переключении/покупке */
 class ShopUI {
     constructor(scene, state, ads) {
         this.scene = scene; this.state = state; this.ads = ads;
@@ -2145,8 +2129,9 @@ class ShopUI {
         this.onBuyCarpet = null; this.onChanged = null; this.onMessage = null;
         this.onPrestige = null; this.onSkinChange = null; this.onPetBought = null;
         this.onLegacyBuy = null; this.onOpen = null; this.onClose = null;
+        this._fadeIn = false;
     }
-        open() {
+    open() {
         if (this.isOpen) return;
         this.isOpen = true;
         this._fadeIn = true;
@@ -2158,13 +2143,12 @@ class ShopUI {
         this.isOpen = false;
         this.group.closeFade(() => this.onClose?.());
     }
-        refresh() {
+    refresh() {
         if (!this.isOpen) return;
         this._fadeIn = false;
         this.group._destroyAll();
         this.render();
     }
-    // Покупка — обновляем содержимое, окно остаётся открытым
     async _afterBuy() {
         await this.onChanged?.();
         this.refresh();
@@ -2183,7 +2167,7 @@ class ShopUI {
         else if (this.activeTab === 'prestige') this._renderPrestige(push);
         const closeHit = push(s.add.text(630, 100, '✖', { fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }));
-                closeHit.on('pointerdown', () => this.close());
+        closeHit.on('pointerdown', () => this.close());
         if (this._fadeIn) {
             this.group.openFade();
             this._fadeIn = false;
@@ -2206,7 +2190,6 @@ class ShopUI {
             const active = this.activeTab === tab.id;
             const pill = makePill(s, x, y, tabW, tabH, { radius: 20, fill: active ? 0xFFD700 : 0x444444, stroke: active ? 0xFFFFFF : 0x666666, strokeW: 3, depth: 41 });
             push(pill.cont);
-            // Переключение вкладки — окно остаётся открытым
             pill.hit.on('pointerdown', () => { pill.tap(); this.activeTab = tab.id; this.refresh(); });
             push(s.add.text(x, y, tab.label, { fontSize: '30px', fill: active ? '#000000' : '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
         });
@@ -2809,17 +2792,11 @@ class LeaderboardUI {
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
-        // Загружаем ковры
-        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
-
-        // Загружаем картинки комнат (если их нет — молча пропустим, будет процедурная отрисовка)
+        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `carpets/carpet${i}.png`);
         for (const id in ROOM_IMAGES) {
-            const path = ROOM_IMAGES[id];
-            this.load.image('room_' + id, path);
+            this.load.image('room_' + id, ROOM_IMAGES[id]);
         }
-        // Глушим ошибки, чтобы отсутствие картинок не ломало игру
         this.load.on('loaderror', () => {});
-
         const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w / 2, h / 2 - 50, t('loading'), TEXT_STYLES.title()).setOrigin(0.5);
         this.add.rectangle(w / 2, h / 2 + 30, 400, 30, 0x333333);
@@ -2856,9 +2833,8 @@ class MainScene extends Phaser.Scene {
         this.carpetX = W / 2; this.carpetY = 600;
         this.carpetBounds = new Phaser.Geom.Rectangle(this.carpetX - this.carpetW / 2, this.carpetY - this.carpetH / 2, this.carpetW, this.carpetH);
 
-                this.ambientMusic = new AmbientMusic();
-        // init() НЕ вызываем здесь — только внутри жеста пользователя (иначе на мобиле контекст не оживёт)
-
+        // Музыка (init только внутри жеста, иначе на мобиле не заведётся)
+        this.ambientMusic = new AmbientMusic();
         this._startMusicOnce = () => {
             try {
                 if (!this.ambientMusic.ctx) this.ambientMusic.init();
@@ -2985,31 +2961,50 @@ class MainScene extends Phaser.Scene {
         this.tutorial.start();
     }
     buildHUD(W, H) {
-        this.add.rectangle(0, 0, 340, 195, 0x000000, 0.78).setOrigin(0, 0).setDepth(9);
-        this.add.rectangle(0, 195, 340, 3, 0x4A90D9, 0.7).setOrigin(0, 0).setDepth(9);
-        this.moneyText = this.add.text(20, 16, '💰 ' + this.state.money, TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
-        this.foodText = this.add.text(20, 58, '🍞 ' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
-        this.toolText = this.add.text(20, 92, '🧹 ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 18)).setDepth(10);
-        this.carpetText = this.add.text(145, 92, '🧽 ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
-        this.soapLvlText = this.add.text(20, 120, `🧼${this.state.soapLevel}  💤${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
-        this.dayNightText = this.add.text(20, 150, '', { fontSize: '14px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
+        // ===== ЛЕВАЯ ПАНЕЛЬ (статистика) =====
+        const leftPanel = this.add.graphics().setDepth(9);
+        leftPanel.fillStyle(0x1a1008, 0.72);
+        leftPanel.fillRoundedRect(12, 12, 325, 180, 22);
+        leftPanel.lineStyle(2, 0x8a6a40, 0.6);
+        leftPanel.strokeRoundedRect(12, 12, 325, 180, 22);
+
+        this.add.text(28, 22, '💰', { fontSize: '26px' }).setOrigin(0, 0).setDepth(10);
+        this.add.text(28, 66, '🍞', { fontSize: '22px' }).setOrigin(0, 0).setDepth(10);
+        this.add.text(28, 102, '🧹', { fontSize: '18px' }).setOrigin(0, 0).setDepth(10);
+        this.add.text(178, 102, '🧽', { fontSize: '18px' }).setOrigin(0, 0).setDepth(10);
+
+        this.moneyText = this.add.text(62, 22, '0', TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
+        this.foodText = this.add.text(62, 66, '0', TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
+        this.toolText = this.add.text(62, 102, '0', TEXT_STYLES.stat('#87CEEB', 18)).setDepth(10);
+        this.carpetText = this.add.text(210, 102, '0', TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
+
+        this.soapLvlText = this.add.text(28, 138, '', TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
+        this.dayNightText = this.add.text(28, 164, '', { fontSize: '14px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
         this.updateDayNightText();
-        this.timerText = this.add.text(325, 150, '⏱ 0:00', { fontSize: '14px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0).setDepth(10);
+        this.timerText = this.add.text(325, 164, '', { fontSize: '14px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0).setDepth(10);
+
         if (this.state.prestigeLevel > 0 || this.state.legacyPoints > 0) {
-            this.prestigeText = this.add.text(325, 16, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
+            this.prestigeText = this.add.text(325, 22, '', { fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
         }
-        this.add.rectangle(380, 0, 340, 195, 0x000000, 0.78).setOrigin(0, 0).setDepth(9);
-        this.add.rectangle(380, 195, 340, 3, 0x4A90D9, 0.7).setOrigin(0, 0).setDepth(9);
+
+        // ===== ПРАВАЯ ПАНЕЛЬ (кнопки меню) =====
+        const rightPanel = this.add.graphics().setDepth(9);
+        rightPanel.fillStyle(0x1a1008, 0.72);
+        rightPanel.fillRoundedRect(383, 12, 325, 180, 22);
+        rightPanel.lineStyle(2, 0x8a6a40, 0.6);
+        rightPanel.strokeRoundedRect(383, 12, 325, 180, 22);
 
         const makeBtn = (x, y, icon, label, onClick, color = '#FFFFFF') => {
-            const r = 26;
-            const circle = this.add.circle(x, y, r, 0x1e1e28, 0.95).setDepth(10).setStrokeStyle(2, 0x4A90D9, 0.7);
-            const ic = this.add.text(x, y, icon, { fontSize: '32px' }).setOrigin(0.5).setDepth(11);
-            const lb = this.add.text(x, y + r + 12, label, { fontSize: '11px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
+            const r = 27;
+            this.add.circle(x + 2, y + 3, r, 0x000000, 0.45).setDepth(10);
+            const circle = this.add.circle(x, y, r, 0x2a1f14, 1).setDepth(10).setStrokeStyle(3, 0x8a6a40, 0.9);
+            const inner = this.add.circle(x, y, r - 4, 0x3a2a1a, 1).setDepth(10);
+            const ic = this.add.text(x, y, icon, { fontSize: '30px' }).setOrigin(0.5).setDepth(11);
+            const lb = this.add.text(x, y + r + 14, label, { fontSize: '11px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
             const hit = this.add.circle(x, y, r + 8, 0x000000, 0.001).setDepth(12);
             hit.setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => {
-                this.tweens.add({ targets: [circle, ic], scaleX: 1.12, scaleY: 1.12, duration: 90, yoyo: true, ease: 'Quad.easeOut' });
+                this.tweens.add({ targets: [circle, inner, ic], scaleX: 0.9, scaleY: 0.9, duration: 80, yoyo: true, ease: 'Quad.easeOut' });
                 onClick();
             });
         };
@@ -3021,31 +3016,45 @@ class MainScene extends Phaser.Scene {
         makeBtn(c2, r2, '🛒', t('shop'),     () => this.shop.open(), '#00FF88');
         makeBtn(c3, r2, '⚙️', t('settings'), () => this.settingsUI.open(), '#CCCCCC');
 
-        this.questBadge = this.add.text(c3 + 22, r1 - 22, '●', { fontSize: '20px', fill: '#FF4444' }).setOrigin(0.5).setDepth(13).setVisible(false);
+        this.questBadge = this.add.text(c3 + 24, r1 - 24, '●', { fontSize: '20px', fill: '#FF4444' }).setOrigin(0.5).setDepth(13).setVisible(false);
         this.tweens.add({ targets: this.questBadge, alpha: { from: 1, to: 0.3 }, duration: 700, yoyo: true, repeat: -1 });
         this.updateQuestBadge();
 
         const ds = this.state.getDailyStatus();
         if (ds.canClaim) {
-            const dailyBg = this.add.circle(360, 100, 24, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
-            const dailyIcon = this.add.text(360, 100, '🎁', { fontSize: '28px' }).setOrigin(0.5).setDepth(15);
-            const hit = this.add.circle(360, 100, 30, 0x000000, 0.001).setDepth(16).setInteractive({ useHandCursor: true });
+            const dailyBg = this.add.circle(360, 208, 26, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
+            const dailyIcon = this.add.text(360, 208, '🎁', { fontSize: '28px' }).setOrigin(0.5).setDepth(15);
+            const hit = this.add.circle(360, 208, 32, 0x000000, 0.001).setDepth(16).setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.dailyUI.open());
         }
 
-        this.add.rectangle(W / 2, 230, 400, 30, 0x000000, 0.7).setDepth(10);
-        this.add.rectangle(W / 2, 230, 400, 30, 0x333333).setDepth(10);
-        this.progressBar = this.add.rectangle(W / 2 - 200, 230, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
-        this.progressText = this.add.text(W / 2, 230, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
+        // ===== ПРОГРЕСС-БАР =====
+        const pbBg = this.add.graphics().setDepth(10);
+        pbBg.fillStyle(0x0a0604, 0.75);
+        pbBg.fillRoundedRect(W/2 - 210, 235, 420, 38, 19);
+        pbBg.lineStyle(3, 0x8a6a40, 0.7);
+        pbBg.strokeRoundedRect(W/2 - 210, 235, 420, 38, 19);
+        this.progressBar = this.add.rectangle(W/2 - 200, 254, 0, 24, 0x00FF88).setOrigin(0, 0.5).setDepth(11);
+        this.progressText = this.add.text(W/2, 254, '0%', TEXT_STYLES.stat('#FFFFFF', 20)).setOrigin(0.5).setDepth(12);
 
-        this.steamBg = this.add.rectangle(W / 2, 265, 200, 14, 0x111111).setDepth(10).setVisible(false);
-        this.steamBar = this.add.rectangle(W / 2 - 100, 265, 200, 14, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
-        this.steamText = this.add.text(W / 2, 282, t('steams'), { fontSize: '12px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(11).setVisible(false);
-        this.starsCounter = this.add.text(W / 2, 300, '', { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(11).setVisible(false);
+        this.steamBg = this.add.rectangle(W/2, 292, 220, 16, 0x111111, 0.85).setDepth(10).setStrokeStyle(2, 0x8a6a40, 0.6).setVisible(false);
+        this.steamBar = this.add.rectangle(W/2 - 106, 292, 212, 12, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
+        this.steamText = this.add.text(W/2, 310, t('steams'), { fontSize: '13px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11).setVisible(false);
 
-        const finishBtn = this.add.text(W / 2, 1050, t('getMoney'), { ...TEXT_STYLES.button('#00FF00', 30), backgroundColor: '#000000', padding: { x: 30, y: 15 } }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
-        finishBtn.on('pointerdown', () => {
-            this.tweens.add({ targets: finishBtn, scaleX: 0.94, scaleY: 0.94, duration: 80, yoyo: true, ease: 'Quad.easeOut' });
+        this.starsCounter = this.add.text(W/2, 330, '', { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(11).setVisible(false);
+
+        // ===== КНОПКА «ПОЛУЧИТЬ ДЕНЬГИ» — pill =====
+        const fbY = 1060;
+        const fbPill = makePill(this, W/2, fbY, 360, 72, {
+            radius: 36, fill: 0x1a3a20, stroke: 0x00FF88, strokeW: 4, depth: 10
+        });
+        this.finishBtnText = this.add.text(W/2, fbY, t('getMoney'), {
+            fontSize: '28px', fill: '#00FF88', fontStyle: 'bold', fontFamily: FONT_HAND,
+            stroke: '#000000', strokeThickness: 4
+        }).setOrigin(0.5).setDepth(11);
+        fbPill.hit.on('pointerdown', () => {
+            fbPill.tap();
+            this.tweens.add({ targets: this.finishBtnText, scaleX: 1.1, scaleY: 1.1, duration: 80, yoyo: true });
             this.finishCarpet();
         });
     }
@@ -3054,13 +3063,13 @@ class MainScene extends Phaser.Scene {
         const td = getTimeOfDay();
         const icon = td === 'morning' ? '🌅' : td === 'day' ? '☀️' : td === 'evening' ? '🌇' : '🌙';
         const bonus = Math.round(this.state.getDayNightBonus() * 100);
-        this.dayNightText.setText(`${icon} ${t(td)}  +${bonus}%💰`);
+        this.dayNightText.setText(`${icon} ${t(td)}  +${bonus}%`);
     }
     refreshHUD() {
-        this.moneyText.setText('💰 ' + this.state.money);
-        this.foodText.setText('🍞 ' + this.state.food);
-        this.toolText.setText('🧹 ' + this.state.getCurrentRadius());
-        this.carpetText.setText('🧽 ' + this.state.carpetsCleaned);
+        this.moneyText.setText('' + this.state.money);
+        this.foodText.setText('' + this.state.food);
+        this.toolText.setText('' + this.state.getCurrentRadius());
+        this.carpetText.setText('' + this.state.carpetsCleaned);
         this.soapLvlText.setText(`🧼${this.state.soapLevel}  💤${this.state.washLevel}  🪰${this.state.swatterLevel}`);
         this.updateQuestBadge(); this.updateDayNightText(); this.updateStarsCounter();
     }
@@ -3075,13 +3084,13 @@ class MainScene extends Phaser.Scene {
         const btnY = 1195;
         const tools = [];
         if (this.state.carpetIndex <= 3) {
-            tools.push({ id: 'soap', icon: '🧼', label: t('soap'), color: 0x4A90D9 });
-            tools.push({ id: 'wash', icon: '💧', label: t('wash'), color: 0x4A90D9 });
+            tools.push({ id: 'soap', icon: '🧼', label: t('soap'), color: 0x5a7a9a });
+            tools.push({ id: 'wash', icon: '💧', label: t('wash'), color: 0x5a7a9a });
         }
-        if (this.state.carpetIndex >= 2) tools.push({ id: 'swatter', icon: '🪰', label: t('swatter'), color: 0xFF4444 });
-        if (this.state.carpetIndex >= 3) tools.push({ id: 'scraper', icon: '🧽', label: t('scraper'), color: 0x8B6A2A });
-        if (this.state.carpetIndex >= 4) tools.push({ id: 'steam',   icon: '🔥', label: t('steam'),   color: 0xFF8844 });
-        if (this.state.carpetIndex >= 5) tools.push({ id: 'remover', icon: '🧴', label: t('remover'), color: 0xAA44AA });
+        if (this.state.carpetIndex >= 2) tools.push({ id: 'swatter', icon: '🪰', label: t('swatter'), color: 0x9a5a5a });
+        if (this.state.carpetIndex >= 3) tools.push({ id: 'scraper', icon: '🧽', label: t('scraper'), color: 0x9a7a4a });
+        if (this.state.carpetIndex >= 4) tools.push({ id: 'steam',   icon: '🔥', label: t('steam'),   color: 0x9a6a4a });
+        if (this.state.carpetIndex >= 5) tools.push({ id: 'remover', icon: '🧴', label: t('remover'), color: 0x8a5a8a });
         const count = tools.length;
         const gap = 8;
         const totalW = 700 - (count - 1) * gap;
@@ -3091,7 +3100,7 @@ class MainScene extends Phaser.Scene {
         this.toolBtns = {};
         tools.forEach((tool, i) => {
             const x = startX + i * (btnW + gap);
-            const pill = makePill(this, x, btnY, btnW, btnH, { radius: 22, fill: 0x2a2a2a, stroke: 0x666666, strokeW: 4, depth: 10 });
+            const pill = makePill(this, x, btnY, btnW, btnH, { radius: 22, fill: 0x1a1008, stroke: 0x8a6a40, strokeW: 3, depth: 10 });
             const accent = this.add.rectangle(x, btnY + btnH / 2 - 8, btnW - 24, 4, tool.color, 0.95).setDepth(11).setOrigin(0.5);
             const icon = this.add.text(x, btnY - 14, tool.icon, { fontSize: '38px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(11);
             const label = this.add.text(x, btnY + 22, tool.label, { fontSize: '13px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
@@ -3121,7 +3130,7 @@ class MainScene extends Phaser.Scene {
                 if (b.accent) b.accent.setAlpha(1);
                 b.pill.press();
             } else {
-                b.pill.redraw(0x2a2a2a, 0x666666, 4);
+                b.pill.redraw(0x1a1008, 0x8a6a40, 3);
                 b.txt.setColor('#FFFFFF');
                 if (b.icon) b.icon.setScale(1);
                 if (b.accent) b.accent.setAlpha(0.6);
@@ -3190,9 +3199,7 @@ class MainScene extends Phaser.Scene {
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen) return;
         if (this.stars.active) return;
         if (this.state.carpetIndex >= 4 && (this.currentTool === 'soap' || this.currentTool === 'wash')) return;
-        // 1. Жуки
         if (this.bugs.count > 0) { this.showBugWarning(); this.mascot?.react('bugs'); return; }
-        // 2. Корки
         if (this.cleaning.hasCrustLeft() && this.currentTool !== 'scraper') {
             this.showCrustWarning(); this.mascot?.react('crust'); return;
         }
@@ -3212,7 +3219,7 @@ class MainScene extends Phaser.Scene {
     updateSteamBar() {
         if (!this.steamBar) return;
         const pct = this.steamFuel / BALANCE.steamMaxFuel;
-        this.steamBar.width = 200 * pct;
+        this.steamBar.width = 212 * pct;
         if (pct < 0.3) this.steamBar.setFillStyle(0xFF4444);
         else if (pct < 0.6) this.steamBar.setFillStyle(0xFFAA44);
         else this.steamBar.setFillStyle(0xFF8844);
@@ -3326,8 +3333,8 @@ class MainScene extends Phaser.Scene {
         this.updateSteamUI();
         this.selectTool('soap');
         if (this.prestigeText) this.prestigeText.destroy();
-        this.prestigeText = this.add.text(325, 16, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
-            fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4
+        this.prestigeText = this.add.text(325, 22, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
+            fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4
         }).setOrigin(1, 0).setDepth(10);
         if (this.tutorial) { this.tutorial.isOpen = false; this.tutorial.clearStep(); }
         this.tutorial = null;
