@@ -82,7 +82,7 @@ const I18N = {
         carpetGrad: 'Ковёр {0} — Шаг {1}/{2}', progress: 'Прогресс: {0} / {1}',
         noFood: '🍞 НЕТ ЕДЫ!\nКУПИ В МАГАЗИНЕ',
         bugsFirst: '🐛 СНАЧАЛА УБЕРИ ЖУКОВ!\n(мухобойка 🪰)',
-        crustFirst: '🧱 СНАЧАЛА СНИМИ КОРКИ!\n(скребок 🧽)',
+        crustFirst: '🧱 СНАЧАЛА СНИМИ КОРКИ!\n(скребок 🪒)',
         carpetDirty: 'Ковёр ещё грязный! Нужно 100%.',
         collectStars: '⭐ Собери все звёзды!', allStars: '⭐ Все звёзды собраны!',
         carpetClean: 'Ковёр чистый! ✨', newQuests: '📅 Новые задания!',
@@ -96,14 +96,14 @@ const I18N = {
         music: '🎵 Музыка', musicOn: '✅ ВКЛ', musicOff: '❌ ВЫКЛ',
         m_hello: ['Мррр~ Как я рад тебя видеть! 🐾💖', 'Приветик! Погладь меня скорее 🥰', 'Мяу-мяу! Скучал(а) по тебе! 💕', 'Ой, ты пришёл(ла)! Я так счастлив! 🌟'],
         m_soap: ['Мыль-мыль! Пузырики такие красивые 🫧✨', 'Ммм... как вкусно пахнет! Мррр~ 💗', 'Пенка-пенка! Обожаю пузырьки! 🧼🫧', 'Так пенисто! Мурр-мурр~ ✨'],
-        m_wash: ['Водичка! Буль-буль~ 💧💙', 'Смывай-смывай, я подскажу! 💦', 'Как свежо! Мурр~ 🫧', 'Люблю водичку! Плескаемся? 💧😻'],
+        m_wash: ['Водичка! Буль-буль~ 💦💙', 'Смывай-смывай, я подскажу! 💦', 'Как свежо! Мурр~ 🫧', 'Люблю водичку! Плескаемся? 💦😻'],
         m_bugs: ['Ой-ой, жучки! Кыш-кыш! 🐛➡️', 'Фу-фу, убирай их скорее! 🪰💥', 'Бррр, не люблю жучков! Убей их! 🐜⚡', 'Кыш-кыш, противные! 🐛👋'],
         m_star: ['Звёздочки! Красиво как! ⭐✨', 'Хватай их, хватай! ✨💫', 'Ммм, блестяшки! Обожаю! 🌟💖', 'Звёздочки-конфетки! Ням! ⭐🍬'],
         m_finish: ['Урааа! Ковёр блестит! 🎉💖', 'Ты настоящий чистюля! Горжусь! 🥰', 'Мурр-мурр! Как красиво получилось! ✨🐾', 'Вот это да! Чистота — красота! 🌟'],
         m_food: ['Я кушать хочу... 🍞🥺', 'Мяу... проголодался совсем 🐾💧', 'Покорми меня, пожалуйста! 🥺🍞', 'Животик урчит... 🍞😿'],
         m_prestige: ['Новый старт! Мурр~ 👑✨', 'Ух ты, ты крутой! Погнали! 🔥💪', 'Снова с нуля? Я с тобой! 🐾💖', 'Новое приключение! Мяу! 🌟'],
         m_money: ['Денежки, денежки! 💰✨', 'Мы разбогатеем! Мррр~ 💖', 'Мррр, как приятно! 💰😻', 'Деньжата капают! 🪙💕'],
-        m_crust: ['Корки-корки! Возьми скребок 🧽🧱', 'Ммм, твёрдые! Сначала скребок! 🧱💪', 'Ой, корки! Скребок спасёт! 🧽✨', 'Царап-царап! Скребком их! 🧱🐾'],
+        m_crust: ['Корки-корки! Возьми скребок 🪒🧱', 'Ммм, твёрдые! Сначала скребок! 🧱💪', 'Ой, корки! Скребок спасёт! 🪒✨', 'Царап-царап! Скребком их! 🧱🐾'],
         m_pet: ['Муррр~ 💖', 'Ох, как приятно! 🥰', 'Ещё погладь~ 🐱', 'Ммм... балдею! 😻', 'Погладил(а) котика — молодец! ✨', 'Я самый счастливый! 💕', 'Мурр-мурр-мурр~ 🎵', 'Обожаю ласку! 💗', 'Ещё-ещё! 🥺', 'Ты лучший хозяин! 💝'],
         m_idle: ['Мррр... 💤', 'Мяу? 🐾', 'Как дела, хозяин? 💕', 'Погладь меня~ 🥺', 'Мурр-мурр 💗', 'Скучно... поиграем? 🎾', 'Я самый милый котик, да? 😸', 'Ты лучший! 💖', 'Мням-мням... 🐟', 'Обнимашки? 🤗', 'Мяу-мяу-мяу! 🎵', 'Хочешь секрет? 🤫', 'Я тебя обожаю! 💝', 'Погладь за ушком~ 🐱']
     },
@@ -163,7 +163,7 @@ const I18N = {
         carpetGrad: 'Carpet {0} — Step {1}/{2}', progress: 'Progress: {0} / {1}',
         noFood: '🍞 NO FOOD!\nBUY IN SHOP',
         bugsFirst: '🐛 KILL BUGS FIRST!\n(swatter 🪰)',
-        crustFirst: '🧱 REMOVE CRUSTS FIRST!\n(scraper 🧽)',
+        crustFirst: '🧱 REMOVE CRUSTS FIRST!\n(scraper 🪒)',
         carpetDirty: 'Carpet still dirty! Need 100%.',
         collectStars: '⭐ Collect all stars!', allStars: '⭐ All stars collected!',
         carpetClean: 'Carpet is clean! ✨', newQuests: '📅 New quests!',
@@ -177,14 +177,14 @@ const I18N = {
         music: '🎵 Music', musicOn: '✅ ON', musicOff: '❌ OFF',
         m_hello: ['Purr~ So happy to see you! 🐾💖', 'Hi! Pet me please! 🥰', 'Meow! Missed you! 💕', 'You\'re here! Yay! 🌟'],
         m_soap: ['Soap-soap! Bubbles are pretty! 🫧✨', 'Mmm... smells so good! Purr~ 💗', 'Foam-foam! Love bubbles! 🧼🫧', 'So foamy! Purr-purr~ ✨'],
-        m_wash: ['Water! Splash-splash~ 💧💙', 'Rinse it, I\'ll help! 💦', 'So fresh! Purr~ 🫧', 'Love water! Splash? 💧😻'],
+        m_wash: ['Water! Splash-splash~ 💦💙', 'Rinse it, I\'ll help! 💦', 'So fresh! Purr~ 🫧', 'Love water! Splash? 💦😻'],
         m_bugs: ['Oh-oh, bugs! Shoo! 🐛➡️', 'Eww, remove them fast! 🪰💥', 'I don\'t like bugs! Kill them! 🐜⚡', 'Shoo, nasty bugs! 🐛👋'],
         m_star: ['Stars! So pretty! ⭐✨', 'Catch them, catch! ✨💫', 'Mmm, shinies! Love them! 🌟💖', 'Star-candies! Yum! ⭐🍬'],
         m_finish: ['Yay! Carpet shines! 🎉💖', 'You\'re a true cleaner! Proud! 🥰', 'Purr-purr! So pretty! ✨🐾', 'Wow! Clean is beautiful! 🌟'],
         m_food: ['I wanna eat... 🍞🥺', 'Meow... so hungry 🐾💧', 'Feed me please! 🥺🍞', 'Tummy rumbles... 🍞😿'],
         m_prestige: ['New start! Purr~ 👑✨', 'Wow you\'re cool! Let\'s go! 🔥💪', 'From scratch again? I\'m with you! 🐾💖', 'New adventure! Meow! 🌟'],
         m_money: ['Money, money! 💰✨', 'We\'ll get rich! Purr~ 💖', 'Purr, so nice! 💰😻', 'Coins dropping! 🪙💕'],
-        m_crust: ['Crusts! Grab the scraper! 🧽🧱', 'Mmm hard! Scraper first! 🧱💪', 'Oh, crusts! Scraper saves! 🧽✨', 'Scratch-scratch! Use scraper! 🧱🐾'],
+        m_crust: ['Crusts! Grab the scraper! 🪒🧱', 'Mmm hard! Scraper first! 🧱💪', 'Oh, crusts! Scraper saves! 🪒✨', 'Scratch-scratch! Use scraper! 🧱🐾'],
         m_pet: ['Purr~ 💖', 'Oh, so nice! 🥰', 'Pet me more~ 🐱', 'Mmm... loving it! 😻', 'You petted the cat — good! ✨', 'I\'m the happiest! 💕', 'Purr-purr-purr~ 🎵', 'Love the pets! 💗', 'More-more! 🥺', 'You\'re the best owner! 💝'],
         m_idle: ['Purr... 💤', 'Meow? 🐾', 'How are you, human? 💕', 'Pet me~ 🥺', 'Purr-purr 💗', 'Bored... play? 🎾', 'I\'m the cutest cat, right? 😸', 'You\'re the best! 💖', 'Nom-nom... 🐟', 'Hugs? 🤗', 'Meow-meow-meow! 🎵', 'Want a secret? 🤫', 'I adore you! 💝', 'Pet my ear~ 🐱']
     }
@@ -278,7 +278,7 @@ const LEGACY_UPGRADES = [
     { id: 'money_flow',  icon: '💰', name: { ru: 'Денежный поток', en: 'Money Flow' },       desc: { ru: '+15% к деньгам навсегда', en: '+15% money forever' }, cost: 1,  maxLevel: 5 },
     { id: 'brush_master', icon: '🧹', name: { ru: 'Мастер щётки', en: 'Brush Master' },       desc: { ru: '+5 к стартовому радиусу', en: '+5 starting radius' }, cost: 2,  maxLevel: 5 },
     { id: 'soap_master', icon: '🧼', name: { ru: 'Мастер мыла', en: 'Soap Master' },          desc: { ru: '+25% к силе мыла', en: '+25% soap power' }, cost: 2,  maxLevel: 5 },
-    { id: 'wash_master', icon: '💧', name: { ru: 'Мастер смыва', en: 'Rinse Master' },        desc: { ru: '+25% к силе смыва', en: '+25% rinse power' }, cost: 2,  maxLevel: 5 },
+    { id: 'wash_master', icon: '💦', name: { ru: 'Мастер смыва', en: 'Rinse Master' },        desc: { ru: '+25% к силе смыва', en: '+25% rinse power' }, cost: 2,  maxLevel: 5 },
     { id: 'pet_friends', icon: '🐾', name: { ru: 'Друзья навек', en: 'Friends Forever' },     desc: { ru: 'Питомцы остаются после престижа', en: 'Pets stay after prestige' }, cost: 3,  maxLevel: 1 },
     { id: 'fast_start',  icon: '⚡', name: { ru: 'Быстрый старт', en: 'Fast Start' },          desc: { ru: 'Престиж начинается со 2-го ковра', en: 'Prestige starts from carpet 2' }, cost: 4,  maxLevel: 1 },
     { id: 'jump_start',  icon: '⏩', name: { ru: 'Прыжок', en: 'Jump Start' },                 desc: { ru: 'Престиж начинается с 3-го ковра', en: 'Prestige starts from carpet 3' }, cost: 6,  maxLevel: 1 },
@@ -299,7 +299,7 @@ const ACHIEVEMENTS = [
     { id: 'prestige_1',   icon: '👑', name: { ru: 'Первый престиж', en: 'First Prestige' }, desc: { ru: 'Сделай престиж 1 раз', en: 'Do prestige once' }, type: 'prestigeLevel', target: 1, reward: 1000 },
     { id: 'prestige_3',   icon: '👑', name: { ru: 'Трижды престиж', en: 'Triple Prestige' }, desc: { ru: 'Престиж 3 раза', en: 'Prestige 3 times' }, type: 'prestigeLevel', target: 3, reward: 5000 },
     { id: 'soap_master',  icon: '🧼', name: { ru: 'Мастер мыла', en: 'Soap Master' }, desc: { ru: 'Прокачай мыло до 5 ур.', en: 'Upgrade soap to lvl. 5' }, type: 'soapLevel', target: 5, reward: 600 },
-    { id: 'wash_master',  icon: '💧', name: { ru: 'Мастер смыва', en: 'Rinse Master' }, desc: { ru: 'Прокачай смыв до 5 ур.', en: 'Upgrade rinse to lvl. 5' }, type: 'washLevel', target: 5, reward: 800 },
+    { id: 'wash_master',  icon: '💦', name: { ru: 'Мастер смыва', en: 'Rinse Master' }, desc: { ru: 'Прокачай смыв до 5 ур.', en: 'Upgrade rinse to lvl. 5' }, type: 'washLevel', target: 5, reward: 800 },
     { id: 'swatter_master', icon: '🪰', name: { ru: 'Мастер мухобойки', en: 'Swatter Master' }, desc: { ru: 'Прокачай мухобойку до 5 ур.', en: 'Upgrade swatter to lvl. 5' }, type: 'swatterLevel', target: 5, reward: 1000 },
     { id: 'decorator',    icon: '🎨', name: { ru: 'Декоратор', en: 'Decorator' }, desc: { ru: 'Открой все комнаты', en: 'Unlock all rooms' }, type: 'roomsUnlocked', target: 5, reward: 3000 },
     { id: 'collector',    icon: '🌟', name: { ru: 'Коллекционер', en: 'Collector' }, desc: { ru: 'Открой все щётки', en: 'Unlock all brushes' }, type: 'brushesUnlocked', target: 5, reward: 3000 },
@@ -357,7 +357,7 @@ const DAILY_REWARDS = [
 const CARPET_TUTORIALS = {
     1: [
         { text: { ru: 'Веди пальцем по ковру с 🧼 МЫЛОМ,\nчтобы нанести пену.', en: 'Swipe with 🧼 SOAP\nto apply lather.' }, check: 'soap', need: 3 },
-        { text: { ru: 'Переключись на 💧 СМЫТЬ\nи смывай пену.', en: 'Switch to 💧 RINSE\nand wash off the foam.' }, check: 'wash', need: 3 },
+        { text: { ru: 'Переключись на 💦 СМЫТЬ\nи смывай пену.', en: 'Switch to 💦 RINSE\nand wash off the foam.' }, check: 'wash', need: 3 },
         { text: { ru: 'Когда грязь почти уйдёт —\nсобирай ⭐ звёзды тапом!', en: 'Tap ⭐ stars when dirt is gone!' }, check: 'auto', need: 0 },
         { text: { ru: 'Ковёр чист на 100%?\nЖми «ПОЛУЧИТЬ ДЕНЬГИ».', en: 'Carpet 100% clean?\nTap "GET MONEY".' }, check: 'finish', need: 1 }
     ],
@@ -367,9 +367,9 @@ const CARPET_TUTORIALS = {
         { text: { ru: 'Прокачивай мухобойку:\nбыстрее, шире, +💰 за жука.', en: 'Upgrade the swatter.' }, check: 'auto', need: 0 }
     ],
     3: [
-        { text: { ru: '🧽 Новый инструмент — СКРЕБОК.\nИм снимаются засохшие корки.', en: '🧽 New tool — SCRAPER.' }, check: 'auto', need: 0 },
-        { text: { ru: 'Проведи 🧽 скребком по корке.', en: 'Swipe 🧽 scraper over crust.' }, check: 'scrape', need: 2 },
-        { text: { ru: 'После скребка смывай пыль 💧.', en: 'After scraping, rinse 💧.' }, check: 'auto', need: 0 }
+        { text: { ru: '🪒 Новый инструмент — СКРЕБОК.\nИм снимаются засохшие корки.', en: '🪒 New tool — SCRAPER.' }, check: 'auto', need: 0 },
+        { text: { ru: 'Проведи 🪒 скребком по корке.', en: 'Swipe 🪒 scraper over crust.' }, check: 'scrape', need: 2 },
+        { text: { ru: 'После скребка смывай пыль 💦.', en: 'After scraping, rinse 💦.' }, check: 'auto', need: 0 }
     ],
     4: [
         { text: { ru: '🔥 Новый инструмент — ПАР.', en: '🔥 New tool — STEAM.' }, check: 'auto', need: 0 },
@@ -2213,7 +2213,7 @@ class ShopUI {
                 async () => { st.upgradeSoap(); await this._afterBuy(); }); y += 76;
             const curWash = (st.getWashStrength() * 100).toFixed(0);
             const nextWash = ((st.getWashStrength() + BALANCE.washStrength * 0.35) * 100).toFixed(0);
-            item(y, `💧 ${t('wash2')} ${st.washLevel}  ${curWash}%→${nextWash}%`, st.getWashUpgradePrice(),
+            item(y, `💦 ${t('wash2')} ${st.washLevel}  ${curWash}%→${nextWash}%`, st.getWashUpgradePrice(),
                 async () => { st.upgradeWash(); await this._afterBuy(); }); y += 76;
         }
         if (st.carpetIndex >= 2) {
@@ -2775,7 +2775,7 @@ class LeaderboardUI {
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
-        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `carpets/carpet${i}.png`);
+        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
         for (const id in ROOM_IMAGES) {
             this.load.image('room_' + id, ROOM_IMAGES[id]);
         }
@@ -2943,56 +2943,31 @@ class MainScene extends Phaser.Scene {
         this.tutorial.start();
     }
     buildHUD(W, H) {
-        // ===== ЛЕВАЯ ПАНЕЛЬ (статистика) — чистая сетка 2 колонки =====
-        const leftPanel = this.add.graphics().setDepth(9);
-        leftPanel.fillStyle(0x1a1008, 0.72);
-        leftPanel.fillRoundedRect(12, 12, 325, 180, 22);
-        leftPanel.lineStyle(2, 0x8a6a40, 0.6);
-        leftPanel.strokeRoundedRect(12, 12, 325, 180, 22);
-
-        // Строка 1: Деньги (большая)
-        this.add.text(28, 20, '💰', { fontSize: '30px' }).setOrigin(0, 0).setDepth(10);
-        this.moneyText = this.add.text(72, 22, '0', TEXT_STYLES.stat('#FFD700', 32)).setDepth(10);
-        this.prestigeText = this.add.text(325, 22, '', { fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
-
-        // Строка 2: Еда | Радиус
-        this.add.text(28, 68, '🍞', { fontSize: '20px' }).setOrigin(0, 0).setDepth(10);
-        this.foodText = this.add.text(58, 70, '0', TEXT_STYLES.stat('#FFFFFF', 20)).setDepth(10);
-
-        this.add.text(180, 68, '🧹', { fontSize: '20px' }).setOrigin(0, 0).setDepth(10);
-        this.toolText = this.add.text(214, 70, '0', TEXT_STYLES.stat('#87CEEB', 20)).setDepth(10);
-
-        // Строка 3: Ковры | Таймер
-        this.add.text(28, 104, '🏆', { fontSize: '20px' }).setOrigin(0, 0).setDepth(10);
-        this.carpetText = this.add.text(58, 106, '0', TEXT_STYLES.stat('#FFD700', 20)).setDepth(10);
-
-        this.timerText = this.add.text(325, 106, '⏱ 0:00', { fontSize: '16px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0).setDepth(10);
-
-        // Строка 4: Уровни инструментов
-        this.soapLvlText = this.add.text(28, 138, '', TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
-
-        // Строка 5: Время суток
-        this.dayNightText = this.add.text(28, 164, '', { fontSize: '14px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
+        this.add.rectangle(0, 0, 340, 195, 0x000000, 0.78).setOrigin(0, 0).setDepth(9);
+        this.add.rectangle(0, 195, 340, 3, 0x4A90D9, 0.7).setOrigin(0, 0).setDepth(9);
+        this.moneyText = this.add.text(20, 16, '💰 ' + this.state.money, TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
+        this.foodText = this.add.text(20, 58, '🍞 ' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
+        this.toolText = this.add.text(20, 92, '🧹 ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 18)).setDepth(10);
+        this.carpetText = this.add.text(145, 92, '🧽 ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
+        this.soapLvlText = this.add.text(20, 120, `🧼${this.state.soapLevel}  💦${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
+        this.dayNightText = this.add.text(20, 150, '', { fontSize: '14px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
         this.updateDayNightText();
-
-        // ===== ПРАВАЯ ПАНЕЛЬ (кнопки меню) =====
-        const rightPanel = this.add.graphics().setDepth(9);
-        rightPanel.fillStyle(0x1a1008, 0.72);
-        rightPanel.fillRoundedRect(383, 12, 325, 180, 22);
-        rightPanel.lineStyle(2, 0x8a6a40, 0.6);
-        rightPanel.strokeRoundedRect(383, 12, 325, 180, 22);
+        this.timerText = this.add.text(325, 150, '⏱ 0:00', { fontSize: '14px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0).setDepth(10);
+        if (this.state.prestigeLevel > 0 || this.state.legacyPoints > 0) {
+            this.prestigeText = this.add.text(325, 16, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
+        }
+        this.add.rectangle(380, 0, 340, 195, 0x000000, 0.78).setOrigin(0, 0).setDepth(9);
+        this.add.rectangle(380, 195, 340, 3, 0x4A90D9, 0.7).setOrigin(0, 0).setDepth(9);
 
         const makeBtn = (x, y, icon, label, onClick, color = '#FFFFFF') => {
-            const r = 27;
-            this.add.circle(x + 2, y + 3, r, 0x000000, 0.45).setDepth(10);
-            const circle = this.add.circle(x, y, r, 0x2a1f14, 1).setDepth(10).setStrokeStyle(3, 0x8a6a40, 0.9);
-            const inner = this.add.circle(x, y, r - 4, 0x3a2a1a, 1).setDepth(10);
-            const ic = this.add.text(x, y, icon, { fontSize: '30px' }).setOrigin(0.5).setDepth(11);
-            const lb = this.add.text(x, y + r + 14, label, { fontSize: '11px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
+            const r = 26;
+            const circle = this.add.circle(x, y, r, 0x1e1e28, 0.95).setDepth(10).setStrokeStyle(2, 0x4A90D9, 0.7);
+            const ic = this.add.text(x, y, icon, { fontSize: '32px' }).setOrigin(0.5).setDepth(11);
+            const lb = this.add.text(x, y + r + 12, label, { fontSize: '11px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
             const hit = this.add.circle(x, y, r + 8, 0x000000, 0.001).setDepth(12);
             hit.setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => {
-                this.tweens.add({ targets: [circle, inner, ic], scaleX: 0.9, scaleY: 0.9, duration: 80, yoyo: true, ease: 'Quad.easeOut' });
+                this.tweens.add({ targets: [circle, ic], scaleX: 1.12, scaleY: 1.12, duration: 90, yoyo: true, ease: 'Quad.easeOut' });
                 onClick();
             });
         };
@@ -3004,45 +2979,31 @@ class MainScene extends Phaser.Scene {
         makeBtn(c2, r2, '🛒', t('shop'),     () => this.shop.open(), '#00FF88');
         makeBtn(c3, r2, '⚙️', t('settings'), () => this.settingsUI.open(), '#CCCCCC');
 
-        this.questBadge = this.add.text(c3 + 24, r1 - 24, '●', { fontSize: '20px', fill: '#FF4444' }).setOrigin(0.5).setDepth(13).setVisible(false);
+        this.questBadge = this.add.text(c3 + 22, r1 - 22, '●', { fontSize: '20px', fill: '#FF4444' }).setOrigin(0.5).setDepth(13).setVisible(false);
         this.tweens.add({ targets: this.questBadge, alpha: { from: 1, to: 0.3 }, duration: 700, yoyo: true, repeat: -1 });
         this.updateQuestBadge();
 
         const ds = this.state.getDailyStatus();
         if (ds.canClaim) {
-            const dailyBg = this.add.circle(360, 208, 26, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
-            const dailyIcon = this.add.text(360, 208, '🎁', { fontSize: '28px' }).setOrigin(0.5).setDepth(15);
-            const hit = this.add.circle(360, 208, 32, 0x000000, 0.001).setDepth(16).setInteractive({ useHandCursor: true });
+            const dailyBg = this.add.circle(360, 100, 24, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
+            const dailyIcon = this.add.text(360, 100, '🎁', { fontSize: '28px' }).setOrigin(0.5).setDepth(15);
+            const hit = this.add.circle(360, 100, 30, 0x000000, 0.001).setDepth(16).setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.dailyUI.open());
         }
 
-        // ===== ПРОГРЕСС-БАР (поднят над ковром, чтобы не перекрывать) =====
-        const pbBg = this.add.graphics().setDepth(10);
-        pbBg.fillStyle(0x0a0604, 0.75);
-        pbBg.fillRoundedRect(W/2 - 210, 196, 420, 36, 18);
-        pbBg.lineStyle(3, 0x8a6a40, 0.7);
-        pbBg.strokeRoundedRect(W/2 - 210, 196, 420, 36, 18);
-        this.progressBar = this.add.rectangle(W/2 - 200, 214, 0, 24, 0x00FF88).setOrigin(0, 0.5).setDepth(11);
-        this.progressText = this.add.text(W/2, 214, '0%', TEXT_STYLES.stat('#FFFFFF', 20)).setOrigin(0.5).setDepth(12);
+        this.add.rectangle(W / 2, 230, 400, 30, 0x000000, 0.7).setDepth(10);
+        this.add.rectangle(W / 2, 230, 400, 30, 0x333333).setDepth(10);
+        this.progressBar = this.add.rectangle(W / 2 - 200, 230, 0, 26, 0x00FF00).setOrigin(0, 0.5).setDepth(10);
+        this.progressText = this.add.text(W / 2, 230, '0%', TEXT_STYLES.stat('#FFFFFF', 22)).setOrigin(0.5).setDepth(11);
 
-        this.steamBg = this.add.rectangle(W/2, 252, 220, 16, 0x111111, 0.85).setDepth(10).setStrokeStyle(2, 0x8a6a40, 0.6).setVisible(false);
-        this.steamBar = this.add.rectangle(W/2 - 106, 252, 212, 12, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
-        this.steamText = this.add.text(W/2, 270, t('steams'), { fontSize: '13px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11).setVisible(false);
+        this.steamBg = this.add.rectangle(W / 2, 265, 200, 14, 0x111111).setDepth(10).setVisible(false);
+        this.steamBar = this.add.rectangle(W / 2 - 100, 265, 200, 14, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
+        this.steamText = this.add.text(W / 2, 282, t('steams'), { fontSize: '12px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(11).setVisible(false);
+        this.starsCounter = this.add.text(W / 2, 300, '', { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(11).setVisible(false);
 
-        this.starsCounter = this.add.text(W/2, 292, '', { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(11).setVisible(false);
-
-        // ===== КНОПКА «ПОЛУЧИТЬ ДЕНЬГИ» =====
-        const fbY = 1060;
-        const fbPill = makePill(this, W/2, fbY, 360, 72, {
-            radius: 36, fill: 0x1a3a20, stroke: 0x00FF88, strokeW: 4, depth: 10
-        });
-        this.finishBtnText = this.add.text(W/2, fbY, t('getMoney'), {
-            fontSize: '28px', fill: '#00FF88', fontStyle: 'bold', fontFamily: FONT_HAND,
-            stroke: '#000000', strokeThickness: 4
-        }).setOrigin(0.5).setDepth(11);
-        fbPill.hit.on('pointerdown', () => {
-            fbPill.tap();
-            this.tweens.add({ targets: this.finishBtnText, scaleX: 1.1, scaleY: 1.1, duration: 80, yoyo: true });
+        const finishBtn = this.add.text(W / 2, 1050, t('getMoney'), { ...TEXT_STYLES.button('#00FF00', 30), backgroundColor: '#000000', padding: { x: 30, y: 15 } }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
+        finishBtn.on('pointerdown', () => {
+            this.tweens.add({ targets: finishBtn, scaleX: 0.94, scaleY: 0.94, duration: 80, yoyo: true, ease: 'Quad.easeOut' });
             this.finishCarpet();
         });
     }
@@ -3051,21 +3012,14 @@ class MainScene extends Phaser.Scene {
         const td = getTimeOfDay();
         const icon = td === 'morning' ? '🌅' : td === 'day' ? '☀️' : td === 'evening' ? '🌇' : '🌙';
         const bonus = Math.round(this.state.getDayNightBonus() * 100);
-        this.dayNightText.setText(`${icon} ${t(td)}  +${bonus}%`);
+        this.dayNightText.setText(`${icon} ${t(td)}  +${bonus}%💰`);
     }
     refreshHUD() {
-        this.moneyText.setText('' + this.state.money);
-        this.foodText.setText('' + this.state.food);
-        this.toolText.setText('' + this.state.getCurrentRadius());
-        this.carpetText.setText('' + this.state.carpetsCleaned);
-        this.soapLvlText.setText(`🧼${this.state.soapLevel}  💤${this.state.washLevel}  🪰${this.state.swatterLevel}`);
-        if (this.prestigeText) {
-            if (this.state.prestigeLevel > 0 || this.state.legacyPoints > 0) {
-                this.prestigeText.setText(`👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`);
-            } else {
-                this.prestigeText.setText('');
-            }
-        }
+        this.moneyText.setText('💰 ' + this.state.money);
+        this.foodText.setText('🍞 ' + this.state.food);
+        this.toolText.setText('🧹 ' + this.state.getCurrentRadius());
+        this.carpetText.setText('🧽 ' + this.state.carpetsCleaned);
+        this.soapLvlText.setText(`🧼${this.state.soapLevel}  💦${this.state.washLevel}  🪰${this.state.swatterLevel}`);
         this.updateQuestBadge(); this.updateDayNightText(); this.updateStarsCounter();
     }
     updateStarsCounter() {
@@ -3080,10 +3034,10 @@ class MainScene extends Phaser.Scene {
         const tools = [];
         if (this.state.carpetIndex <= 3) {
             tools.push({ id: 'soap', icon: '🧼', label: t('soap'), color: 0x5a7a9a });
-            tools.push({ id: 'wash', icon: '💧', label: t('wash'), color: 0x5a7a9a });
+            tools.push({ id: 'wash', icon: '💦', label: t('wash'), color: 0x5a7a9a });
         }
         if (this.state.carpetIndex >= 2) tools.push({ id: 'swatter', icon: '🪰', label: t('swatter'), color: 0x9a5a5a });
-        if (this.state.carpetIndex >= 3) tools.push({ id: 'scraper', icon: '🧽', label: t('scraper'), color: 0x9a7a4a });
+        if (this.state.carpetIndex >= 3) tools.push({ id: 'scraper', icon: '🪒', label: t('scraper'), color: 0x9a7a4a });
         if (this.state.carpetIndex >= 4) tools.push({ id: 'steam',   icon: '🔥', label: t('steam'),   color: 0x9a6a4a });
         if (this.state.carpetIndex >= 5) tools.push({ id: 'remover', icon: '🧴', label: t('remover'), color: 0x8a5a8a });
         const count = tools.length;
@@ -3132,8 +3086,8 @@ class MainScene extends Phaser.Scene {
             }
         }
         if (tool === 'soap') this.brush.setText(this.state.getBrushIcon());
-        else if (tool === 'wash') this.brush.setText('🧹');
-        else if (tool === 'scraper') this.brush.setText('🧽');
+        else if (tool === 'wash') this.brush.setText('💦');
+        else if (tool === 'scraper') this.brush.setText('🪒');
         else if (tool === 'steam') this.brush.setText('🔥');
         else if (tool === 'remover') this.brush.setText('🧴');
         else this.brush.setVisible(false);
@@ -3214,7 +3168,7 @@ class MainScene extends Phaser.Scene {
     updateSteamBar() {
         if (!this.steamBar) return;
         const pct = this.steamFuel / BALANCE.steamMaxFuel;
-        this.steamBar.width = 212 * pct;
+        this.steamBar.width = 200 * pct;
         if (pct < 0.3) this.steamBar.setFillStyle(0xFF4444);
         else if (pct < 0.6) this.steamBar.setFillStyle(0xFFAA44);
         else this.steamBar.setFillStyle(0xFF8844);
@@ -3327,6 +3281,10 @@ class MainScene extends Phaser.Scene {
         this.buildToolButtons(720, 1280);
         this.updateSteamUI();
         this.selectTool('soap');
+        if (this.prestigeText) this.prestigeText.destroy();
+        this.prestigeText = this.add.text(325, 16, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
+            fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4
+        }).setOrigin(1, 0).setDepth(10);
         if (this.tutorial) { this.tutorial.isOpen = false; this.tutorial.clearStep(); }
         this.tutorial = null;
         await this.saveSystem.save();
