@@ -606,12 +606,14 @@ class Mascot {
         this.container.add(g);
         this.container.add(this.eyeLeft);
         this.container.add(this.eyeRight);
-        // Хвост
+                // Хвост
         this.tail = this.scene.add.graphics();
         this.tail.lineStyle(8, 0xF3A44B, 1);
         this.tail.beginPath();
         this.tail.moveTo(30, 40);
-        this.tail.quadraticCurveTo(60, 30, 55, -10);
+        this.tail.lineTo(55, 30);
+        this.tail.lineTo(58, 10);
+        this.tail.lineTo(50, -10);
         this.tail.strokePath();
         this.container.add(this.tail);
         this.scene.tweens.add({ targets: this.container, y: this.y - 4, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
@@ -2885,9 +2887,9 @@ class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
         for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
-        for (const id in ROOM_IMAGES) {
-            this.load.image('room_' + id, ROOM_IMAGES[id]);
-        }
+                // for (const id in ROOM_IMAGES) {
+        //     this.load.image('room_' + id, ROOM_IMAGES[id]);
+        // }
         this.load.on('loaderror', () => {});
         const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w / 2, h / 2 - 50, t('loading'), TEXT_STYLES.title()).setOrigin(0.5);
