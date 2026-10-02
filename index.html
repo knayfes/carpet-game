@@ -464,17 +464,6 @@ function makePill(scene, x, y, w, h, opts = {}) {
     return api;
 }
 
-function makeRoundedRect(scene, x, y, w, h, r, fill, stroke, strokeW, alpha = 1, depth = 0) {
-    const g = scene.add.graphics().setDepth(depth);
-    g.fillStyle(fill, alpha);
-    g.fillRoundedRect(x - w/2, y - h/2, w, h, r);
-    if (strokeW > 0) {
-        g.lineStyle(strokeW, stroke, 1);
-        g.strokeRoundedRect(x - w/2, y - h/2, w, h, r);
-    }
-    return g;
-}
-
 class AmbientMusic {
     constructor() {
         this.ctx = null; this.master = null; this.bus = null;
@@ -571,7 +560,7 @@ class AmbientMusic {
 class Mascot {
     constructor(scene) {
         this.scene = scene;
-        this.x = 640; this.y = 1020;
+        this.x = 640; this.y = 1000;
         this.container = scene.add.container(this.x, this.y).setDepth(50);
         this._buildKitten();
         this._buildHitZone();
@@ -579,7 +568,11 @@ class Mascot {
         this._idleTimer = null;
         this._cooldownKeys = {};
         this._lastTap = 0;
+        this._blinkTimer = null;
+        this._tailTween = null;
         this._scheduleIdle();
+        this._scheduleBlink();
+        this._scheduleTail();
     }
     _buildKitten() {
         const g = this.scene.add.graphics();
@@ -592,20 +585,58 @@ class Mascot {
         g.fillStyle(0xFFC9A0, 1);
         g.fillTriangle(-30, -33, -18, -52, -10, -35);
         g.fillTriangle( 30, -33,  18, -52,  10, -35);
-        g.fillStyle(0x1A1A1A, 1);
-        g.fillCircle(-13, -14, 4.5); g.fillCircle(13, -14, 4.5);
-        g.fillStyle(0xFFFFFF, 1);
-        g.fillCircle(-12, -15, 1.6); g.fillCircle(14, -15, 1.6);
+        // Глаза (open)
+        this.eyeLeft = this.scene.add.graphics();
+        this.eyeLeft.fillStyle(0x1A1A1A, 1); this.eyeLeft.fillCircle(-13, -14, 4.5);
+        this.eyeLeft.fillStyle(0xFFFFFF, 1); this.eyeLeft.fillCircle(-12, -15, 1.6);
+        this.eyeRight = this.scene.add.graphics();
+        this.eyeRight.fillStyle(0x1A1A1A, 1); this.eyeRight.fillCircle(13, -14, 4.5);
+        this.eyeRight.fillStyle(0xFFFFFF, 1); this.eyeRight.fillCircle(14, -15, 1.6);
+        // Нос + рот
         g.fillStyle(0xFF7A7A, 1); g.fillTriangle(-3, -2, 3, -2, 0, 2);
         g.lineStyle(1.5, 0x1A1A1A, 1);
         g.beginPath(); g.moveTo(0, 2); g.lineTo(-4, 6); g.moveTo(0, 2); g.lineTo(4, 6); g.strokePath();
+        // Усы
         g.lineStyle(1.2, 0x1A1A1A, 0.8);
         g.lineBetween(-30, -6, -12, -3); g.lineBetween(-30, 2, -12, 0);
         g.lineBetween( 30, -6,  12, -3); g.lineBetween( 30, 2,  12, 0);
+        // Лапки
         g.fillStyle(0xF3A44B, 1);
         g.fillEllipse(-18, 46, 22, 16); g.fillEllipse(18, 46, 22, 16);
         this.container.add(g);
+        this.container.add(this.eyeLeft);
+        this.container.add(this.eyeRight);
+        // Хвост
+        this.tail = this.scene.add.graphics();
+        this.tail.lineStyle(8, 0xF3A44B, 1);
+        this.tail.beginPath();
+        this.tail.moveTo(30, 40);
+        this.tail.quadraticCurveTo(60, 30, 55, -10);
+        this.tail.strokePath();
+        this.container.add(this.tail);
         this.scene.tweens.add({ targets: this.container, y: this.y - 4, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+    }
+    _scheduleTail() {
+        const loop = () => {
+            if (this.tail && this.tail.active) {
+                this.scene.tweens.add({ targets: this.tail, angle: { from: -4, to: 4 }, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+            }
+        };
+        loop();
+    }
+    _scheduleBlink() {
+        const loop = () => {
+            if (this.eyeLeft && this.eyeLeft.active && this.eyeRight && this.eyeRight.active) {
+                this.eyeLeft.setVisible(false);
+                this.eyeRight.setVisible(false);
+                setTimeout(() => {
+                    if (this.eyeLeft && this.eyeLeft.active) this.eyeLeft.setVisible(true);
+                    if (this.eyeRight && this.eyeRight.active) this.eyeRight.setVisible(true);
+                }, 130);
+            }
+            this._blinkTimer = setTimeout(loop, 3000 + Math.random() * 4000);
+        };
+        this._blinkTimer = setTimeout(loop, 3000);
     }
     _buildHitZone() {
         const hit = this.scene.add.circle(this.x, this.y, 60, 0x000000, 0.001)
@@ -633,7 +664,7 @@ class Mascot {
     say(text, ms = 3200) {
         if (!text) return;
         if (this.bubble) { try { this.bubble.destroy(); } catch {} this.bubble = null; }
-        const bx = this.x - 200, by = this.y - 80;
+        const bx = this.x - 200, by = this.y - 40;
         const bubble = this.scene.add.container(bx, by).setDepth(51);
         const bg = this.scene.add.graphics();
         bg.fillStyle(0xFFFFFF, 0.96);
@@ -1289,6 +1320,36 @@ class Effects {
                     duration: BALANCE.finishStarDuration * 0.6, ease: 'Cubic.easeIn', onComplete: () => tt.destroy() }) });
         }
     }
+    moneyFlash(W, H, amount) {
+        // Вспышка на ковре
+        const flash = this.scene.add.rectangle(W/2, 600, 500, 700, 0xFFFF88, 0.55).setDepth(28);
+        this.scene.tweens.add({ targets: flash, alpha: 0, duration: 450, ease: 'Cubic.easeOut',
+            onComplete: () => flash.destroy() });
+        // Всплывающие +N💰 по ковру
+        const positions = [
+            { x: W/2 - 180, y: 400 }, { x: W/2 + 180, y: 400 },
+            { x: W/2 - 180, y: 800 }, { x: W/2 + 180, y: 800 },
+            { x: W/2, y: 600 }
+        ];
+        positions.forEach((p, i) => {
+            this.scene.time.delayedCall(i * 80, () => {
+                const tt = this.scene.add.text(p.x, p.y, `+${amount}💰`, {
+                    fontSize: '34px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND,
+                    stroke: '#000000', strokeThickness: 6
+                }).setOrigin(0.5).setDepth(30).setScale(0.5);
+                this.scene.tweens.add({ targets: tt, y: p.y - 90, alpha: { from: 1, to: 0 }, scale: { from: 1.3, to: 0.9 },
+                    duration: 1100, ease: 'Cubic.easeOut', onComplete: () => tt.destroy() });
+            });
+        });
+        // Крупная центральная цифра
+        const big = this.scene.add.text(W/2, 600, `+${amount}`, {
+            fontSize: '72px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND,
+            stroke: '#000000', strokeThickness: 8
+        }).setOrigin(0.5).setDepth(31).setScale(0.3).setAlpha(0);
+        this.scene.tweens.add({ targets: big, alpha: 1, scale: 1.3, duration: 260, ease: 'Back.easeOut',
+            onComplete: () => this.scene.tweens.add({ targets: big, alpha: 0, y: 540, scale: 1.6,
+                duration: 700, delay: 300, ease: 'Cubic.easeIn', onComplete: () => big.destroy() }) });
+    }
 }
 </script>
 
@@ -1744,28 +1805,30 @@ class RoomRenderer {
         g.fillRect(0, 0, 55, 1000);
         g.fillRect(W - 55, 0, 55, 1000);
 
+        // Окно — светлее
         const wx = 75, wy = 30, ww = W - 150, wh = 420;
         g.fillStyle(0x4a2c14, 1); g.fillRect(wx - 18, wy - 18, ww + 36, wh + 36);
         g.fillStyle(0x2a1a0e, 1); g.fillRect(wx - 10, wy - 10, ww + 20, wh + 20);
 
         for (let i = 0; i < wh; i++) {
             const tt = i / wh;
-            const r = Math.floor(0x14 + (0x28 - 0x14) * tt);
-            const gg = Math.floor(0x1e + (0x32 - 0x1e) * tt);
-            const b = Math.floor(0x3a + (0x52 - 0x3a) * tt);
+            const r = Math.floor(0x2a + (0x4a - 0x2a) * tt);
+            const gg = Math.floor(0x3a + (0x62 - 0x3a) * tt);
+            const b = Math.floor(0x5a + (0x8a - 0x5a) * tt);
             g.fillStyle((r << 16) | (gg << 8) | b, 1);
             g.fillRect(wx, wy + i, ww, 1);
         }
-        for (let i = 0; i < 70; i++) {
+        for (let i = 0; i < 90; i++) {
             const sx = wx + Math.random() * ww;
-            const sy = wy + Math.random() * wh * 0.5;
-            g.fillStyle(0xffffff, 0.4 + Math.random() * 0.5);
-            g.fillCircle(sx, sy, 0.7 + Math.random() * 1);
+            const sy = wy + Math.random() * wh * 0.6;
+            g.fillStyle(0xffffff, 0.6 + Math.random() * 0.4);
+            g.fillCircle(sx, sy, 0.8 + Math.random() * 1.4);
         }
-        g.fillStyle(0xf5f0d8, 0.9); g.fillCircle(wx + ww * 0.78, wy + wh * 0.18, 26);
-        g.fillStyle(0x2a3455, 1); g.fillCircle(wx + ww * 0.78 - 8, wy + wh * 0.18 - 4, 22);
+        // Луна поярче
+        g.fillStyle(0xfffbe0, 1); g.fillCircle(wx + ww * 0.78, wy + wh * 0.18, 32);
+        g.fillStyle(0x3a4a6a, 1); g.fillCircle(wx + ww * 0.78 - 9, wy + wh * 0.18 - 5, 27);
 
-        g.fillStyle(0x2c3a55, 1);
+        g.fillStyle(0x3a4a6a, 1);
         g.beginPath();
         g.moveTo(wx, wy + wh * 0.68);
         g.lineTo(wx + ww * 0.12, wy + wh * 0.5);
@@ -1778,12 +1841,12 @@ class RoomRenderer {
         g.lineTo(wx + ww, wy + wh);
         g.lineTo(wx, wy + wh);
         g.closePath(); g.fillPath();
-        g.fillStyle(0xdde8f5, 0.95);
+        g.fillStyle(0xe8f0ff, 1);
         g.fillTriangle(wx + ww * 0.42, wy + wh * 0.36, wx + ww * 0.36, wy + wh * 0.44, wx + ww * 0.48, wy + wh * 0.44);
         g.fillTriangle(wx + ww * 0.12, wy + wh * 0.5, wx + ww * 0.07, wy + wh * 0.56, wx + ww * 0.17, wy + wh * 0.56);
         g.fillTriangle(wx + ww * 0.72, wy + wh * 0.42, wx + ww * 0.68, wy + wh * 0.48, wx + ww * 0.76, wy + wh * 0.48);
 
-        g.fillStyle(0x3a4d6b, 1);
+        g.fillStyle(0x4a5e80, 1);
         g.beginPath();
         g.moveTo(wx, wy + wh * 0.82);
         g.lineTo(wx + ww * 0.18, wy + wh * 0.62);
@@ -1794,17 +1857,17 @@ class RoomRenderer {
         g.lineTo(wx + ww, wy + wh);
         g.lineTo(wx, wy + wh);
         g.closePath(); g.fillPath();
-        g.fillStyle(0xc8d4e4, 0.7);
+        g.fillStyle(0xd8e4f4, 0.85);
         g.fillTriangle(wx + ww * 0.55, wy + wh * 0.58, wx + ww * 0.51, wy + wh * 0.63, wx + ww * 0.59, wy + wh * 0.63);
 
-        g.fillStyle(0xb8c8dc, 0.55);
+        g.fillStyle(0xc8d8e8, 0.65);
         g.fillRect(wx, wy + wh * 0.88, ww, wh * 0.12);
 
         for (let i = 0; i < 9; i++) {
             const tx = wx + 25 + i * (ww / 9) + (Math.random() * 20 - 10);
             const ty = wy + wh * 0.78 + Math.random() * 40;
             const th = 50 + Math.random() * 40;
-            g.fillStyle(0x101a26, 0.95);
+            g.fillStyle(0x1a2a36, 0.95);
             for (let layer = 0; layer < 3; layer++) {
                 const ly = ty + layer * th * 0.28;
                 const lw = 26 - layer * 5;
@@ -1812,11 +1875,11 @@ class RoomRenderer {
             }
         }
 
-        for (let i = 0; i < 180; i++) {
+        for (let i = 0; i < 220; i++) {
             const sx = wx + Math.random() * ww;
             const sy = wy + Math.random() * wh;
-            g.fillStyle(0xffffff, 0.5 + Math.random() * 0.5);
-            g.fillCircle(sx, sy, 0.5 + Math.random() * 1.6);
+            g.fillStyle(0xffffff, 0.55 + Math.random() * 0.45);
+            g.fillCircle(sx, sy, 0.6 + Math.random() * 1.7);
         }
 
         g.fillStyle(0x4a2c14, 1);
@@ -3001,23 +3064,30 @@ class MainScene extends Phaser.Scene {
         rightPanelBg.lineStyle(2, 0x4A90D9, 0.5);
         rightPanelBg.strokeRoundedRect(383, 12, 325, 180, 18);
 
-        this.moneyText = this.add.text(30, 22, '💰 ' + this.state.money, TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
-        this.foodText = this.add.text(30, 62, '🍞 ' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
-        this.toolText = this.add.text(30, 94, '🧹 ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 18)).setDepth(10);
-        this.carpetText = this.add.text(155, 94, '🧽 ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
-        this.soapLvlText = this.add.text(30, 120, `🧼${this.state.soapLevel}  🧹${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
-        this.dayNightText = this.add.text(30, 150, '', { fontSize: '14px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
+        // Иконки отдельно от текста, колонкой
+        this.add.text(30, 22, '💰', { fontSize: '26px' }).setOrigin(0, 0).setDepth(10);
+        this.add.text(30, 62, '🍞', { fontSize: '22px' }).setOrigin(0, 0).setDepth(10);
+        this.add.text(30, 96, '🧹', { fontSize: '18px' }).setOrigin(0, 0).setDepth(10);
+        this.add.text(165, 96, '🧽', { fontSize: '18px' }).setOrigin(0, 0).setDepth(10);
+
+        this.moneyText = this.add.text(62, 22, '' + this.state.money, TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
+        this.foodText = this.add.text(62, 62, '' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
+        this.toolText = this.add.text(62, 96, '' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 18)).setDepth(10);
+        this.carpetText = this.add.text(197, 96, '' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
+
+        this.soapLvlText = this.add.text(30, 124, `🧼${this.state.soapLevel}  🧹${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
+        this.dayNightText = this.add.text(30, 152, '', { fontSize: '15px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
         this.updateDayNightText();
-        this.timerText = this.add.text(320, 150, '⏱ 0:00', { fontSize: '14px', fill: '#CCCCCC', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(1, 0).setDepth(10);
+        this.timerText = this.add.text(322, 152, '⏱ 0:00', { fontSize: '17px', fill: '#FFDD66', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
         if (this.state.prestigeLevel > 0 || this.state.legacyPoints > 0) {
-            this.prestigeText = this.add.text(320, 22, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, { fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
+            this.prestigeText = this.add.text(322, 22, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, { fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
         }
 
         const makeBtn = (x, y, icon, label, onClick, color = '#FFFFFF') => {
-            const r = 26;
-            const circle = this.add.circle(x, y, r, 0x1e1e28, 0.95).setDepth(10).setStrokeStyle(2, 0x4A90D9, 0.7);
-            const ic = this.add.text(x, y, icon, { fontSize: '32px' }).setOrigin(0.5).setDepth(11);
-            const lb = this.add.text(x, y + r + 12, label, { fontSize: '11px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
+            const r = 32;
+            const circle = this.add.circle(x, y, r, 0x1e1e28, 0.95).setDepth(10).setStrokeStyle(3, 0x4A90D9, 0.75);
+            const ic = this.add.text(x, y, icon, { fontSize: '38px' }).setOrigin(0.5).setDepth(11);
+            const lb = this.add.text(x, y + r + 12, label, { fontSize: '12px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
             const hit = this.add.circle(x, y, r + 8, 0x000000, 0.001).setDepth(12);
             hit.setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => {
@@ -3025,7 +3095,7 @@ class MainScene extends Phaser.Scene {
                 onClick();
             });
         };
-        const c1 = 445, c2 = 550, c3 = 655, r1 = 45, r2 = 130;
+        const c1 = 445, c2 = 550, c3 = 655, r1 = 45, r2 = 132;
         makeBtn(c1, r1, '🏛️', t('museum'),     () => this.museum.open(), '#FFD700');
         makeBtn(c2, r1, '🏆', t('achievements'), () => this.achievementsUI.open(), '#FFD700');
         makeBtn(c3, r1, '📅', t('quests'),   () => this.questsUI.open(), '#FFD700');
@@ -3033,15 +3103,15 @@ class MainScene extends Phaser.Scene {
         makeBtn(c2, r2, '🛒', t('shop'),     () => this.shop.open(), '#00FF88');
         makeBtn(c3, r2, '⚙️', t('settings'), () => this.settingsUI.open(), '#CCCCCC');
 
-        this.questBadge = this.add.text(c3 + 22, r1 - 22, '●', { fontSize: '20px', fill: '#FF4444' }).setOrigin(0.5).setDepth(13).setVisible(false);
+        this.questBadge = this.add.text(c3 + 26, r1 - 26, '●', { fontSize: '22px', fill: '#FF4444' }).setOrigin(0.5).setDepth(13).setVisible(false);
         this.tweens.add({ targets: this.questBadge, alpha: { from: 1, to: 0.3 }, duration: 700, yoyo: true, repeat: -1 });
         this.updateQuestBadge();
 
         const ds = this.state.getDailyStatus();
         if (ds.canClaim) {
-            const dailyBg = this.add.circle(360, 100, 24, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
-            const dailyIcon = this.add.text(360, 100, '🎁', { fontSize: '28px' }).setOrigin(0.5).setDepth(15);
-            const hit = this.add.circle(360, 100, 30, 0x000000, 0.001).setDepth(16).setInteractive({ useHandCursor: true });
+            const dailyBg = this.add.circle(360, 100, 26, 0xFFD700, 1).setDepth(14).setStrokeStyle(3, 0xFFFFFF, 0.9);
+            const dailyIcon = this.add.text(360, 100, '🎁', { fontSize: '30px' }).setOrigin(0.5).setDepth(15);
+            const hit = this.add.circle(360, 100, 32, 0x000000, 0.001).setDepth(16).setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => this.dailyUI.open());
         }
 
@@ -3055,9 +3125,28 @@ class MainScene extends Phaser.Scene {
         this.steamText = this.add.text(W / 2, 282, t('steams'), { fontSize: '12px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(11).setVisible(false);
         this.starsCounter = this.add.text(W / 2, 300, '', { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(11).setVisible(false);
 
-        const finishBtn = this.add.text(W / 2, 1050, t('getMoney'), { ...TEXT_STYLES.button('#00FF00', 30), backgroundColor: '#000000', padding: { x: 30, y: 15 } }).setOrigin(0.5).setDepth(10).setInteractive({ useHandCursor: true });
-        finishBtn.on('pointerdown', () => {
-            this.tweens.add({ targets: finishBtn, scaleX: 0.94, scaleY: 0.94, duration: 80, yoyo: true, ease: 'Quad.easeOut' });
+        // Кнопка «ПОЛУЧИТЬ ДЕНЬГИ» — pill с рамкой и тенью
+        const fbY = 1050;
+        const fbW = 380, fbH = 80, fbR = 40;
+        const fbShadow = this.add.graphics().setDepth(9);
+        fbShadow.fillStyle(0x000000, 0.45);
+        fbShadow.fillRoundedRect(W/2 - fbW/2 + 3, fbY - fbH/2 + 5, fbW, fbH, fbR);
+        const fbBg = this.add.graphics().setDepth(10);
+        fbBg.fillStyle(0x0a2010, 1);
+        fbBg.fillRoundedRect(W/2 - fbW/2, fbY - fbH/2, fbW, fbH, fbR);
+        fbBg.lineStyle(4, 0x00FF88, 1);
+        fbBg.strokeRoundedRect(W/2 - fbW/2, fbY - fbH/2, fbW, fbH, fbR);
+        fbBg.lineStyle(2, 0xFFFFFF, 0.35);
+        fbBg.strokeRoundedRect(W/2 - fbW/2 + 6, fbY - fbH/2 + 6, fbW - 12, fbH - 12, fbR - 6);
+        const fbText = this.add.text(W/2, fbY, t('getMoney'), {
+            fontSize: '30px', fill: '#00FF88', fontStyle: 'bold', fontFamily: FONT_HAND,
+            stroke: '#000000', strokeThickness: 5
+        }).setOrigin(0.5).setDepth(11);
+        const fbHit = this.add.rectangle(W/2, fbY, fbW, fbH, 0x000000, 0.001).setDepth(12).setInteractive({ useHandCursor: true });
+        fbHit.on('pointerdown', () => {
+            this.tweens.killTweensOf(fbBg); this.tweens.killTweensOf(fbText); this.tweens.killTweensOf(fbShadow);
+            fbBg.setScale(0.94); fbText.setScale(0.94); fbShadow.setScale(0.94);
+            this.tweens.add({ targets: [fbBg, fbText, fbShadow], scaleX: 1, scaleY: 1, duration: 110, ease: 'Back.easeOut' });
             this.finishCarpet();
         });
     }
@@ -3069,10 +3158,10 @@ class MainScene extends Phaser.Scene {
         this.dayNightText.setText(`${icon} ${t(td)}  +${bonus}%💰`);
     }
     refreshHUD() {
-        this.moneyText.setText('💰 ' + this.state.money);
-        this.foodText.setText('🍞 ' + this.state.food);
-        this.toolText.setText('🧹 ' + this.state.getCurrentRadius());
-        this.carpetText.setText('🧽 ' + this.state.carpetsCleaned);
+        this.moneyText.setText('' + this.state.money);
+        this.foodText.setText('' + this.state.food);
+        this.toolText.setText('' + this.state.getCurrentRadius());
+        this.carpetText.setText('' + this.state.carpetsCleaned);
         this.soapLvlText.setText(`🧼${this.state.soapLevel}  🧹${this.state.washLevel}  🪰${this.state.swatterLevel}`);
         this.updateQuestBadge(); this.updateDayNightText(); this.updateStarsCounter();
     }
@@ -3104,11 +3193,18 @@ class MainScene extends Phaser.Scene {
         tools.forEach((tool, i) => {
             const x = startX + i * (btnW + gap);
             const pill = makePill(this, x, btnY, btnW, btnH, { radius: 22, fill: 0x1a1008, stroke: 0x8a6a40, strokeW: 3, depth: 10 });
-            const accent = this.add.rectangle(x, btnY + btnH / 2 - 8, btnW - 24, 4, tool.color, 0.95).setDepth(11).setOrigin(0.5);
-            const icon = this.add.text(x, btnY - 14, tool.icon, { fontSize: '38px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(11);
-            const label = this.add.text(x, btnY + 22, tool.label, { fontSize: '13px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
+            const accent = this.add.rectangle(x, btnY + btnH / 2 - 6, btnW - 24, 4, tool.color, 0.95).setDepth(11).setOrigin(0.5);
+            // Иконка по центру кнопки
+            const icon = this.add.text(x, btnY - 8, tool.icon, { fontSize: '44px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(11);
+            // Подпись мельче, ниже
+            const label = this.add.text(x, btnY + 30, tool.label, { fontSize: '14px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
+            // Уровень в левом верхнем углу кнопки
+            const lvlBadge = this.add.text(x - btnW/2 + 8, btnY - btnH/2 + 6, '', {
+                fontSize: '11px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND,
+                stroke: '#000000', strokeThickness: 3
+            }).setOrigin(0, 0).setDepth(12);
             pill.hit.on('pointerdown', () => { pill.tap(); this.selectTool(tool.id); });
-            this.toolBtns[tool.id] = { pill, txt: label, icon, accent, color: tool.color, x, y: btnY, w: btnW, h: btnH };
+            this.toolBtns[tool.id] = { pill, txt: label, icon, lvlBadge, accent, color: tool.color, x, y: btnY, w: btnW, h: btnH };
         });
         this.updateSteamUI();
         this.selectTool(this.currentTool || 'soap');
@@ -3118,6 +3214,16 @@ class MainScene extends Phaser.Scene {
         if (this.steamBg) this.steamBg.setVisible(active);
         if (this.steamBar) this.steamBar.setVisible(active);
         if (this.steamText) this.steamText.setVisible(active);
+    }
+    updateToolLevels() {
+        if (!this.toolBtns) return;
+        const lvlMap = { soap: this.state.soapLevel, wash: this.state.washLevel, swatter: this.state.swatterLevel, scraper: 0, steam: 0, remover: 0 };
+        for (const id in this.toolBtns) {
+            const b = this.toolBtns[id];
+            if (!b.lvlBadge) continue;
+            const lvl = lvlMap[id] || 0;
+            b.lvlBadge.setText(lvl > 0 ? 'lvl ' + lvl : '');
+        }
     }
     selectTool(tool) {
         if (this.state.carpetIndex >= 4 && (tool === 'soap' || tool === 'wash')) tool = 'scraper';
@@ -3146,6 +3252,7 @@ class MainScene extends Phaser.Scene {
         else if (tool === 'remover') this.brush.setText('🧴');
         else this.brush.setVisible(false);
         if (tool !== 'swatter') this.effects.hideSwatterCursor();
+        this.updateToolLevels();
     }
     setupInput() {
         this.game.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
@@ -3241,6 +3348,8 @@ class MainScene extends Phaser.Scene {
         const reward = this.state.addReward(timeSec);
         this.refreshHUD();
         await this.saveSystem.save();
+        // Визуальный эффект получения денег
+        this.effects.moneyFlash(720, 1280, reward);
         this.showMessage(`+${reward} 💰!  ⏱ ${formatTime(timeSec)}`);
         this.mascot?.react('finish');
         if (this.tutorial) this.tutorial.reportAction('finish');
@@ -3290,6 +3399,7 @@ class MainScene extends Phaser.Scene {
                 if (b.pill) try { b.pill.cont.destroy(true); } catch {}
                 if (b.txt) b.txt.destroy();
                 if (b.icon) b.icon.destroy();
+                if (b.lvlBadge) b.lvlBadge.destroy();
                 if (b.accent) b.accent.destroy();
             }
             this.toolBtns = null;
@@ -3328,6 +3438,7 @@ class MainScene extends Phaser.Scene {
                 if (b.pill) try { b.pill.cont.destroy(true); } catch {}
                 if (b.txt) b.txt.destroy();
                 if (b.icon) b.icon.destroy();
+                if (b.lvlBadge) b.lvlBadge.destroy();
                 if (b.accent) b.accent.destroy();
             }
             this.toolBtns = null;
@@ -3336,7 +3447,7 @@ class MainScene extends Phaser.Scene {
         this.updateSteamUI();
         this.selectTool('soap');
         if (this.prestigeText) this.prestigeText.destroy();
-        this.prestigeText = this.add.text(320, 22, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
+        this.prestigeText = this.add.text(322, 22, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
             fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4
         }).setOrigin(1, 0).setDepth(10);
         if (this.tutorial) { this.tutorial.isOpen = false; this.tutorial.clearStep(); }
@@ -3359,6 +3470,21 @@ class MainScene extends Phaser.Scene {
     updateProgressBar(p) {
         this.progressBar.width = 400 * p;
         this.progressText.setText(Math.min(100, Math.floor(p * 100)) + '%');
+        // Пульс на 50%, 90%, 100%
+        const milestones = [0.5, 0.9, 1.0];
+        for (const m of milestones) {
+            if (p >= m && !this['_pulse_' + m]) {
+                this['_pulse_' + m] = true;
+                const flash = this.add.rectangle(360, 230, 400, 30, 0xFFFFFF, 0.7).setDepth(12);
+                this.tweens.add({ targets: flash, alpha: 0, scaleX: 1.1, scaleY: 1.6, duration: 450, ease: 'Cubic.easeOut',
+                    onComplete: () => flash.destroy() });
+                this.tweens.add({ targets: this.progressBar, scaleY: 1.6, duration: 200, yoyo: true, ease: 'Quad.easeOut' });
+                if (m === 1.0) {
+                    this.tweens.add({ targets: this.progressText, scaleX: 1.4, scaleY: 1.4, duration: 250, yoyo: true, ease: 'Back.easeOut' });
+                }
+            }
+            if (p < m) this['_pulse_' + m] = false;
+        }
     }
     vibrate() { if (!this.state.settings.vibration) return; try { navigator.vibrate?.(BALANCE.vibrationMs); } catch {} }
     showNoFoodWarning() {
