@@ -563,9 +563,9 @@ class AmbientMusic {
 }
 
 class Mascot {
-    constructor(scene) {
+   constructor(scene) {
         this.scene = scene;
-        this.x = 640; this.y = 1000;
+        this.x = 640; this.y = 1070;
         this.container = scene.add.container(this.x, this.y).setDepth(50);
         this._buildKitten();
         this._buildHitZone();
@@ -1195,7 +1195,7 @@ class LeaderboardSystem {
     }
     async submitScores() {
         if (!await this._init()) return;
-        try { await this.lb.setLeaderboardScore('bestMoney', this.state.leaderboardBestMoney); } catch {}
+        try { await this.lb.setLeaderboardScore('bestMoney', this.state.leaderboardBestMoney); } catch {}      
         try { await this.lb.setLeaderboardScore('prestige', this.state.leaderboardBestPrestige); } catch {}
     }
     async fetchTop(name = 'bestMoney', count = 10) {
@@ -3119,7 +3119,7 @@ class MainScene extends Phaser.Scene {
         }
 
         const pbW = 420, pbH = 44, pbR = 22;
-        const pbX = W/2, pbY = 230;
+        const pbX = W/2, pbY = 260;
 
         const pbShadow = this.add.graphics().setDepth(9);
         pbShadow.fillStyle(0x000000, 0.5);
@@ -3147,9 +3147,9 @@ class MainScene extends Phaser.Scene {
             shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true }
         }).setOrigin(0.5).setDepth(13);
 
-        this.steamBg = this.add.rectangle(W / 2, 285, 220, 16, 0x111111, 0.85).setDepth(10).setStrokeStyle(2, 0x8a6a40, 0.6).setVisible(false);
-        this.steamBar = this.add.rectangle(W / 2 - 106, 285, 212, 12, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
-        this.steamText = this.add.text(W / 2, 303, t('steams'), { fontSize: '13px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11).setVisible(false);
+        this.steamBg = this.add.rectangle(W / 2, 315, 220, 16, 0x111111, 0.85).setDepth(10).setStrokeStyle(2, 0x8a6a40, 0.6).setVisible(false);
+        this.steamBar = this.add.rectangle(W / 2 - 106, 315, 212, 12, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
+        this.steamText = this.add.text(W / 2, 333, t('steams'), { fontSize: '13px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11).setVisible(false);
 
         // ============================================================
         // Кнопка «ПОЛУЧИТЬ ДЕНЬГИ» — обёрнута в контейнер, чтобы scale
