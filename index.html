@@ -2138,13 +2138,24 @@ class ShopUI {
         this.onPrestige = null; this.onSkinChange = null; this.onPetBought = null;
         this.onLegacyBuy = null; this.onOpen = null; this.onClose = null;
     }
-    open() { if (this.isOpen) return; this.isOpen = true; this.onOpen?.(); this.render(); }
+        open() {
+        if (this.isOpen) return;
+        this.isOpen = true;
+        this._fadeIn = true;
+        this.onOpen?.();
+        this.render();
+    }
     close() {
         if (!this.isOpen) return;
         this.isOpen = false;
         this.group.closeFade(() => this.onClose?.());
     }
-    refresh() { if (!this.isOpen) return; this.group._destroyAll(); this.render(); }
+        refresh() {
+        if (!this.isOpen) return;
+        this._fadeIn = false;
+        this.group._destroyAll();
+        this.render();
+    }
     // Покупка — обновляем содержимое, окно остаётся открытым
     async _afterBuy() {
         await this.onChanged?.();
@@ -2164,8 +2175,11 @@ class ShopUI {
         else if (this.activeTab === 'prestige') this._renderPrestige(push);
         const closeHit = push(s.add.text(630, 100, '✖', { fontSize: '52px', fill: '#FF4444', fontStyle: 'bold', stroke: '#000000', strokeThickness: 6 })
             .setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }));
-        closeHit.on('pointerdown', () => this.close());
-        this.group.openFade();
+                closeHit.on('pointerdown', () => this.close());
+        if (this._fadeIn) {
+            this.group.openFade();
+            this._fadeIn = false;
+        }
     }
     _renderTabs(push) {
         const s = this.scene, st = this.state;
