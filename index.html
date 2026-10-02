@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Чистим Ковры / Clean Carpets</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧽</text></svg>">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
@@ -266,12 +267,14 @@ const BALANCE = {
 
 const SAVE_KEY = 'carpetGameStats_v12';
 
+// ?v=2 — обход кэша браузера (после обновления картинок можно поставить v=3, v=4...)
+const ROOM_VERSION = 2;
 const ROOM_IMAGES = {
-    classic: 'rooms/room_classic.png',
-    neon:    'rooms/room_neon.png',
-    beach:   'rooms/room_beach.png',
-    space:   'rooms/room_space.png',
-    candy:   'rooms/room_candy.png'
+    classic: `rooms/room_classic.png?v=${ROOM_VERSION}`,
+    neon:    `rooms/room_neon.png?v=${ROOM_VERSION}`,
+    beach:   `rooms/room_beach.png?v=${ROOM_VERSION}`,
+    space:   `rooms/room_space.png?v=${ROOM_VERSION}`,
+    candy:   `rooms/room_candy.png?v=${ROOM_VERSION}`
 };
 
 const LEGACY_UPGRADES = [
@@ -569,7 +572,6 @@ class Mascot {
         this._cooldownKeys = {};
         this._lastTap = 0;
         this._blinkTimer = null;
-        this._tailTween = null;
         this._scheduleIdle();
         this._scheduleBlink();
         this._scheduleTail();
@@ -585,28 +587,24 @@ class Mascot {
         g.fillStyle(0xFFC9A0, 1);
         g.fillTriangle(-30, -33, -18, -52, -10, -35);
         g.fillTriangle( 30, -33,  18, -52,  10, -35);
-        // Глаза (open)
         this.eyeLeft = this.scene.add.graphics();
         this.eyeLeft.fillStyle(0x1A1A1A, 1); this.eyeLeft.fillCircle(-13, -14, 4.5);
         this.eyeLeft.fillStyle(0xFFFFFF, 1); this.eyeLeft.fillCircle(-12, -15, 1.6);
         this.eyeRight = this.scene.add.graphics();
         this.eyeRight.fillStyle(0x1A1A1A, 1); this.eyeRight.fillCircle(13, -14, 4.5);
         this.eyeRight.fillStyle(0xFFFFFF, 1); this.eyeRight.fillCircle(14, -15, 1.6);
-        // Нос + рот
         g.fillStyle(0xFF7A7A, 1); g.fillTriangle(-3, -2, 3, -2, 0, 2);
         g.lineStyle(1.5, 0x1A1A1A, 1);
         g.beginPath(); g.moveTo(0, 2); g.lineTo(-4, 6); g.moveTo(0, 2); g.lineTo(4, 6); g.strokePath();
-        // Усы
         g.lineStyle(1.2, 0x1A1A1A, 0.8);
         g.lineBetween(-30, -6, -12, -3); g.lineBetween(-30, 2, -12, 0);
         g.lineBetween( 30, -6,  12, -3); g.lineBetween( 30, 2,  12, 0);
-        // Лапки
         g.fillStyle(0xF3A44B, 1);
         g.fillEllipse(-18, 46, 22, 16); g.fillEllipse(18, 46, 22, 16);
         this.container.add(g);
         this.container.add(this.eyeLeft);
         this.container.add(this.eyeRight);
-                // Хвост
+        // Хвост — без quadraticCurveTo
         this.tail = this.scene.add.graphics();
         this.tail.lineStyle(8, 0xF3A44B, 1);
         this.tail.beginPath();
@@ -619,12 +617,9 @@ class Mascot {
         this.scene.tweens.add({ targets: this.container, y: this.y - 4, duration: 1600, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
     }
     _scheduleTail() {
-        const loop = () => {
-            if (this.tail && this.tail.active) {
-                this.scene.tweens.add({ targets: this.tail, angle: { from: -4, to: 4 }, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
-            }
-        };
-        loop();
+        if (this.tail && this.tail.active) {
+            this.scene.tweens.add({ targets: this.tail, angle: { from: -4, to: 4 }, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.easeInOut' });
+        }
     }
     _scheduleBlink() {
         const loop = () => {
@@ -1323,11 +1318,9 @@ class Effects {
         }
     }
     moneyFlash(W, H, amount) {
-        // Вспышка на ковре
         const flash = this.scene.add.rectangle(W/2, 600, 500, 700, 0xFFFF88, 0.55).setDepth(28);
         this.scene.tweens.add({ targets: flash, alpha: 0, duration: 450, ease: 'Cubic.easeOut',
             onComplete: () => flash.destroy() });
-        // Всплывающие +N💰 по ковру
         const positions = [
             { x: W/2 - 180, y: 400 }, { x: W/2 + 180, y: 400 },
             { x: W/2 - 180, y: 800 }, { x: W/2 + 180, y: 800 },
@@ -1343,7 +1336,6 @@ class Effects {
                     duration: 1100, ease: 'Cubic.easeOut', onComplete: () => tt.destroy() });
             });
         });
-        // Крупная центральная цифра
         const big = this.scene.add.text(W/2, 600, `+${amount}`, {
             fontSize: '72px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND,
             stroke: '#000000', strokeThickness: 8
@@ -1807,7 +1799,6 @@ class RoomRenderer {
         g.fillRect(0, 0, 55, 1000);
         g.fillRect(W - 55, 0, 55, 1000);
 
-        // Окно — светлее
         const wx = 75, wy = 30, ww = W - 150, wh = 420;
         g.fillStyle(0x4a2c14, 1); g.fillRect(wx - 18, wy - 18, ww + 36, wh + 36);
         g.fillStyle(0x2a1a0e, 1); g.fillRect(wx - 10, wy - 10, ww + 20, wh + 20);
@@ -1826,7 +1817,6 @@ class RoomRenderer {
             g.fillStyle(0xffffff, 0.6 + Math.random() * 0.4);
             g.fillCircle(sx, sy, 0.8 + Math.random() * 1.4);
         }
-        // Луна поярче
         g.fillStyle(0xfffbe0, 1); g.fillCircle(wx + ww * 0.78, wy + wh * 0.18, 32);
         g.fillStyle(0x3a4a6a, 1); g.fillCircle(wx + ww * 0.78 - 9, wy + wh * 0.18 - 5, 27);
 
@@ -2887,9 +2877,9 @@ class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
         for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
-                // for (const id in ROOM_IMAGES) {
-        //     this.load.image('room_' + id, ROOM_IMAGES[id]);
-        // }
+        for (const id in ROOM_IMAGES) {
+            this.load.image('room_' + id, ROOM_IMAGES[id]);
+        }
         this.load.on('loaderror', () => {});
         const w = this.cameras.main.width, h = this.cameras.main.height;
         this.add.text(w / 2, h / 2 - 50, t('loading'), TEXT_STYLES.title()).setOrigin(0.5);
@@ -3054,6 +3044,7 @@ class MainScene extends Phaser.Scene {
         this.tutorial.start();
     }
     buildHUD(W, H) {
+        // Панели со скруглением
         const leftPanelBg = this.add.graphics().setDepth(9);
         leftPanelBg.fillStyle(0x000000, 0.78);
         leftPanelBg.fillRoundedRect(12, 12, 325, 180, 18);
@@ -3066,23 +3057,18 @@ class MainScene extends Phaser.Scene {
         rightPanelBg.lineStyle(2, 0x4A90D9, 0.5);
         rightPanelBg.strokeRoundedRect(383, 12, 325, 180, 18);
 
-        // Иконки отдельно от текста, колонкой
-        this.add.text(30, 22, '💰', { fontSize: '26px' }).setOrigin(0, 0).setDepth(10);
-        this.add.text(30, 62, '🍞', { fontSize: '22px' }).setOrigin(0, 0).setDepth(10);
-        this.add.text(30, 96, '🧹', { fontSize: '18px' }).setOrigin(0, 0).setDepth(10);
-        this.add.text(165, 96, '🧽', { fontSize: '18px' }).setOrigin(0, 0).setDepth(10);
+        // Иконки и числа в одной строке — не разъезжаются
+        this.moneyText = this.add.text(28, 20, '💰 ' + this.state.money, TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
+        this.foodText = this.add.text(28, 62, '🍞 ' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
+        this.toolText = this.add.text(28, 96, '🧹 ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 18)).setDepth(10);
+        this.carpetText = this.add.text(178, 96, '🧽 ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
 
-        this.moneyText = this.add.text(62, 22, '' + this.state.money, TEXT_STYLES.stat('#FFD700', 30)).setDepth(10);
-        this.foodText = this.add.text(62, 62, '' + this.state.food, TEXT_STYLES.stat('#FFFFFF', 22)).setDepth(10);
-        this.toolText = this.add.text(62, 96, '' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 18)).setDepth(10);
-        this.carpetText = this.add.text(197, 96, '' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 18)).setDepth(10);
-
-        this.soapLvlText = this.add.text(30, 124, `🧼${this.state.soapLevel}  🧹${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
-        this.dayNightText = this.add.text(30, 152, '', { fontSize: '15px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
+        this.soapLvlText = this.add.text(28, 124, `🧼${this.state.soapLevel}  🧹${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 15)).setDepth(10);
+        this.dayNightText = this.add.text(28, 152, '', { fontSize: '15px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setDepth(10);
         this.updateDayNightText();
-        this.timerText = this.add.text(322, 152, '⏱ 0:00', { fontSize: '17px', fill: '#FFDD66', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
+        this.timerText = this.add.text(320, 152, '⏱ 0:00', { fontSize: '17px', fill: '#FFDD66', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
         if (this.state.prestigeLevel > 0 || this.state.legacyPoints > 0) {
-            this.prestigeText = this.add.text(322, 22, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, { fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
+            this.prestigeText = this.add.text(320, 22, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, { fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(1, 0).setDepth(10);
         }
 
         const makeBtn = (x, y, icon, label, onClick, color = '#FFFFFF') => {
@@ -3127,7 +3113,7 @@ class MainScene extends Phaser.Scene {
         this.steamText = this.add.text(W / 2, 282, t('steams'), { fontSize: '12px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(11).setVisible(false);
         this.starsCounter = this.add.text(W / 2, 300, '', { fontSize: '18px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(0.5).setDepth(11).setVisible(false);
 
-        // Кнопка «ПОЛУЧИТЬ ДЕНЬГИ» — pill с рамкой и тенью
+        // Кнопка «ПОЛУЧИТЬ ДЕНЬГИ» — pill
         const fbY = 1050;
         const fbW = 380, fbH = 80, fbR = 40;
         const fbShadow = this.add.graphics().setDepth(9);
@@ -3160,10 +3146,10 @@ class MainScene extends Phaser.Scene {
         this.dayNightText.setText(`${icon} ${t(td)}  +${bonus}%💰`);
     }
     refreshHUD() {
-        this.moneyText.setText('' + this.state.money);
-        this.foodText.setText('' + this.state.food);
-        this.toolText.setText('' + this.state.getCurrentRadius());
-        this.carpetText.setText('' + this.state.carpetsCleaned);
+        this.moneyText.setText('💰 ' + this.state.money);
+        this.foodText.setText('🍞 ' + this.state.food);
+        this.toolText.setText('🧹 ' + this.state.getCurrentRadius());
+        this.carpetText.setText('🧽 ' + this.state.carpetsCleaned);
         this.soapLvlText.setText(`🧼${this.state.soapLevel}  🧹${this.state.washLevel}  🪰${this.state.swatterLevel}`);
         this.updateQuestBadge(); this.updateDayNightText(); this.updateStarsCounter();
     }
@@ -3196,20 +3182,22 @@ class MainScene extends Phaser.Scene {
             const x = startX + i * (btnW + gap);
             const pill = makePill(this, x, btnY, btnW, btnH, { radius: 22, fill: 0x1a1008, stroke: 0x8a6a40, strokeW: 3, depth: 10 });
             const accent = this.add.rectangle(x, btnY + btnH / 2 - 6, btnW - 24, 4, tool.color, 0.95).setDepth(11).setOrigin(0.5);
-            // Иконка по центру кнопки
-            const icon = this.add.text(x, btnY - 8, tool.icon, { fontSize: '44px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(11);
-            // Подпись мельче, ниже
-            const label = this.add.text(x, btnY + 30, tool.label, { fontSize: '14px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
-            // Уровень в левом верхнем углу кнопки
+            // Иконка крупнее и по центру
+            const icon = this.add.text(x, btnY - 8, tool.icon, { fontSize: '52px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(11);
+            // Подпись мельче, снизу
+            const label = this.add.text(x, btnY + 32, tool.label, { fontSize: '15px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
+            // Бейдж уровня — только для soap/wash/swatter
+            const showLvl = (tool.id === 'soap' || tool.id === 'wash' || tool.id === 'swatter');
             const lvlBadge = this.add.text(x - btnW/2 + 8, btnY - btnH/2 + 6, '', {
-                fontSize: '11px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND,
+                fontSize: '12px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND,
                 stroke: '#000000', strokeThickness: 3
-            }).setOrigin(0, 0).setDepth(12);
+            }).setOrigin(0, 0).setDepth(12).setVisible(showLvl);
             pill.hit.on('pointerdown', () => { pill.tap(); this.selectTool(tool.id); });
             this.toolBtns[tool.id] = { pill, txt: label, icon, lvlBadge, accent, color: tool.color, x, y: btnY, w: btnW, h: btnH };
         });
         this.updateSteamUI();
         this.selectTool(this.currentTool || 'soap');
+        this.updateToolLevels();
     }
     updateSteamUI() {
         const active = this.state.carpetIndex >= 4;
@@ -3219,12 +3207,19 @@ class MainScene extends Phaser.Scene {
     }
     updateToolLevels() {
         if (!this.toolBtns) return;
-        const lvlMap = { soap: this.state.soapLevel, wash: this.state.washLevel, swatter: this.state.swatterLevel, scraper: 0, steam: 0, remover: 0 };
         for (const id in this.toolBtns) {
             const b = this.toolBtns[id];
             if (!b.lvlBadge) continue;
-            const lvl = lvlMap[id] || 0;
-            b.lvlBadge.setText(lvl > 0 ? 'lvl ' + lvl : '');
+            let lvl = 0;
+            if (id === 'soap') lvl = this.state.soapLevel;
+            else if (id === 'wash') lvl = this.state.washLevel;
+            else if (id === 'swatter') lvl = this.state.swatterLevel;
+            // Для scraper/steam/remover всегда скрыто
+            if (lvl > 1 && (id === 'soap' || id === 'wash' || id === 'swatter')) {
+                b.lvlBadge.setText('L' + lvl).setVisible(true);
+            } else {
+                b.lvlBadge.setText('').setVisible(false);
+            }
         }
     }
     selectTool(tool) {
@@ -3350,7 +3345,6 @@ class MainScene extends Phaser.Scene {
         const reward = this.state.addReward(timeSec);
         this.refreshHUD();
         await this.saveSystem.save();
-        // Визуальный эффект получения денег
         this.effects.moneyFlash(720, 1280, reward);
         this.showMessage(`+${reward} 💰!  ⏱ ${formatTime(timeSec)}`);
         this.mascot?.react('finish');
@@ -3449,7 +3443,7 @@ class MainScene extends Phaser.Scene {
         this.updateSteamUI();
         this.selectTool('soap');
         if (this.prestigeText) this.prestigeText.destroy();
-        this.prestigeText = this.add.text(322, 22, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
+        this.prestigeText = this.add.text(320, 22, `👑${this.state.prestigeLevel}  ✨${this.state.legacyPoints}`, {
             fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4
         }).setOrigin(1, 0).setDepth(10);
         if (this.tutorial) { this.tutorial.isOpen = false; this.tutorial.clearStep(); }
@@ -3472,7 +3466,6 @@ class MainScene extends Phaser.Scene {
     updateProgressBar(p) {
         this.progressBar.width = 400 * p;
         this.progressText.setText(Math.min(100, Math.floor(p * 100)) + '%');
-        // Пульс на 50%, 90%, 100%
         const milestones = [0.5, 0.9, 1.0];
         for (const m of milestones) {
             if (p >= m && !this['_pulse_' + m]) {
