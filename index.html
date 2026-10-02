@@ -497,7 +497,21 @@ class AmbientMusic {
             this.master.connect(this.ctx.destination);
         } catch {}
     }
-    resume() { try { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); } catch {} }
+        resume() {
+        try {
+            if (!this.ctx) return;
+            if (this.ctx.state === 'suspended') {
+                const p = this.ctx.resume();
+                if (p && p.then) {
+                    p.then(() => {
+                        if (this.enabled && !this._playing) this.start();
+                    }).catch(() => {});
+                }
+            } else if (this.enabled && !this._playing) {
+                this.start();
+            }
+        } catch {}
+    }
     _playNote(freq, dur, type = 'sine', vol = 0.1) {
         if (!this.ctx || !this.bus) return;
         const t = this.ctx.currentTime;
@@ -1781,6 +1795,16 @@ class RoomRenderer {
         g.fillTriangle(wx + ww * 0.12, wy + wh * 0.5, wx + ww * 0.07, wy + wh * 0.56, wx + ww * 0.17, wy + wh * 0.56);
         g.fillTriangle(wx + ww * 0.72, wy + wh * 0.42, wx + ww * 0.68, wy + wh * 0.48, wx + ww * 0.76, wy + wh * 0.48);
 
+                // Мягкий светлый участок на стене (где раньше стояла лампа)
+        g.fillStyle(0x6a4a2a, 0.35); g.fillCircle(64, 900, 90);
+        g.fillStyle(0x7a5a35, 0.28); g.fillCircle(64, 900, 70);
+        g.fillStyle(0x8a6a40, 0.20); g.fillCircle(64, 900, 50);
+        // Солнечный луч из окна падает на стену
+        g.fillStyle(0xE8C88A, 0.06);
+        g.fillRect(60, 500, 90, 450);
+        g.fillStyle(0xE8C88A, 0.04);
+        g.fillRect(30, 500, 150, 450);
+
         // Передние горы
         g.fillStyle(0x3a4d6b, 1);
         g.beginPath();
@@ -2793,7 +2817,7 @@ class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
         // Загружаем ковры
-        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `carpets/carpet${i}.png`);
+        for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
 
         // Загружаем картинки комнат (если их нет — молча пропустим, будет процедурная отрисовка)
         for (const id in ROOM_IMAGES) {
@@ -2839,17 +2863,25 @@ class MainScene extends Phaser.Scene {
         this.carpetX = W / 2; this.carpetY = 600;
         this.carpetBounds = new Phaser.Geom.Rectangle(this.carpetX - this.carpetW / 2, this.carpetY - this.carpetH / 2, this.carpetW, this.carpetH);
 
-        this.ambientMusic = new AmbientMusic();
-        this.ambientMusic.init();
+                this.ambientMusic = new AmbientMusic();
+        // init() НЕ вызываем здесь — только внутри жеста пользователя (иначе на мобиле контекст не оживёт)
+
         this._startMusicOnce = () => {
-            this.ambientMusic.resume();
-            if (this.state.settings.music) this.ambientMusic.setEnabled(true);
+            try {
+                if (!this.ambientMusic.ctx) this.ambientMusic.init();
+                this.ambientMusic.resume();
+                if (this.state.settings.music) this.ambientMusic.setEnabled(true);
+            } catch {}
             window.removeEventListener('pointerdown', this._startMusicOnce);
             window.removeEventListener('touchstart', this._startMusicOnce);
+            window.removeEventListener('touchend', this._startMusicOnce);
+            window.removeEventListener('click', this._startMusicOnce);
             window.removeEventListener('keydown', this._startMusicOnce);
         };
         window.addEventListener('pointerdown', this._startMusicOnce);
-        window.addEventListener('touchstart', this._startMusicOnce);
+        window.addEventListener('touchstart', this._startMusicOnce, { passive: true });
+        window.addEventListener('touchend', this._startMusicOnce, { passive: true });
+        window.addEventListener('click', this._startMusicOnce);
         window.addEventListener('keydown', this._startMusicOnce);
 
         this.room = new RoomRenderer(this);
