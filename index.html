@@ -2926,7 +2926,7 @@ class MainScene extends Phaser.Scene {
         this.ads = this.registry.get('ads');
         this.leaderboard = this.registry.get('leaderboard');
         if (this.input.mouse) this.input.mouse.disableContextMenu();
-        this.input.setDefaultCursor('none');   // ← системный курсор скрыт на игровом поле
+        this.input.setDefaultCursor('default');
         this.saveSystem.ready();
         const W = 720, H = 1280;
         this.carpetW = 500; this.carpetH = 700;
@@ -3307,68 +3307,104 @@ class MainScene extends Phaser.Scene {
         this.updateToolLevels();
     }
     setupInput() {
-        this.game.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-        this.game.canvas.addEventListener('touchmove',  (e) => e.preventDefault(), { passive: false });
-        const uiOpen = () => this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
-            || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen;
-        const handlePointer = (pointer) => {
-            if (this.inputLocked || uiOpen() || this.stars.active) return;
-            if (this.currentTool === 'swatter') { this.effects.drawSwatterCursor(pointer.x, pointer.y); this._setBrushVisible(false); return; }
-            this.effects.hideSwatterCursor();
+    this.game.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+    this.game.canvas.addEventListener('touchmove',  (e) => e.preventDefault(), { passive: false });
+
+    const uiOpen = () => this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
+        || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen;
+
+    // Единый помощник: скрыть/показать системный курсор в зависимости от зоны
+    const applyCursor = (overCarpet) => {
+        // На тач-устройствах mouse может быть null — метод всё равно безопасен
+        this.input.setDefaultCursor(overCarpet ? 'none' : 'default');
+    };
+
+    const handlePointer = (pointer) => {
+        if (this.inputLocked || uiOpen() || this.stars.active) return;
+
+        // Инструмент-мухобойка — отдельный случай (свой прицел)
+        if (this.currentTool === 'swatter') {
+            this.effects.drawSwatterCursor(pointer.x, pointer.y);
+            this._setBrushVisible(false);
+            applyCursor(true);   // над ковром системный курсор тоже прячем
+            return;
+        }
+
+        this.effects.hideSwatterCursor();
+
+        const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+        // Иконка инструмента ВСЕГДА видна, когда палец/мышь над ковром (и при драге тоже)
+        this._setBrushVisible(inB, pointer.x, pointer.y);
+        applyCursor(inB);   // ← системный курсор скрыт только над ковром
+
+        if (!inB) return;
+        const lx = pointer.x - this.carpetBounds.x, ly = pointer.y - this.carpetBounds.y;
+        const dx = lx - this.lastLocalX, dy = ly - this.lastLocalY;
+        if (dx * dx + dy * dy < 64) return;
+        this.lastLocalX = lx; this.lastLocalY = ly;
+        this.applyTool(lx, ly);
+    };
+
+    this.input.on('pointerdown', (pointer) => {
+        if (this.inputLocked || uiOpen() || this.stars.active) return;
+        this.ambientMusic.resume();
+
+        if (this.currentTool === 'swatter') {
             const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-
-            // При активной чистке (палец/мышь зажат) — курсор полностью скрыт
-            if (this.isPointerDown) {
-                this._setBrushVisible(false);
-            } else {
-                this._setBrushVisible(inB, pointer.x, pointer.y);
-            }
-
-            if (!inB) return;
-            const lx = pointer.x - this.carpetBounds.x, ly = pointer.y - this.carpetBounds.y;
-            const dx = lx - this.lastLocalX, dy = ly - this.lastLocalY;
-            if (dx * dx + dy * dy < 64) return;
-            this.lastLocalX = lx; this.lastLocalY = ly;
-            this.applyTool(lx, ly);
-        };
-        this.input.on('pointerdown', (pointer) => {
-            if (this.inputLocked || uiOpen() || this.stars.active) return;
-            this.ambientMusic.resume();
-            if (this.currentTool === 'swatter') {
+            if (inB) {
                 this.effects.drawSwatterCursor(pointer.x, pointer.y);
                 this.effects.swatEffect(pointer.x, pointer.y);
                 const hit = this.bugs.swat(pointer.x, pointer.y, this.time.now);
                 if (hit && this.tutorial) this.tutorial.reportAction('killBugs');
                 this.refreshHUD();
-                return;
             }
-            this.isPointerDown = true;
-            this.lastLocalX = -9999; this.lastLocalY = -9999;
-            // Сразу скрываем курсор при нажатии
-            this._setBrushVisible(false);
-            handlePointer(pointer);
-        });
-        this.input.on('pointermove', (pointer) => {
-            if (this.inputLocked || uiOpen() || this.stars.active) return;
-            if (this.currentTool !== 'swatter') {
-                // Во время драга курсор скрыт, при простом наведении — видим
-                if (this.isPointerDown) {
-                    this._setBrushVisible(false);
-                } else {
-                    const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-                    this._setBrushVisible(inB, pointer.x, pointer.y);
-                }
+            return;
+        }
+
+        this.isPointerDown = true;
+        this.lastLocalX = -9999; this.lastLocalY = -9999;
+        handlePointer(pointer);
+    });
+
+    this.input.on('pointermove', (pointer) => {
+        if (this.inputLocked || uiOpen() || this.stars.active) return;
+
+        if (this.currentTool === 'swatter') {
+            const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+            if (inB) {
+                this.effects.drawSwatterCursor(pointer.x, pointer.y);
+                applyCursor(true);
+            } else {
+                this.effects.hideSwatterCursor();
+                applyCursor(false);
             }
-            if (!pointer.isDown) { this.isPointerDown = false; return; }
-            if (this.currentTool === 'swatter') { this.effects.drawSwatterCursor(pointer.x, pointer.y); return; }
-            handlePointer(pointer);
-        });
-        const stop = () => { this.isPointerDown = false; this.effects.hideSwatterCursor(); this._setBrushVisible(false); this.lastLocalX = -9999; this.lastLocalY = -9999; };
-        this.input.on('pointerup', stop); this.input.on('pointerout', stop); this.input.on('pointerupoutside', stop);
-        window.addEventListener('blur', stop);
-        document.addEventListener('touchend', () => { this.effects.hideSwatterCursor(); }, { passive: true });
-        document.addEventListener('mouseup', () => { this.effects.hideSwatterCursor(); });
-    }
+            if (!pointer.isDown) this.isPointerDown = false;
+            return;
+        }
+
+        // Всегда обновляем позицию иконки — и при наведении, и при драге
+        const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+        this._setBrushVisible(inB, pointer.x, pointer.y);
+        applyCursor(inB);
+
+        if (!pointer.isDown) { this.isPointerDown = false; return; }
+        handlePointer(pointer);
+    });
+
+    const stop = () => {
+        this.isPointerDown = false;
+        this.effects.hideSwatterCursor();
+        this._setBrushVisible(false);
+        this.lastLocalX = -9999; this.lastLocalY = -9999;
+        applyCursor(false);   // курсор вернулся на default после отпускания
+    };
+    this.input.on('pointerup', stop);
+    this.input.on('pointerout', stop);
+    this.input.on('pointerupoutside', stop);
+    window.addEventListener('blur', stop);
+    document.addEventListener('touchend', () => { this.effects.hideSwatterCursor(); applyCursor(false); }, { passive: true });
+    document.addEventListener('mouseup', () => { this.effects.hideSwatterCursor(); applyCursor(false); });
+}
     applyTool(lx, ly) {
         if (this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen) return;
