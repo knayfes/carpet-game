@@ -1103,45 +1103,43 @@ class GameState {
 class SaveSystem {
     constructor(state) { this.state = state; this.ysdk = null; this.useLocal = false; this._saving = false; }
     async init() {
-    // Всегда пробуем localStorage сразу — на случай если SDK висит
-    const loadLocal = () => {
+        const loadLocal = () => {
+            try {
+                const raw = localStorage.getItem(SAVE_KEY);
+                if (raw) {
+                    this.state.fromSaveObject(JSON.parse(raw));
+                    if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+                }
+            } catch {}
+        };
+
         try {
-            const raw = localStorage.getItem(SAVE_KEY);
-            if (raw) {
-                this.state.fromSaveObject(JSON.parse(raw));
-                if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+            if (typeof YaGames === 'undefined') throw new Error('no SDK');
+            this.ysdk = await YaGames.init();
+            const detected = detectLang(this.ysdk);
+            if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+            else { LANG = detected; this.state.settings.lang = detected; }
+
+            const keys = Object.keys(this.state.toSaveObject());
+            const stats = await this.ysdk.player.getStats(keys);
+
+            const hasCloud = stats && Object.keys(stats).length > 0 &&
+                (stats.money !== undefined || stats.carpetIndex !== undefined || stats.prestigeLevel !== undefined);
+
+            if (hasCloud) {
+                this.state.fromSaveObject(stats);
+            } else {
+                loadLocal();
             }
-        } catch {}
-    };
-
-    try {
-        if (typeof YaGames === 'undefined') throw new Error('no SDK');
-        this.ysdk = await YaGames.init();
-        const detected = detectLang(this.ysdk);
-        if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
-        else { LANG = detected; this.state.settings.lang = detected; }
-
-        const keys = Object.keys(this.state.toSaveObject());
-        const stats = await this.ysdk.player.getStats(keys);
-
-        // Если облако вернуло что-то осмысленное — используем его
-        const hasCloud = stats && Object.keys(stats).length > 0 &&
-            (stats.money !== undefined || stats.carpetIndex !== undefined || stats.prestigeLevel !== undefined);
-
-        if (hasCloud) {
-            this.state.fromSaveObject(stats);
-        } else {
-            loadLocal();   // облако пустое → берём локальный
+            if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+        } catch (e) {
+            console.warn('Yandex SDK init failed, using local save:', e);
+            this.useLocal = true;
+            LANG = detectLang(null);
+            loadLocal();
         }
-        if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
-    } catch (e) {
-        console.warn('Yandex SDK init failed, using local save:', e);
-        this.useLocal = true;
-        LANG = detectLang(null);
-        loadLocal();
+        return this;
     }
-    return this;
-}
     ready() { try { this.ysdk?.features?.LoadingAPI?.ready?.(); } catch {} }
     gameplayStart() { try { this.ysdk?.features?.GameplayAPI?.start?.(); } catch {} }
     gameplayStop() { try { this.ysdk?.features?.GameplayAPI?.stop?.(); } catch {} }
@@ -1510,9 +1508,8 @@ class CleaningSystem {
     reset(carpetIndex) {
         this.dirt.fill(1.0); this.soap.fill(0.0); this.crust.fill(0.0);
         this.stainType.fill(0); this.moldTimer.fill(0);
-        if (carpetIndex >= 3 && carpetIndex !== 4 && carpetIndex !== 5) {
-            const chance = carpetIndex === 3 ? 0.40 : 0.25;
-            for (let i = 0; i < this.crust.length; i++) if (Math.random() < chance) this.crust[i] = 1.0;
+        if (carpetIndex === 3) {
+            for (let i = 0; i < this.crust.length; i++) if (Math.random() < 0.40) this.crust[i] = 1.0;
         }
         if (carpetIndex >= 4) {
             const chance = 0.25;
@@ -1761,23 +1758,20 @@ class BugSystem {
         return g;
     }
     kill(bug, fromPet = false) {
-    if (bug.isDead) return;
-    bug.isDead = true;
-    if (!fromPet) this.state.registerBugKill();
-    this.onKill?.(bug.x, bug.y, fromPet);
-    if (!fromPet) {
-    // Базовая награда за жука + бонус от уровня мухобойки
-    let totalReward = BALANCE.bugRewardPerKill + this.state.getSwatterRewardBonus();
-    // Двойная награда удваивает ВСЁ (и базу, и бонус уровня)
-    if (this.state.doubleBugReward) totalReward *= 2;
-    if (totalReward > 0) {
-        this.state.addMoney(totalReward);
-        this.onReward?.(bug.x, bug.y, totalReward);
-    }
-}
-    this.scene.tweens.add({ targets: bug, alpha: 0, scale: 1.5, duration: BALANCE.bugFadeDuration, ease: 'Cubic.easeOut',
-        onComplete: () => { const idx = this.bugs.indexOf(bug); if (idx > -1) this.bugs.splice(idx, 1); bug.destroy(); } });
-}
+        if (bug.isDead) return;
+        bug.isDead = true;
+        if (!fromPet) this.state.registerBugKill();
+        this.onKill?.(bug.x, bug.y, fromPet);
+        if (!fromPet) {
+            let totalReward = BALANCE.bugRewardPerKill + this.state.getSwatterRewardBonus();
+            if (this.state.doubleBugReward) totalReward *= 2;
+            if (totalReward > 0) {
+                this.state.addMoney(totalReward);
+                this.onReward?.(bug.x, bug.y, totalReward);
+            }
+        }
+        this.scene.tweens.add({ targets: bug, alpha: 0, scale: 1.5, duration: BALANCE.bugFadeDuration, ease: 'Cubic.easeOut',
+            onComplete: () => { const idx = this.bugs.indexOf(bug); if (idx > -1) this.bugs.splice(idx, 1); bug.destroy(); } });
     }
     swat(x, y, now) {
         if (now - this.lastSwat < this.state.getSwatterCooldown()) return false;
@@ -2577,7 +2571,7 @@ class ShopUI {
             (LANG === 'ru' ? 'Наследие, скины, достижения\n' : 'Legacy, skins, achievements\n') +
             (st.legacyUpgrades.pet_friends ? (LANG === 'ru' ? 'Питомцы\n' : 'Pets\n') : (LANG === 'ru' ? 'Питомцы СБРОСЯТСЯ\n' : 'Pets will RESET\n')) +
             `\n${t('willReset')}\n` +
-            (LANG === 'ru' ? 'Деньги, ковры, щётка, автоеда' : 'Money, carpets, brush, auto-food');
+            (LANG === 'ru' ? 'Деньги, ковры, инструменты, автоеда' : 'Money, carpets, tools, auto-food');
         push(s.add.text(360, cy - 20, info, { ...TEXT_STYLES.shopInfo('#FFFFFF', 17), align: 'center', lineSpacing: 4 }).setOrigin(0.5).setDepth(42));
         let confirmPending = false;
         const btnLabel = t('prestigeBtn', gain);
@@ -2965,44 +2959,44 @@ class PreloadScene extends Phaser.Scene {
         this.load.on('progress', (v) => { bar.width = 400 * v; });
     }
     async create() {
-    const state = new GameState();
-    const saveSystem = new SaveSystem(state);
-    const ads = new AdsSystem(saveSystem);
-    const leaderboard = new LeaderboardSystem(state, saveSystem);
-    this.registry.set('gameState', state);
-    this.registry.set('saveSystem', saveSystem);
-    this.registry.set('ads', ads);
-    this.registry.set('leaderboard', leaderboard);
+        const state = new GameState();
+        const saveSystem = new SaveSystem(state);
+        const ads = new AdsSystem(saveSystem);
+        const leaderboard = new LeaderboardSystem(state, saveSystem);
+        this.registry.set('gameState', state);
+        this.registry.set('saveSystem', saveSystem);
+        this.registry.set('ads', ads);
+        this.registry.set('leaderboard', leaderboard);
 
-    // Жёсткий таймаут: если SDK не ответил за 5 секунд — стартуем без него
-    const withTimeout = (promise, ms) => Promise.race([
-        promise,
-        new Promise(resolve => setTimeout(() => resolve('timeout'), ms))
-    ]);
+        // Жёсткий таймаут: если SDK не ответил за 5 сек — стартуем без него
+        const withTimeout = (promise, ms) => Promise.race([
+            promise,
+            new Promise(resolve => setTimeout(() => resolve('timeout'), ms))
+        ]);
 
-    try {
-        const result = await withTimeout(saveSystem.init(), 5000);
-        if (result === 'timeout') {
-            console.warn('SaveSystem init timeout — using local fallback');
+        try {
+            const result = await withTimeout(saveSystem.init(), 5000);
+            if (result === 'timeout') {
+                console.warn('SaveSystem init timeout — using local fallback');
+                saveSystem.useLocal = true;
+                try {
+                    const raw = localStorage.getItem(SAVE_KEY);
+                    if (raw) state.fromSaveObject(JSON.parse(raw));
+                } catch {}
+            }
+        } catch (e) {
+            console.warn('SaveSystem init error:', e);
             saveSystem.useLocal = true;
-            try {
-                const raw = localStorage.getItem(SAVE_KEY);
-                if (raw) state.fromSaveObject(JSON.parse(raw));
-            } catch {}
         }
-    } catch (e) {
-        console.warn('SaveSystem init error:', e);
-        saveSystem.useLocal = true;
+
+        state.refreshDailyQuests();
+        state.checkAchievements();
+
+        // Сохраняем асинхронно — не блокируем запуск
+        saveSystem.save().catch(e => console.warn('Save failed:', e));
+
+        this.scene.start('MainScene');
     }
-
-    state.refreshDailyQuests();
-    state.checkAchievements();
-
-    // Сохраняем тоже асинхронно, не блокируя запуск
-    saveSystem.save().catch(e => console.warn('Save failed:', e));
-
-    this.scene.start('MainScene');
-}
 }
 
 class MainScene extends Phaser.Scene {
