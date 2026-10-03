@@ -229,7 +229,7 @@ function tArr(key) {
 }
 
 const BALANCE = {
-    startMoney: 0, startFood: 3, startToolLevel: 1,
+    startMoney: 250, startFood: 3, startToolLevel: 1,
     totalCarpets: 5,
     foodPrice: 25, foodBulkCount: 5, foodBulkDiscount: 0.85,
     rewardMin: 40, rewardMax: 70,
@@ -262,6 +262,7 @@ const BALANCE = {
     scraperBasePower: 2.0,
     steamMaxFuel: 100, steamFuelCost: 4.0, steamFuelRegen: 0.4, steamPower: 0.5,
     stainRemoverPower: 2.0, moldSpreadMs: 10000,
+    steamBasePrice: 250, removerBasePrice: 300,
     tutorialPerCarpet: true,
     legacyPerPrestige1: 2, legacyPerPrestigeN: 3,
     dayNightBonus: 0.5, vibrationMs: 20,
@@ -298,7 +299,7 @@ const ACHIEVEMENTS = [
     { id: 'fifty_cleans', icon: '🥇', name: { ru: '50 ковров', en: '50 Carpets' }, desc: { ru: 'Почисти 50 ковров', en: 'Clean 50 carpets' }, type: 'carpetsCleaned', target: 50, reward: 1000 },
     { id: 'hundred',      icon: '🏆', name: { ru: '100 ковров', en: '100 Carpets' }, desc: { ru: 'Почисти 100 ковров', en: 'Clean 100 carpets' }, type: 'carpetsCleaned', target: 100, reward: 2500 },
     { id: 'rich',         icon: '💰', name: { ru: 'Богач', en: 'Rich' }, desc: { ru: 'Заработай 5000 разом', en: 'Earn 5000 at once' }, type: 'maxMoney', target: 5000, reward: 500 },
-    { id: 'very_rich',    icon: '💎', name: { ru: 'Очень богач', en: 'Very Rich' }, desc: { ru: 'Заработай 20000 разом', en: 'Earn 20000 at once' }, type: 'maxMoney', target: 20000, reward: 2000 },
+    { id: 'very_rich',    icon: '💎', name: { ru: 'Сказочный богач', en: 'Fairy Rich' }, desc: { ru: 'Имей 20000💰 на балансе', en: 'Hold 20000💰 balance' }, type: 'currentMoney', target: 20000, reward: 2000 },
     { id: 'bug_hunter',   icon: '🐛', name: { ru: 'Охотник', en: 'Hunter' }, desc: { ru: 'Убей 100 жуков', en: 'Kill 100 bugs' }, type: 'bugsKilledTotal', target: 100, reward: 500 },
     { id: 'speed_clean',  icon: '⚡', name: { ru: 'Скороход', en: 'Speedrun' }, desc: { ru: 'Ковёр за 45 сек', en: 'Carpet in 45 sec' }, type: 'bestTime', target: 45, reward: 700 },
     { id: 'prestige_1',   icon: '👑', name: { ru: 'Первый престиж', en: 'First Prestige' }, desc: { ru: 'Сделай престиж 1 раз', en: 'Do prestige once' }, type: 'prestigeLevel', target: 1, reward: 1000 },
@@ -380,7 +381,7 @@ const CARPET_TUTORIALS = {
         { text: { ru: '🔥 Новый инструмент — ПАР.', en: '🔥 New tool — STEAM.' }, check: 'auto', need: 0 },
         { text: { ru: 'На 4-м ковре нет мыла и смыва.', en: 'Carpet 4 has no soap/rinse.' }, check: 'auto', need: 0 },
         { text: { ru: 'Проведи паром по ковру.', en: 'Swipe steam over the carpet.' }, check: 'steam', need: 2 },
-        { text: { ru: 'Сначала скребок, затем пар.', en: 'First scrape, then steam.' }, check: 'auto', need: 0 }
+        { text: { ru: 'Пар сам снимет корки и грязь. ✨', en: 'Steam removes crusts and dirt. ✨' }, check: 'auto', need: 0 }
     ],
     5: [
         { text: { ru: '🧴 Новый инструмент — ПЯТНОВЫВОДИТЕЛЬ.', en: '🧴 New — STAIN REMOVER.' }, check: 'auto', need: 0 },
@@ -563,7 +564,7 @@ class AmbientMusic {
 }
 
 class Mascot {
-   constructor(scene) {
+    constructor(scene) {
         this.scene = scene;
         this.x = 640; this.y = 1070;
         this.container = scene.add.container(this.x, this.y).setDepth(50);
@@ -708,6 +709,7 @@ class GameState {
         this.food = BALANCE.startFood;
         this.toolLevel = BALANCE.startToolLevel;
         this.soapLevel = 1; this.washLevel = 1; this.swatterLevel = 0;
+        this.steamLevel = 1; this.stainRemoverLevel = 1;
         this.carpetIndex = 1; this.carpetLevel = 0;
         this.carpetsCleaned = 0; this.bugsKilledTotal = 0; this.starsPopped = 0;
         this.maxMoney = 0; this.autoFoodEnabled = false;
@@ -743,6 +745,8 @@ class GameState {
     getSoapUpgradePrice() { return this.soapLevel * BALANCE.soapBasePrice; }
     getWashUpgradePrice() { return this.washLevel * BALANCE.washBasePrice; }
     getSwatterUpgradePrice() { return BALANCE.swatterBasePrice + this.swatterLevel * BALANCE.swatterBasePrice; }
+    getSteamUpgradePrice() { return BALANCE.steamBasePrice * this.steamLevel; }
+    getRemoverUpgradePrice() { return BALANCE.removerBasePrice * this.stainRemoverLevel; }
     getSoapPower() {
         const base = BALANCE.soapPower * (1 + (this.soapLevel - 1) * 0.40);
         return base * (1 + (this.legacyUpgrades.soap_master || 0) * 0.25);
@@ -754,6 +758,10 @@ class GameState {
     getSwatterCooldown() { return Math.max(BALANCE.swatterCooldownMin, BALANCE.swatterCooldown - this.swatterLevel * BALANCE.swatterCooldownStep); }
     getSwatterRadius() { return BALANCE.swatterRadius + this.swatterLevel * BALANCE.swatterRadiusStep; }
     getSwatterRewardBonus() { return this.swatterLevel * BALANCE.swatterBonusPerLevel; }
+    getSteamRadiusBonus() { return (this.steamLevel - 1) * 8; }
+    getSteamFuelCost() { return BALANCE.steamFuelCost * Math.max(0.5, 1 - (this.steamLevel - 1) * 0.10); }
+    getSteamFuelRegen() { return BALANCE.steamFuelRegen * (1 + (this.steamLevel - 1) * 0.20); }
+    getStainRemoverPower() { return BALANCE.stainRemoverPower * (1 + (this.stainRemoverLevel - 1) * 0.40); }
     getPrestigeMultiplier() {
         let mult = BALANCE.prestigeMultiplier;
         if (this.legacyUpgrades.double_income) mult = Math.max(mult, 2.0);
@@ -824,6 +832,8 @@ class GameState {
         const gain = this.prestigeLevel === 1 ? BALANCE.legacyPerPrestige1 : BALANCE.legacyPerPrestigeN;
         this.legacyPoints += gain;
         this.money = 0; this.food = BALANCE.startFood; this.toolLevel = BALANCE.startToolLevel;
+        this.soapLevel = 1; this.washLevel = 1; this.swatterLevel = 0;
+        this.steamLevel = 1; this.stainRemoverLevel = 1;
         if (this.legacyUpgrades.jump_start) { this.carpetIndex = 3; this.carpetLevel = 2; }
         else if (this.legacyUpgrades.fast_start) { this.carpetIndex = 2; this.carpetLevel = 1; }
         else { this.carpetIndex = 1; this.carpetLevel = 0; }
@@ -854,12 +864,14 @@ class GameState {
         this.questCounters.moneyEarnedToday += reward;
         if (timeSec > 0 && timeSec < 50) this.questCounters.fastCleanToday += 1;
         this.recordCarpetFinish(this.carpetIndex, timeSec);
+        this.checkAchievements();
         return reward;
     }
     addMoney(amount) {
         this.money += amount;
         if (this.money > this.maxMoney) this.maxMoney = this.money;
         if (this.maxMoney > this.leaderboardBestMoney) this.leaderboardBestMoney = this.maxMoney;
+        this.checkAchievements();
     }
     registerBugKill() { this.bugsKilledTotal += 1; this.questCounters.killBugsToday += 1; }
     registerSoapUse(n = 1) { this.questCounters.soapUsesToday += n; }
@@ -877,6 +889,8 @@ class GameState {
     upgradeSoap() { const p = this.getSoapUpgradePrice(); if (this.money < p) return false; this.money -= p; this.soapLevel += 1; return true; }
     upgradeWash() { const p = this.getWashUpgradePrice(); if (this.money < p) return false; this.money -= p; this.washLevel += 1; return true; }
     upgradeSwatter() { const p = this.getSwatterUpgradePrice(); if (this.money < p) return false; this.money -= p; this.swatterLevel += 1; return true; }
+    upgradeSteam() { const p = this.getSteamUpgradePrice(); if (this.money < p) return false; this.money -= p; this.steamLevel += 1; return true; }
+    upgradeStainRemover() { const p = this.getRemoverUpgradePrice(); if (this.money < p) return false; this.money -= p; this.stainRemoverLevel += 1; return true; }
     buyDoubleBug() {
         if (this.doubleBugReward) return false;
         if (this.money < BALANCE.doubleBugPrice) return false;
@@ -918,6 +932,7 @@ class GameState {
         switch (type) {
             case 'carpetsCleaned': return this.carpetsCleaned;
             case 'maxMoney': return this.maxMoney;
+            case 'currentMoney': return this.money;
             case 'bugsKilledTotal': return this.bugsKilledTotal;
             case 'starsPopped': return this.starsPopped;
             case 'bestTime': { let best = 99999; for (const k in this.carpetStats) { const tt = this.carpetStats[k].bestTime; if (tt > 0 && tt < best) best = tt; } return best; }
@@ -992,6 +1007,7 @@ class GameState {
         const obj = {
             money: this.money, food: this.food, toolLevel: this.toolLevel,
             soapLevel: this.soapLevel, washLevel: this.washLevel, swatterLevel: this.swatterLevel,
+            steamLevel: this.steamLevel, stainRemoverLevel: this.stainRemoverLevel,
             carpetIndex: this.carpetIndex, carpetLevel: this.carpetLevel,
             carpetsCleaned: this.carpetsCleaned, bugsKilledTotal: this.bugsKilledTotal,
             starsPopped: this.starsPopped, maxMoney: this.maxMoney,
@@ -1034,6 +1050,8 @@ class GameState {
         this.soapLevel = n(d.soapLevel, 1);
         this.washLevel = n(d.washLevel, 1);
         this.swatterLevel = n(d.swatterLevel, 0);
+        this.steamLevel = n(d.steamLevel, 1);
+        this.stainRemoverLevel = n(d.stainRemoverLevel, 1);
         this.carpetIndex = n(d.carpetIndex, this.carpetIndex);
         this.carpetLevel = n(d.carpetLevel, this.carpetLevel);
         this.carpetsCleaned = n(d.carpetsCleaned, this.carpetsCleaned);
@@ -1195,7 +1213,7 @@ class LeaderboardSystem {
     }
     async submitScores() {
         if (!await this._init()) return;
-        try { await this.lb.setLeaderboardScore('bestMoney', this.state.leaderboardBestMoney); } catch {}      
+        try { await this.lb.setLeaderboardScore('bestMoney', this.state.leaderboardBestMoney); } catch {}
         try { await this.lb.setLeaderboardScore('prestige', this.state.leaderboardBestPrestige); } catch {}
     }
     async fetchTop(name = 'bestMoney', count = 10) {
@@ -1473,8 +1491,12 @@ class CleaningSystem {
     reset(carpetIndex) {
         this.dirt.fill(1.0); this.soap.fill(0.0); this.crust.fill(0.0);
         this.stainType.fill(0); this.moldTimer.fill(0);
-        if (carpetIndex >= 3) {
+        if (carpetIndex >= 3 && carpetIndex !== 4 && carpetIndex !== 5) {
             const chance = carpetIndex === 3 ? 0.40 : 0.25;
+            for (let i = 0; i < this.crust.length; i++) if (Math.random() < chance) this.crust[i] = 1.0;
+        }
+        if (carpetIndex >= 4) {
+            const chance = 0.25;
             for (let i = 0; i < this.crust.length; i++) if (Math.random() < chance) this.crust[i] = 1.0;
         }
         if (carpetIndex >= 5) {
@@ -1520,7 +1542,7 @@ class CleaningSystem {
                 } else if (tool === 'remover') {
                     if (this.stainType[i] > 0) {
                         this.stainType[i] = 0; stainChanged = true;
-                        this.dirt[i] = Math.max(0, this.dirt[i] - BALANCE.stainRemoverPower * falloff);
+                        this.dirt[i] = Math.max(0, this.dirt[i] - this.state.getStainRemoverPower() * falloff);
                         if (this.dirt[i] < 0.01) this.dirt[i] = 0;
                         dirtChanged = true; erased = true;
                         this.onStainRemove?.(localX + this.originX, localY + this.originY);
@@ -1681,6 +1703,7 @@ class BugSystem {
     }
     get count() { return this.bugs.length; }
     getSwatterRadius() { return this.state.getSwatterRadius(); }
+    canSwat(now) { return (now - this.lastSwat) >= this.state.getSwatterCooldown(); }
     clear() { this.bugs.forEach(b => b.destroy()); this.bugs = []; }
     spawnForLevel(carpetIndex) {
         if (carpetIndex < 2) return;
@@ -1719,17 +1742,23 @@ class BugSystem {
         return g;
     }
     kill(bug, fromPet = false) {
-        if (bug.isDead) return;
-        bug.isDead = true;
-        if (!fromPet) this.state.registerBugKill();
-        this.onKill?.(bug.x, bug.y, fromPet);
-        if (!fromPet) {
-            const lvlBonus = this.state.getSwatterRewardBonus();
-            if (lvlBonus > 0) { this.state.addMoney(lvlBonus); this.onReward?.(bug.x, bug.y, lvlBonus); }
-            if (this.state.doubleBugReward) { this.state.addMoney(BALANCE.bugRewardPerKill); this.onReward?.(bug.x, bug.y, BALANCE.bugRewardPerKill); }
-        }
-        this.scene.tweens.add({ targets: bug, alpha: 0, scale: 1.5, duration: BALANCE.bugFadeDuration, ease: 'Cubic.easeOut',
-            onComplete: () => { const idx = this.bugs.indexOf(bug); if (idx > -1) this.bugs.splice(idx, 1); bug.destroy(); } });
+    if (bug.isDead) return;
+    bug.isDead = true;
+    if (!fromPet) this.state.registerBugKill();
+    this.onKill?.(bug.x, bug.y, fromPet);
+    if (!fromPet) {
+    // Базовая награда за жука + бонус от уровня мухобойки
+    let totalReward = BALANCE.bugRewardPerKill + this.state.getSwatterRewardBonus();
+    // Двойная награда удваивает ВСЁ (и базу, и бонус уровня)
+    if (this.state.doubleBugReward) totalReward *= 2;
+    if (totalReward > 0) {
+        this.state.addMoney(totalReward);
+        this.onReward?.(bug.x, bug.y, totalReward);
+    }
+}
+    this.scene.tweens.add({ targets: bug, alpha: 0, scale: 1.5, duration: BALANCE.bugFadeDuration, ease: 'Cubic.easeOut',
+        onComplete: () => { const idx = this.bugs.indexOf(bug); if (idx > -1) this.bugs.splice(idx, 1); bug.destroy(); } });
+}
     }
     swat(x, y, now) {
         if (now - this.lastSwat < this.state.getSwatterCooldown()) return false;
@@ -2271,7 +2300,7 @@ class ShopUI {
             const stroke = opts.disabled ? 0x555555 : (canBuy ? 0x00FF00 : 0x666666);
             const pill = makePill(s, 360, y, 620, 68, { radius: 22, fill, stroke, strokeW: 2, depth: 41 });
             push(pill.cont);
-            push(s.add.text(70, y, sublabel, { fontSize: '20px', fill: opts.disabled ? '#888888' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
+            push(s.add.text(70, y, sublabel, { fontSize: '19px', fill: opts.disabled ? '#888888' : '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0, 0.5).setDepth(42));
             const priceStr = opts.priceLabel || `${price}💰`;
             push(s.add.text(630, y, priceStr, { fontSize: '26px', fill: opts.disabled ? '#666666' : (canBuy ? '#00FF00' : '#FF6666'), fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(1, 0.5).setDepth(42));
             pill.hit.on('pointerdown', async () => {
@@ -2318,6 +2347,20 @@ class ShopUI {
                     async () => { st.buyDoubleBug(); await this._afterBuy(); });
             }
             y += 82;
+        }
+        if (st.carpetIndex >= 4) {
+            const curCost = st.getSteamFuelCost().toFixed(1);
+            const nextCost = (BALANCE.steamFuelCost * Math.max(0.5, 1 - st.steamLevel * 0.10)).toFixed(1);
+            const curRad = st.getCurrentRadius() + st.getSteamRadiusBonus();
+            const nextRad = st.getCurrentRadius() + (st.steamLevel) * 8;
+            item(y, `🔥 ${t('steam')} ${st.steamLevel}  ${curRad}→${nextRad}📐  ${curCost}→${nextCost}⛽`,
+                st.getSteamUpgradePrice(), async () => { st.upgradeSteam(); await this._afterBuy(); }); y += 82;
+        }
+        if (st.carpetIndex >= 5) {
+            const curP = (st.getStainRemoverPower() * 100).toFixed(0);
+            const nextP = (BALANCE.stainRemoverPower * (1 + st.stainRemoverLevel * 0.40) * 100).toFixed(0);
+            item(y, `🧴 ${t('remover')} ${st.stainRemoverLevel}  ${curP}%→${nextP}%`,
+                st.getRemoverUpgradePrice(), async () => { st.upgradeStainRemover(); await this._afterBuy(); }); y += 82;
         }
         this._renderAdBlock(push, y); y += 100;
         this._renderNewCarpetSection(push, y);
@@ -3091,7 +3134,11 @@ class MainScene extends Phaser.Scene {
             const r = 32;
             const circle = this.add.circle(x, y, r, 0x1e1e28, 0.95).setDepth(10).setStrokeStyle(3, 0x4A90D9, 0.75);
             const ic = this.add.text(x, y, icon, { fontSize: '38px' }).setOrigin(0.5).setDepth(11);
-            const lb = this.add.text(x, y + r + 12, label, { fontSize: '12px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
+            const lb = this.add.text(x, y + r + 16, label, {
+                fontSize: '17px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
+                stroke: '#000000', strokeThickness: 5,
+                shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 3, fill: true }
+            }).setOrigin(0.5).setDepth(11);
             const hit = this.add.circle(x, y, r + 8, 0x000000, 0.001).setDepth(12);
             hit.setInteractive({ useHandCursor: true });
             hit.on('pointerdown', () => {
@@ -3152,10 +3199,6 @@ class MainScene extends Phaser.Scene {
         this.steamBar = this.add.rectangle(W / 2 - 106, 315, 212, 12, 0xFF8844).setOrigin(0, 0.5).setDepth(11).setVisible(false);
         this.steamText = this.add.text(W / 2, 333, t('steams'), { fontSize: '13px', fill: '#FF8844', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 3 }).setOrigin(0.5).setDepth(11).setVisible(false);
 
-        // ============================================================
-        // Кнопка «ПОЛУЧИТЬ ДЕНЬГИ» — обёрнута в контейнер, чтобы scale
-        // работал вокруг центра кнопки, а не вокруг (0,0) сцены.
-        // ============================================================
         const fbY = 1050;
         const fbW = 380, fbH = 80, fbR = 40;
 
@@ -3214,7 +3257,7 @@ class MainScene extends Phaser.Scene {
         this.updateQuestBadge(); this.updateDayNightText();
     }
     updateQuestBadge() { if (!this.questBadge) return; this.questBadge.setVisible(this.state.quests.some(q => this.state.isQuestComplete(q) && !this.state.questClaimed[q.id])); }
-    updateBrushIcon() { /* цветная аура отключена */ }
+    updateBrushIcon() { /* отключено */ }
     buildToolButtons(W, H) {
         const btnY = 1195;
         const tools = [];
@@ -3223,7 +3266,7 @@ class MainScene extends Phaser.Scene {
             tools.push({ id: 'wash', icon: '🧹', label: t('wash'), color: 0x5a7a9a });
         }
         if (this.state.carpetIndex >= 2) tools.push({ id: 'swatter', icon: '🪰', label: t('swatter'), color: 0x9a5a5a });
-        if (this.state.carpetIndex >= 3) tools.push({ id: 'scraper', icon: '🪒', label: t('scraper'), color: 0x9a7a4a });
+        if (this.state.carpetIndex === 3) tools.push({ id: 'scraper', icon: '🪒', label: t('scraper'), color: 0x9a7a4a });
         if (this.state.carpetIndex >= 4) tools.push({ id: 'steam',   icon: '🔥', label: t('steam'),   color: 0x9a6a4a });
         if (this.state.carpetIndex >= 5) tools.push({ id: 'remover', icon: '🧴', label: t('remover'), color: 0x8a5a8a });
         const count = tools.length;
@@ -3239,7 +3282,7 @@ class MainScene extends Phaser.Scene {
             const accent = this.add.rectangle(x, btnY + btnH / 2 - 6, btnW - 24, 4, tool.color, 0.95).setDepth(11).setOrigin(0.5);
             const icon = this.add.text(x, btnY - 8, tool.icon, { fontSize: '52px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(11);
             const label = this.add.text(x, btnY + 32, tool.label, { fontSize: '15px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setOrigin(0.5).setDepth(11);
-            const showLvl = (tool.id === 'soap' || tool.id === 'wash' || tool.id === 'swatter');
+            const showLvl = (tool.id === 'soap' || tool.id === 'wash' || tool.id === 'swatter' || tool.id === 'steam' || tool.id === 'remover');
             const lvlBadge = this.add.text(x - btnW/2 + 8, btnY - btnH/2 + 6, '', {
                 fontSize: '12px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND,
                 stroke: '#000000', strokeThickness: 3
@@ -3266,7 +3309,9 @@ class MainScene extends Phaser.Scene {
             if (id === 'soap') lvl = this.state.soapLevel;
             else if (id === 'wash') lvl = this.state.washLevel;
             else if (id === 'swatter') lvl = this.state.swatterLevel;
-            if (lvl > 1 && (id === 'soap' || id === 'wash' || id === 'swatter')) {
+            else if (id === 'steam') lvl = this.state.steamLevel;
+            else if (id === 'remover') lvl = this.state.stainRemoverLevel;
+            if (lvl > 1) {
                 b.lvlBadge.setText('L' + lvl).setVisible(true);
             } else {
                 b.lvlBadge.setText('').setVisible(false);
@@ -3278,7 +3323,7 @@ class MainScene extends Phaser.Scene {
         this.brush.setVisible(visible);
     }
     selectTool(tool) {
-        if (this.state.carpetIndex >= 4 && (tool === 'soap' || tool === 'wash')) tool = 'scraper';
+        if (this.state.carpetIndex >= 4 && (tool === 'soap' || tool === 'wash')) tool = 'steam';
         this.currentTool = tool;
         const iconMap = { soap: '🧼', wash: '🧹', scraper: '🪒', steam: '🔥', remover: '🧴' };
         if (iconMap[tool]) {
@@ -3307,104 +3352,108 @@ class MainScene extends Phaser.Scene {
         this.updateToolLevels();
     }
     setupInput() {
-    this.game.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
-    this.game.canvas.addEventListener('touchmove',  (e) => e.preventDefault(), { passive: false });
+        this.game.canvas.addEventListener('touchstart', (e) => e.preventDefault(), { passive: false });
+        this.game.canvas.addEventListener('touchmove',  (e) => e.preventDefault(), { passive: false });
 
-    const uiOpen = () => this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
-        || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen;
+        const uiOpen = () => this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
+            || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen;
 
-    // Единый помощник: скрыть/показать системный курсор в зависимости от зоны
-    const applyCursor = (overCarpet) => {
-        // На тач-устройствах mouse может быть null — метод всё равно безопасен
-        this.input.setDefaultCursor(overCarpet ? 'none' : 'default');
-    };
+        const applyCursor = (overCarpet) => {
+            this.input.setDefaultCursor(overCarpet ? 'none' : 'default');
+        };
 
-    const handlePointer = (pointer) => {
-        if (this.inputLocked || uiOpen() || this.stars.active) return;
+        const handlePointer = (pointer) => {
+            if (this.inputLocked || uiOpen() || this.stars.active) return;
 
-        // Инструмент-мухобойка — отдельный случай (свой прицел)
-        if (this.currentTool === 'swatter') {
-            this.effects.drawSwatterCursor(pointer.x, pointer.y);
+            if (this.currentTool === 'swatter') {
+                const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+                const ready = this.bugs.canSwat(this.time.now);
+                if (inB && ready) {
+                    this.effects.drawSwatterCursor(pointer.x, pointer.y);
+                    applyCursor(true);
+                } else {
+                    this.effects.hideSwatterCursor();
+                    applyCursor(false);
+                }
+                this._setBrushVisible(false);
+                return;
+            }
+
+            this.effects.hideSwatterCursor();
+
+            const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+            this._setBrushVisible(inB, pointer.x, pointer.y);
+            applyCursor(inB);
+
+            if (!inB) return;
+            const lx = pointer.x - this.carpetBounds.x, ly = pointer.y - this.carpetBounds.y;
+            const dx = lx - this.lastLocalX, dy = ly - this.lastLocalY;
+            if (dx * dx + dy * dy < 64) return;
+            this.lastLocalX = lx; this.lastLocalY = ly;
+            this.applyTool(lx, ly);
+        };
+
+        this.input.on('pointerdown', (pointer) => {
+            if (this.inputLocked || uiOpen() || this.stars.active) return;
+            this.ambientMusic.resume();
+
+            if (this.currentTool === 'swatter') {
+                const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+                const ready = this.bugs.canSwat(this.time.now);
+                if (inB && ready) {
+                    this.effects.drawSwatterCursor(pointer.x, pointer.y);
+                    this.effects.swatEffect(pointer.x, pointer.y);
+                    const hit = this.bugs.swat(pointer.x, pointer.y, this.time.now);
+                    if (hit && this.tutorial) this.tutorial.reportAction('killBugs');
+                    this.refreshHUD();
+                }
+                return;
+            }
+
+            this.isPointerDown = true;
+            this.lastLocalX = -9999; this.lastLocalY = -9999;
+            handlePointer(pointer);
+        });
+
+        this.input.on('pointermove', (pointer) => {
+            if (this.inputLocked || uiOpen() || this.stars.active) return;
+
+            if (this.currentTool === 'swatter') {
+                const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+                const ready = this.bugs.canSwat(this.time.now);
+                if (inB && ready) {
+                    this.effects.drawSwatterCursor(pointer.x, pointer.y);
+                    applyCursor(true);
+                } else {
+                    this.effects.hideSwatterCursor();
+                    applyCursor(false);
+                }
+                if (!pointer.isDown) this.isPointerDown = false;
+                return;
+            }
+
+            const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
+            this._setBrushVisible(inB, pointer.x, pointer.y);
+            applyCursor(inB);
+
+            if (!pointer.isDown) { this.isPointerDown = false; return; }
+            handlePointer(pointer);
+        });
+
+        const stop = () => {
+            this.isPointerDown = false;
+            this.effects.hideSwatterCursor();
             this._setBrushVisible(false);
-            applyCursor(true);   // над ковром системный курсор тоже прячем
-            return;
-        }
-
-        this.effects.hideSwatterCursor();
-
-        const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-        // Иконка инструмента ВСЕГДА видна, когда палец/мышь над ковром (и при драге тоже)
-        this._setBrushVisible(inB, pointer.x, pointer.y);
-        applyCursor(inB);   // ← системный курсор скрыт только над ковром
-
-        if (!inB) return;
-        const lx = pointer.x - this.carpetBounds.x, ly = pointer.y - this.carpetBounds.y;
-        const dx = lx - this.lastLocalX, dy = ly - this.lastLocalY;
-        if (dx * dx + dy * dy < 64) return;
-        this.lastLocalX = lx; this.lastLocalY = ly;
-        this.applyTool(lx, ly);
-    };
-
-    this.input.on('pointerdown', (pointer) => {
-        if (this.inputLocked || uiOpen() || this.stars.active) return;
-        this.ambientMusic.resume();
-
-        if (this.currentTool === 'swatter') {
-            const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-            if (inB) {
-                this.effects.drawSwatterCursor(pointer.x, pointer.y);
-                this.effects.swatEffect(pointer.x, pointer.y);
-                const hit = this.bugs.swat(pointer.x, pointer.y, this.time.now);
-                if (hit && this.tutorial) this.tutorial.reportAction('killBugs');
-                this.refreshHUD();
-            }
-            return;
-        }
-
-        this.isPointerDown = true;
-        this.lastLocalX = -9999; this.lastLocalY = -9999;
-        handlePointer(pointer);
-    });
-
-    this.input.on('pointermove', (pointer) => {
-        if (this.inputLocked || uiOpen() || this.stars.active) return;
-
-        if (this.currentTool === 'swatter') {
-            const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-            if (inB) {
-                this.effects.drawSwatterCursor(pointer.x, pointer.y);
-                applyCursor(true);
-            } else {
-                this.effects.hideSwatterCursor();
-                applyCursor(false);
-            }
-            if (!pointer.isDown) this.isPointerDown = false;
-            return;
-        }
-
-        // Всегда обновляем позицию иконки — и при наведении, и при драге
-        const inB = Phaser.Geom.Rectangle.Contains(this.carpetBounds, pointer.x, pointer.y);
-        this._setBrushVisible(inB, pointer.x, pointer.y);
-        applyCursor(inB);
-
-        if (!pointer.isDown) { this.isPointerDown = false; return; }
-        handlePointer(pointer);
-    });
-
-    const stop = () => {
-        this.isPointerDown = false;
-        this.effects.hideSwatterCursor();
-        this._setBrushVisible(false);
-        this.lastLocalX = -9999; this.lastLocalY = -9999;
-        applyCursor(false);   // курсор вернулся на default после отпускания
-    };
-    this.input.on('pointerup', stop);
-    this.input.on('pointerout', stop);
-    this.input.on('pointerupoutside', stop);
-    window.addEventListener('blur', stop);
-    document.addEventListener('touchend', () => { this.effects.hideSwatterCursor(); applyCursor(false); }, { passive: true });
-    document.addEventListener('mouseup', () => { this.effects.hideSwatterCursor(); applyCursor(false); });
-}
+            this.lastLocalX = -9999; this.lastLocalY = -9999;
+            applyCursor(false);
+        };
+        this.input.on('pointerup', stop);
+        this.input.on('pointerout', stop);
+        this.input.on('pointerupoutside', stop);
+        window.addEventListener('blur', stop);
+        document.addEventListener('touchend', () => { this.effects.hideSwatterCursor(); applyCursor(false); }, { passive: true });
+        document.addEventListener('mouseup', () => { this.effects.hideSwatterCursor(); applyCursor(false); });
+    }
     applyTool(lx, ly) {
         if (this.shop.isOpen || this.museum.isOpen || this.questsUI.isOpen || this.achievementsUI.isOpen
             || this.dailyUI.isOpen || this.settingsUI.isOpen || this.leaderboardUI.isOpen) return;
@@ -3415,18 +3464,21 @@ class MainScene extends Phaser.Scene {
             this.showCrustWarning(); this.mascot?.react('crust'); return;
         }
         if (this.currentTool === 'steam') {
-            if (this.steamFuel < BALANCE.steamFuelCost) {
+            const cost = this.state.getSteamFuelCost();
+            if (this.steamFuel < cost) {
                 this.showSteamEmptyWarning();
                 return;
             }
-            this.steamFuel = Math.max(0, this.steamFuel - BALANCE.steamFuelCost);
+            this.steamFuel = Math.max(0, this.steamFuel - cost);
             this.updateSteamBar();
         }
         if (this.state.food <= 0) {
             if (this.state.money < BALANCE.foodPrice) { this.state.food = 1; this.refreshHUD(); this.showMessage(t('foodBonus')); }
             else { this.showNoFoodWarning(); this.mascot?.react('food'); return; }
         }
-        this.cleaning.applyStroke(lx, ly, this.state.getCurrentRadius(), this.currentTool);
+        let radius = this.state.getCurrentRadius();
+        if (this.currentTool === 'steam') radius += this.state.getSteamRadiusBonus();
+        this.cleaning.applyStroke(lx, ly, radius, this.currentTool);
         const p = this.cleaning.progress;
         if (!this.stars.active && p >= BALANCE.finishThreshold && p < 1.0) { this.stars.activate(); }
     }
@@ -3729,7 +3781,7 @@ class MainScene extends Phaser.Scene {
             const usingSteam = (this.currentTool === 'steam' && this.isPointerDown);
             if (!usingSteam && this.steamFuel < BALANCE.steamMaxFuel) {
                 this.steamFuel = Math.min(BALANCE.steamMaxFuel,
-                    this.steamFuel + BALANCE.steamFuelRegen * (delta / 1000) * 60);
+                    this.steamFuel + this.state.getSteamFuelRegen() * (delta / 1000) * 60);
                 this.updateSteamBar();
             }
         }
