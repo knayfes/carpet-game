@@ -1103,26 +1103,45 @@ class GameState {
 class SaveSystem {
     constructor(state) { this.state = state; this.ysdk = null; this.useLocal = false; this._saving = false; }
     async init() {
+    // Всегда пробуем localStorage сразу — на случай если SDK висит
+    const loadLocal = () => {
         try {
-            if (typeof YaGames === 'undefined') throw new Error('no SDK');
-            this.ysdk = await YaGames.init();
-            const detected = detectLang(this.ysdk);
-            if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
-            else { LANG = detected; this.state.settings.lang = detected; }
-            const keys = Object.keys(this.state.toSaveObject());
-            const stats = await this.ysdk.player.getStats(keys);
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (raw) {
+                this.state.fromSaveObject(JSON.parse(raw));
+                if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+            }
+        } catch {}
+    };
+
+    try {
+        if (typeof YaGames === 'undefined') throw new Error('no SDK');
+        this.ysdk = await YaGames.init();
+        const detected = detectLang(this.ysdk);
+        if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+        else { LANG = detected; this.state.settings.lang = detected; }
+
+        const keys = Object.keys(this.state.toSaveObject());
+        const stats = await this.ysdk.player.getStats(keys);
+
+        // Если облако вернуло что-то осмысленное — используем его
+        const hasCloud = stats && Object.keys(stats).length > 0 &&
+            (stats.money !== undefined || stats.carpetIndex !== undefined || stats.prestigeLevel !== undefined);
+
+        if (hasCloud) {
             this.state.fromSaveObject(stats);
-            if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
-        } catch {
-            this.useLocal = true;
-            LANG = detectLang(null);
-            try {
-                const raw = localStorage.getItem(SAVE_KEY);
-                if (raw) { this.state.fromSaveObject(JSON.parse(raw)); if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang; }
-            } catch {}
+        } else {
+            loadLocal();   // облако пустое → берём локальный
         }
-        return this;
+        if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+    } catch (e) {
+        console.warn('Yandex SDK init failed, using local save:', e);
+        this.useLocal = true;
+        LANG = detectLang(null);
+        loadLocal();
     }
+    return this;
+}
     ready() { try { this.ysdk?.features?.LoadingAPI?.ready?.(); } catch {} }
     gameplayStart() { try { this.ysdk?.features?.GameplayAPI?.start?.(); } catch {} }
     gameplayStop() { try { this.ysdk?.features?.GameplayAPI?.stop?.(); } catch {} }
@@ -2946,19 +2965,44 @@ class PreloadScene extends Phaser.Scene {
         this.load.on('progress', (v) => { bar.width = 400 * v; });
     }
     async create() {
-        const state = new GameState();
-        const saveSystem = await new SaveSystem(state).init();
-        const ads = new AdsSystem(saveSystem);
-        const leaderboard = new LeaderboardSystem(state, saveSystem);
-        state.refreshDailyQuests();
-        state.checkAchievements();
-        await saveSystem.save();
-        this.registry.set('gameState', state);
-        this.registry.set('saveSystem', saveSystem);
-        this.registry.set('ads', ads);
-        this.registry.set('leaderboard', leaderboard);
-        this.scene.start('MainScene');
+    const state = new GameState();
+    const saveSystem = new SaveSystem(state);
+    const ads = new AdsSystem(saveSystem);
+    const leaderboard = new LeaderboardSystem(state, saveSystem);
+    this.registry.set('gameState', state);
+    this.registry.set('saveSystem', saveSystem);
+    this.registry.set('ads', ads);
+    this.registry.set('leaderboard', leaderboard);
+
+    // Жёсткий таймаут: если SDK не ответил за 5 секунд — стартуем без него
+    const withTimeout = (promise, ms) => Promise.race([
+        promise,
+        new Promise(resolve => setTimeout(() => resolve('timeout'), ms))
+    ]);
+
+    try {
+        const result = await withTimeout(saveSystem.init(), 5000);
+        if (result === 'timeout') {
+            console.warn('SaveSystem init timeout — using local fallback');
+            saveSystem.useLocal = true;
+            try {
+                const raw = localStorage.getItem(SAVE_KEY);
+                if (raw) state.fromSaveObject(JSON.parse(raw));
+            } catch {}
+        }
+    } catch (e) {
+        console.warn('SaveSystem init error:', e);
+        saveSystem.useLocal = true;
     }
+
+    state.refreshDailyQuests();
+    state.checkAchievements();
+
+    // Сохраняем тоже асинхронно, не блокируя запуск
+    saveSystem.save().catch(e => console.warn('Save failed:', e));
+
+    this.scene.start('MainScene');
+}
 }
 
 class MainScene extends Phaser.Scene {
