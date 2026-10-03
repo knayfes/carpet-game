@@ -241,7 +241,7 @@ const BALANCE = {
     swatterBasePrice: 200,
     newCarpetRadiusRequired: 50, newCarpetRadiusIncrease: 12, newCarpetBasePrice: 1000,
     autoFoodBasePrice: 3000, autoFoodPriceIncrease: 1000,
-    doubleBugPrice: 2000, bugRewardPerKill: 5,
+    doubleBugPrice: 2000, bugBaseReward: 0, bugRewardPerKill: 5,
     soapThreshold: 0.01, eraseStrength: 0.30,
     finishThreshold: 0.99, finishStarReward: 5, finishStarMinDist: 70,
     inputLockDuration: 300,
@@ -834,6 +834,7 @@ class GameState {
         this.money = 0; this.food = BALANCE.startFood; this.toolLevel = BALANCE.startToolLevel;
         this.soapLevel = 1; this.washLevel = 1; this.swatterLevel = 0;
         this.steamLevel = 1; this.stainRemoverLevel = 1;
+        this.doubleBugReward = false;
         if (this.legacyUpgrades.jump_start) { this.carpetIndex = 3; this.carpetLevel = 2; }
         else if (this.legacyUpgrades.fast_start) { this.carpetIndex = 2; this.carpetLevel = 1; }
         else { this.carpetIndex = 1; this.carpetLevel = 0; }
@@ -1709,6 +1710,32 @@ class CleaningSystem {
         }
         this.needRedrawSoap = false;
     }
+    serialize() {
+        return {
+            carpetIndex: this.state.carpetIndex,
+            dirt: Array.from(this.dirt),
+            soap: Array.from(this.soap),
+            crust: Array.from(this.crust),
+            stain: Array.from(this.stainType),
+            cols: this.cols,
+            rows: this.rows
+        };
+    }
+    deserialize(data) {
+        if (!data || data.cols !== this.cols || data.rows !== this.rows) return false;
+        if (data.carpetIndex !== this.state.carpetIndex) return false;
+        try {
+            this.dirt.set(data.dirt);
+            this.soap.set(data.soap);
+            this.crust.set(data.crust);
+            this.stainType.set(data.stain);
+        } catch { return false; }
+        this.needRedrawDirt = true; this.needRedrawSoap = true;
+        this.needRedrawCrust = true; this.needRedrawStain = true;
+        this.progress = 0; this.celebrationFired = false;
+        this.recalcProgress();
+        return true;
+    }
 }
 
 class BugSystem {
@@ -1763,7 +1790,12 @@ class BugSystem {
         if (!fromPet) this.state.registerBugKill();
         this.onKill?.(bug.x, bug.y, fromPet);
         if (!fromPet) {
-            let totalReward = BALANCE.bugRewardPerKill + this.state.getSwatterRewardBonus();
+            // Базовая награда +5 ТОЛЬКО если куплена двойная
+            // Бонус уровня мухобойки +1 за каждый уровень
+            // Всё это умножается на 2 если двойная куплена
+            const base = this.state.doubleBugReward ? BALANCE.bugRewardPerKill : BALANCE.bugBaseReward;
+            const lvl = this.state.getSwatterRewardBonus();
+            let totalReward = base + lvl;
             if (this.state.doubleBugReward) totalReward *= 2;
             if (totalReward > 0) {
                 this.state.addMoney(totalReward);
@@ -2356,7 +2388,7 @@ class ShopUI {
             if (st.doubleBugReward) {
                 item(y, `💰 ${t('doubleBugOn')}`, 0, () => {}, { disabled: true, priceLabel: '✅' });
             } else {
-                item(y, `💰 ${t('doubleBug')} (+${BALANCE.bugRewardPerKill}💰)`, BALANCE.doubleBugPrice,
+                item(y, `💰 ${t('doubleBug')} (+${BALANCE.bugRewardPerKill}💰×2)`, BALANCE.doubleBugPrice,
                     async () => { st.buyDoubleBug(); await this._afterBuy(); });
             }
             y += 82;
@@ -2571,7 +2603,7 @@ class ShopUI {
             (LANG === 'ru' ? 'Наследие, скины, достижения\n' : 'Legacy, skins, achievements\n') +
             (st.legacyUpgrades.pet_friends ? (LANG === 'ru' ? 'Питомцы\n' : 'Pets\n') : (LANG === 'ru' ? 'Питомцы СБРОСЯТСЯ\n' : 'Pets will RESET\n')) +
             `\n${t('willReset')}\n` +
-            (LANG === 'ru' ? 'Деньги, ковры, инструменты, автоеда' : 'Money, carpets, tools, auto-food');
+            (LANG === 'ru' ? 'Деньги, ковры, инструменты, автоеда, ×2 мух' : 'Money, carpets, tools, auto-food, ×2 bugs');
         push(s.add.text(360, cy - 20, info, { ...TEXT_STYLES.shopInfo('#FFFFFF', 17), align: 'center', lineSpacing: 4 }).setOrigin(0.5).setDepth(42));
         let confirmPending = false;
         const btnLabel = t('prestigeBtn', gain);
@@ -2944,6 +2976,8 @@ class LeaderboardUI {
 </script>
 
 <script>
+const CLEAN_STATE_KEY = 'carpetGameStats_cleanState';
+
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
@@ -2968,7 +3002,6 @@ class PreloadScene extends Phaser.Scene {
         this.registry.set('ads', ads);
         this.registry.set('leaderboard', leaderboard);
 
-        // Жёсткий таймаут: если SDK не ответил за 5 сек — стартуем без него
         const withTimeout = (promise, ms) => Promise.race([
             promise,
             new Promise(resolve => setTimeout(() => resolve('timeout'), ms))
@@ -2992,7 +3025,6 @@ class PreloadScene extends Phaser.Scene {
         state.refreshDailyQuests();
         state.checkAchievements();
 
-        // Сохраняем асинхронно — не блокируем запуск
         saveSystem.save().catch(e => console.warn('Save failed:', e));
 
         this.scene.start('MainScene');
@@ -3096,13 +3128,23 @@ class MainScene extends Phaser.Scene {
         this.steamFuel = BALANCE.steamMaxFuel;
         this.tutorial = null;
         this.brush = this.add.text(0, 0, this.state.getBrushIcon(), { fontSize: '70px', fontFamily: 'Arial' }).setOrigin(0.5).setDepth(3).setVisible(false);
-        this.brushAura = null;
         this.buildHUD(W, H);
         this.buildToolButtons(W, H);
         this.setupInput();
         this.selectTool('soap');
-        this.cleaning.reset(this.state.carpetIndex);
-        this.bugs.spawnForLevel(this.state.carpetIndex);
+        // Пытаемся восстановить прогресс чистки
+        let restored = false;
+        try {
+            const raw = localStorage.getItem(CLEAN_STATE_KEY);
+            if (raw) {
+                const saved = JSON.parse(raw);
+                restored = this.cleaning.deserialize(saved);
+            }
+        } catch {}
+        if (!restored) {
+            this.cleaning.reset(this.state.carpetIndex);
+            this.bugs.spawnForLevel(this.state.carpetIndex);
+        }
         if (this.state.refreshDailyQuests()) {
             this.saveSystem.save();
             this.time.delayedCall(800, () => this.showMessage(t('newQuests')));
@@ -3111,10 +3153,16 @@ class MainScene extends Phaser.Scene {
         this.leaderboard.submitScores();
         this.time.addEvent({ delay: 60000, loop: true, callback: () => { this.updateDayNightText(); }});
         this._onVisibilityChange = () => {
-            if (document.hidden) { try { this.saveSystem.saveSync(); } catch {} this.pauseGame(); }
-            else this.resumeGame();
+            if (document.hidden) {
+                try { this.saveSystem.saveSync(); } catch {}
+                try { localStorage.setItem(CLEAN_STATE_KEY, JSON.stringify(this.cleaning.serialize())); } catch {}
+                this.pauseGame();
+            } else this.resumeGame();
         };
-        this._onPageHide = () => { try { this.saveSystem.saveSync(); } catch {} };
+        this._onPageHide = () => {
+            try { this.saveSystem.saveSync(); } catch {}
+            try { localStorage.setItem(CLEAN_STATE_KEY, JSON.stringify(this.cleaning.serialize())); } catch {}
+        };
         document.addEventListener('visibilitychange', this._onVisibilityChange);
         window.addEventListener('pagehide', this._onPageHide);
         window.addEventListener('blur', () => this.pauseGame());
@@ -3172,10 +3220,11 @@ class MainScene extends Phaser.Scene {
             const r = 32;
             const circle = this.add.circle(x, y, r, 0x1e1e28, 0.95).setDepth(10).setStrokeStyle(3, 0x4A90D9, 0.75);
             const ic = this.add.text(x, y, icon, { fontSize: '38px' }).setOrigin(0.5).setDepth(11);
-            const lb = this.add.text(x, y + r + 16, label, {
-                fontSize: '17px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
-                stroke: '#000000', strokeThickness: 5,
-                shadow: { offsetX: 1, offsetY: 1, color: '#000000', blur: 3, fill: true }
+            const lb = this.add.text(x, y + r + 15, label, {
+                fontSize: '15px', fill: color, fontStyle: 'bold', fontFamily: FONT_HAND,
+                stroke: '#000000', strokeThickness: 6,
+                shadow: { offsetX: 2, offsetY: 2, color: '#000000', blur: 4, fill: true },
+                align: 'center'
             }).setOrigin(0.5).setDepth(11);
             const hit = this.add.circle(x, y, r + 8, 0x000000, 0.001).setDepth(12);
             hit.setInteractive({ useHandCursor: true });
@@ -3278,7 +3327,6 @@ class MainScene extends Phaser.Scene {
             this.finishCarpet();
         });
     }
-    updateBrushAura() { /* отключено */ }
     updateDayNightText() {
         if (!this.dayNightText) return;
         const td = getTimeOfDay();
@@ -3547,6 +3595,7 @@ class MainScene extends Phaser.Scene {
         this.mascot?.react('finish');
         if (this.tutorial) this.tutorial.reportAction('finish');
         this.bugs.clear();
+        try { localStorage.removeItem(CLEAN_STATE_KEY); } catch {}
         this.cleaning.reset(this.state.carpetIndex);
         this.stars.clear();
         this.updateProgressBar(0);
@@ -3584,6 +3633,7 @@ class MainScene extends Phaser.Scene {
         this.steamFuel = BALANCE.steamMaxFuel;
         this.updateSteamBar();
         this.bugs.clear();
+        try { localStorage.removeItem(CLEAN_STATE_KEY); } catch {}
         if (this.toolBtns) {
             for (const id in this.toolBtns) {
                 const b = this.toolBtns[id];
@@ -3621,6 +3671,7 @@ class MainScene extends Phaser.Scene {
         this.steamFuel = BALANCE.steamMaxFuel;
         this.updateSteamBar();
         this.bugs.clear();
+        try { localStorage.removeItem(CLEAN_STATE_KEY); } catch {}
         this.pets.refreshIndicators();
         if (this.toolBtns) {
             for (const id in this.toolBtns) {
