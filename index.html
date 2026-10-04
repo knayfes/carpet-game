@@ -10,10 +10,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- Yandex Games SDK — обязателен до Phaser -->
     <script src="/sdk.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        html, body {
+<script>
+    window.__ysdk = null;
+    window.__ysdkReady = false;
+    (async () => {
+        try {
+            if (typeof YaGames !== 'undefined') {
+                window.__ysdk = await YaGames.init();
+                window.__ysdkReady = true;
+                console.log('[Yandex SDK] Initialized');
+            } else {
+                console.warn('[Yandex SDK] YaGames is not defined — /sdk.js not loaded');
+            }
+        } catch (e) {
+            console.warn('[Yandex SDK] init failed:', e);
+        }
+    })();
+</script>
             width: 100%; height: 100%;
             background: #1a1a1a; overflow: hidden;
             touch-action: none;
@@ -1184,43 +1197,50 @@ class GameState {
 class SaveSystem {
     constructor(state) { this.state = state; this.ysdk = null; this.useLocal = false; this._saving = false; }
     async init() {
-        const loadLocal = () => {
-            try {
-                const raw = localStorage.getItem(SAVE_KEY);
-                if (raw) {
-                    this.state.fromSaveObject(JSON.parse(raw));
-                    if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
-                }
-            } catch {}
-        };
-
+    const loadLocal = () => {
         try {
-            if (typeof YaGames === 'undefined') throw new Error('no SDK');
-            this.ysdk = await YaGames.init();
-            const detected = detectLang(this.ysdk);
-            if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
-            else { LANG = detected; this.state.settings.lang = detected; }
-
-            const keys = Object.keys(this.state.toSaveObject());
-            const stats = await this.ysdk.player.getStats(keys);
-
-            const hasCloud = stats && Object.keys(stats).length > 0 &&
-                (stats.money !== undefined || stats.carpetIndex !== undefined || stats.prestigeLevel !== undefined);
-
-            if (hasCloud) {
-                this.state.fromSaveObject(stats);
-            } else {
-                loadLocal();
+            const raw = localStorage.getItem(SAVE_KEY);
+            if (raw) {
+                this.state.fromSaveObject(JSON.parse(raw));
+                if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
             }
-            if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
-        } catch (e) {
-            console.warn('Yandex SDK init failed, using local save:', e);
-            this.useLocal = true;
-            LANG = detectLang(null);
+        } catch {}
+    };
+
+    try {
+        // Ждём, пока SDK проинициализируется (максимум 6 сек)
+        let waited = 0;
+        while (!window.__ysdkReady && waited < 6000) {
+            await new Promise(r => setTimeout(r, 100));
+            waited += 100;
+        }
+        if (!window.__ysdk) throw new Error('no SDK');
+        this.ysdk = window.__ysdk;
+
+        const detected = detectLang(this.ysdk);
+        if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+        else { LANG = detected; this.state.settings.lang = detected; }
+
+        const keys = Object.keys(this.state.toSaveObject());
+        const stats = await this.ysdk.player.getStats(keys);
+
+        const hasCloud = stats && Object.keys(stats).length > 0 &&
+            (stats.money !== undefined || stats.carpetIndex !== undefined || stats.prestigeLevel !== undefined);
+
+        if (hasCloud) {
+            this.state.fromSaveObject(stats);
+        } else {
             loadLocal();
         }
-        return this;
+        if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+    } catch (e) {
+        console.warn('Yandex SDK init failed, using local save:', e);
+        this.useLocal = true;
+        LANG = detectLang(null);
+        loadLocal();
     }
+    return this;
+}
     ready() { try { this.ysdk?.features?.LoadingAPI?.ready?.(); } catch {} }
     gameplayStart() { try { this.ysdk?.features?.GameplayAPI?.start?.(); } catch {} }
     gameplayStop() { try { this.ysdk?.features?.GameplayAPI?.stop?.(); } catch {} }
