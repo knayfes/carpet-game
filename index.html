@@ -8,30 +8,40 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Yandex Games SDK — обязателен до Phaser -->
+    <!-- Yandex Games SDK — актуальный путь по документации -->
     <script src="/sdk.js"></script>
-<script>
-    window.__ysdk = null;
-    window.__ysdkReady = false;
-    (async () => {
-        try {
-            if (typeof YaGames !== 'undefined') {
-                window.__ysdk = await YaGames.init();
-                window.__ysdkReady = true;
-                console.log('[Yandex SDK] Initialized');
-            } else {
-                console.warn('[Yandex SDK] YaGames is not defined — /sdk.js not loaded');
+    <script>
+        // Явная инициализация SDK — до старта Phaser
+        window.__ysdk = null;
+        window.__ysdkReady = false;
+        (async () => {
+            try {
+                if (typeof YaGames !== 'undefined') {
+                    window.__ysdk = await YaGames.init();
+                    window.__ysdkReady = true;
+                    console.log('[Yandex SDK] Initialized');
+                } else {
+                    console.warn('[Yandex SDK] YaGames is not defined — /sdk.js not loaded');
+                }
+            } catch (e) {
+                console.warn('[Yandex SDK] init failed:', e);
             }
-        } catch (e) {
-            console.warn('[Yandex SDK] init failed:', e);
+        })();
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js"></script>
+    <style>
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            -webkit-user-select: none; user-select: none;
+            -webkit-touch-callout: none;
+            -webkit-user-drag: none;
+            -webkit-tap-highlight-color: transparent;
         }
-    })();
-</script>
+        html, body {
             width: 100%; height: 100%;
             background: #1a1a1a; overflow: hidden;
             touch-action: none;
-            -webkit-user-select: none; user-select: none;
-            -webkit-tap-highlight-color: transparent;
+            overscroll-behavior: none;
             font-family: 'Caveat', 'Comic Sans MS', cursive;
         }
         canvas { display: block; touch-action: none; }
@@ -215,17 +225,25 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 let LANG = 'ru';
 function detectLang(ysdk) {
+    // 1. Приоритет — язык игрока из SDK Яндекса (требование п. 2.14)
     try {
         const lang = ysdk?.environment?.i18n?.lang;
-        if (lang && I18N[lang]) return lang;
-        if (lang && ['uk', 'be', 'kk', 'ky', 'uz'].includes(lang)) return 'ru';
-        if (lang) return 'en';
-    } catch {}
+        if (lang) {
+            console.log('[i18n] Yandex SDK lang:', lang);
+            if (I18N[lang]) return lang;
+            if (['uk', 'be', 'kk', 'ky', 'uz', 'az', 'hy', 'ka'].includes(lang)) return 'ru';
+            return 'en';
+        }
+    } catch (e) {
+        console.warn('[i18n] SDK lang read error:', e);
+    }
+    // 2. Резерв — язык браузера
     try {
         const nav = (navigator.language || 'ru').slice(0, 2).toLowerCase();
         if (I18N[nav]) return nav;
         if (['uk', 'be', 'kk'].includes(nav)) return 'ru';
     } catch {}
+    // 3. Финальный дефолт
     return 'ru';
 }
 function t(key, ...args) {
@@ -277,7 +295,7 @@ const BALANCE = {
     steamBasePrice: 250, removerBasePrice: 300,
     tutorialPerCarpet: true,
     legacyPerPrestige1: 2, legacyPerPrestigeN: 3,
-    dayNightBonus: 0.5, vibrationMs: 20,
+    dayNightBonus: 0.5,
     musicVolume: 0.18
 };
 
@@ -512,6 +530,7 @@ class AmbientMusic {
     constructor() {
         this.ctx = null; this.master = null; this.bus = null;
         this.enabled = true; this._playing = false;
+        this._wasPlaying = false;
         this._chordTimer = null; this._chimeTimer = null; this._chordIdx = 0;
         this._noteTimers = [];
         this._chords = [
@@ -909,7 +928,7 @@ class GameState {
         this.soapLevel = 1; this.washLevel = 1; this.swatterLevel = 0;
         this.steamLevel = 1; this.stainRemoverLevel = 1;
         this.doubleBugReward = false;
-        // ⚠️ selectedBrush и unlockedBrushes НЕ сбрасываются — скины остаются навсегда
+        // Скины НЕ сбрасываются
         if (this.legacyUpgrades.jump_start) { this.carpetIndex = 3; this.carpetLevel = 2; }
         else if (this.legacyUpgrades.fast_start) { this.carpetIndex = 2; this.carpetLevel = 1; }
         else { this.carpetIndex = 1; this.carpetLevel = 0; }
@@ -1197,50 +1216,56 @@ class GameState {
 class SaveSystem {
     constructor(state) { this.state = state; this.ysdk = null; this.useLocal = false; this._saving = false; }
     async init() {
-    const loadLocal = () => {
+        const loadLocal = () => {
+            try {
+                const raw = localStorage.getItem(SAVE_KEY);
+                if (raw) {
+                    this.state.fromSaveObject(JSON.parse(raw));
+                    if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+                }
+            } catch {}
+        };
+
         try {
-            const raw = localStorage.getItem(SAVE_KEY);
-            if (raw) {
-                this.state.fromSaveObject(JSON.parse(raw));
-                if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+            // Ждём, пока SDK проинициализируется (максимум 6 сек)
+            let waited = 0;
+            while (!window.__ysdkReady && waited < 6000) {
+                await new Promise(r => setTimeout(r, 100));
+                waited += 100;
             }
-        } catch {}
-    };
+            if (!window.__ysdk) throw new Error('no SDK');
+            this.ysdk = window.__ysdk;
 
-    try {
-        // Ждём, пока SDK проинициализируется (максимум 6 сек)
-        let waited = 0;
-        while (!window.__ysdkReady && waited < 6000) {
-            await new Promise(r => setTimeout(r, 100));
-            waited += 100;
-        }
-        if (!window.__ysdk) throw new Error('no SDK');
-        this.ysdk = window.__ysdk;
+            // Язык из SDK — приоритетный источник (п. 2.14)
+            const detected = detectLang(this.ysdk);
+            if (this.state.settings.lang && I18N[this.state.settings.lang]) {
+                LANG = this.state.settings.lang;
+            } else {
+                LANG = detected;
+                this.state.settings.lang = detected;
+            }
+            console.log('[i18n] Using language:', LANG);
 
-        const detected = detectLang(this.ysdk);
-        if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
-        else { LANG = detected; this.state.settings.lang = detected; }
+            const keys = Object.keys(this.state.toSaveObject());
+            const stats = await this.ysdk.player.getStats(keys);
 
-        const keys = Object.keys(this.state.toSaveObject());
-        const stats = await this.ysdk.player.getStats(keys);
+            const hasCloud = stats && Object.keys(stats).length > 0 &&
+                (stats.money !== undefined || stats.carpetIndex !== undefined || stats.prestigeLevel !== undefined);
 
-        const hasCloud = stats && Object.keys(stats).length > 0 &&
-            (stats.money !== undefined || stats.carpetIndex !== undefined || stats.prestigeLevel !== undefined);
-
-        if (hasCloud) {
-            this.state.fromSaveObject(stats);
-        } else {
+            if (hasCloud) {
+                this.state.fromSaveObject(stats);
+            } else {
+                loadLocal();
+            }
+            if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
+        } catch (e) {
+            console.warn('Yandex SDK init failed, using local save:', e);
+            this.useLocal = true;
+            LANG = detectLang(null);
             loadLocal();
         }
-        if (this.state.settings.lang && I18N[this.state.settings.lang]) LANG = this.state.settings.lang;
-    } catch (e) {
-        console.warn('Yandex SDK init failed, using local save:', e);
-        this.useLocal = true;
-        LANG = detectLang(null);
-        loadLocal();
+        return this;
     }
-    return this;
-}
     ready() { try { this.ysdk?.features?.LoadingAPI?.ready?.(); } catch {} }
     gameplayStart() { try { this.ysdk?.features?.GameplayAPI?.start?.(); } catch {} }
     gameplayStop() { try { this.ysdk?.features?.GameplayAPI?.stop?.(); } catch {} }
@@ -2975,15 +3000,12 @@ class SettingsUI {
             pill.hit.on('pointerdown', () => { pill.tap(); onTap(); });
         };
 
-        // Язык
         row(390, t('language'), LANG === 'ru' ? '🇷🇺 Русский' : '🇬🇧 English', '#00FF88', async () => {
             LANG = LANG === 'ru' ? 'en' : 'ru';
             st.settings.lang = LANG;
             await this.saveSystem.save();
             this.scene.scene.restart();
         });
-
-        // Музыка
         row(470, t('music'), st.settings.music ? t('musicOn') : t('musicOff'), st.settings.music ? '#00FF00' : '#FF6666', async () => {
             st.settings.music = !st.settings.music;
             await this.saveSystem.save();
@@ -3000,15 +3022,11 @@ class SettingsUI {
             }
             this.refresh();
         });
-
-        // Экспорт
         row(550, t('exportSave'), t('exportBtn'), '#00E5FF', () => {
             const data = JSON.stringify(st.toSaveObject());
             try { navigator.clipboard.writeText(data); this.scene.showMessage(t('saveCopied')); }
             catch { try { const ta = document.createElement('textarea'); ta.value = data; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); this.scene.showMessage(t('saveCopied')); } catch {} }
         });
-
-        // Импорт
         row(630, t('importSave'), t('importBtn'), '#00E5FF', async () => {
             try {
                 const text = await navigator.clipboard.readText();
@@ -3024,7 +3042,6 @@ class SettingsUI {
             } catch { this.scene.showMessage(t('saveInvalid')); }
         });
 
-        // Сброс прогресса
         let confirmPending = false;
         const rstBtn = push(s.add.text(W/2, 730, t('resetProgress'), {
             fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#550000', padding: { x: 25, y: 14 }
@@ -3130,7 +3147,7 @@ class PreloadScene extends Phaser.Scene {
         ]);
 
         try {
-            const result = await withTimeout(saveSystem.init(), 5000);
+            const result = await withTimeout(saveSystem.init(), 8000);
             if (result === 'timeout') {
                 console.warn('SaveSystem init timeout — using local fallback');
                 saveSystem.useLocal = true;
@@ -3161,6 +3178,7 @@ class MainScene extends Phaser.Scene {
         this.ads = this.registry.get('ads');
         this.leaderboard = this.registry.get('leaderboard');
         if (this.input.mouse) this.input.mouse.disableContextMenu();
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
         this.input.setDefaultCursor('default');
         this.saveSystem.ready();
         const W = 720, H = 1280;
@@ -3172,8 +3190,10 @@ class MainScene extends Phaser.Scene {
         this._startMusicOnce = () => {
             try {
                 if (!this.ambientMusic.ctx) this.ambientMusic.init();
-                this.ambientMusic.resume();
-                if (this.state.settings.music) this.ambientMusic.setEnabled(true);
+                if (this.state.settings.music) {
+                    this.ambientMusic.enabled = true;
+                    this.ambientMusic.resume();
+                }
             } catch {}
             window.removeEventListener('pointerdown', this._startMusicOnce);
             window.removeEventListener('touchstart', this._startMusicOnce);
@@ -3289,6 +3309,7 @@ class MainScene extends Phaser.Scene {
         this.time.delayedCall(400, () => this.startCarpetTutorial());
         this.leaderboard.submitScores();
         this.time.addEvent({ delay: 60000, loop: true, callback: () => { this.updateDayNightText(); }});
+
         this._onVisibilityChange = () => {
             if (document.hidden) {
                 try { this.saveSystem.saveSync(); } catch {}
@@ -3315,8 +3336,30 @@ class MainScene extends Phaser.Scene {
         if (open && !this.gameplayStopped) { this.saveSystem.gameplayStop(); this.gameplayStopped = true; }
         else if (!open && this.gameplayStopped) { this.saveSystem.gameplayStart(); this.gameplayStopped = false; }
     }
-    pauseGame() { if (this._paused) return; this._paused = true; try { if (this.sound && this.sound.pauseAll) this.sound.pauseAll(); } catch {} }
-    resumeGame() { if (!this._paused) return; this._paused = false; try { if (this.sound && this.sound.resumeAll) this.sound.resumeAll(); } catch {} this.saveSystem.gameplayStart?.(); }
+    // П. 1.3, 4.7 — музыка останавливается при потере фокуса / показе рекламы
+    pauseGame() {
+        if (this._paused) return;
+        this._paused = true;
+        try { if (this.sound && this.sound.pauseAll) this.sound.pauseAll(); } catch {}
+        try {
+            if (this.ambientMusic && this.ambientMusic._playing) {
+                this.ambientMusic._wasPlaying = true;
+                this.ambientMusic.stop();
+            }
+        } catch {}
+    }
+    resumeGame() {
+        if (!this._paused) return;
+        this._paused = false;
+        try { if (this.sound && this.sound.resumeAll) this.sound.resumeAll(); } catch {}
+        try {
+            if (this.ambientMusic && this.ambientMusic._wasPlaying && this.state.settings.music) {
+                this.ambientMusic._wasPlaying = false;
+                this.ambientMusic.resume();
+            }
+        } catch {}
+        this.saveSystem.gameplayStart?.();
+    }
     startCarpetTutorial() {
         const idx = this.state.carpetIndex;
         const stat = this.state.carpetStats[idx];
