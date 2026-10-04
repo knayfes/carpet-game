@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Yandex Games SDK — обязателен до Phaser -->
     <script src="https://yandex.ru/games/sdk/v2"></script>
     <script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js"></script>
     <style>
@@ -68,8 +69,7 @@ const I18N = {
         dailyTitle: '🎁 ЕЖЕДНЕВНЫЙ БОНУС', dailyDay: 'День {0} из 7',
         dailyNow: '👈 СЕЙЧАС', dailyClaim: '🎁 ЗАБРАТЬ',
         dailyDone: '✅ СЕГОДНЯ ПОЛУЧЕНО', dailyComeBack: 'Приходи завтра!',
-        settingsTitle: '⚙️ НАСТРОЙКИ', vibration: '📳 Вибрация',
-        vibOn: '✅ ВКЛ', vibOff: '❌ ВЫКЛ',
+        settingsTitle: '⚙️ НАСТРОЙКИ',
         exportSave: '📤 Экспорт сейва', exportBtn: '📋 Копировать',
         importSave: '📥 Импорт сейва', importBtn: '📋 Вставить',
         resetProgress: '🗑️ СБРОСИТЬ ВЕСЬ ПРОГРЕСС', resetConfirm: '⚠️ ТОЧНО СБРОСИТЬ?',
@@ -150,8 +150,7 @@ const I18N = {
         dailyTitle: '🎁 DAILY BONUS', dailyDay: 'Day {0} of 7',
         dailyNow: '👈 NOW', dailyClaim: '🎁 CLAIM',
         dailyDone: '✅ CLAIMED TODAY', dailyComeBack: 'Come back tomorrow!',
-        settingsTitle: '⚙️ SETTINGS', vibration: '📳 Vibration',
-        vibOn: '✅ ON', vibOff: '❌ OFF',
+        settingsTitle: '⚙️ SETTINGS',
         exportSave: '📤 Export save', exportBtn: '📋 Copy',
         importSave: '📥 Import save', importBtn: '📋 Paste',
         resetProgress: '🗑️ RESET ALL PROGRESS', resetConfirm: '⚠️ SURE TO RESET?',
@@ -270,6 +269,7 @@ const BALANCE = {
 };
 
 const SAVE_KEY = 'carpetGameStats_v12';
+const CLEAN_STATE_KEY = 'carpetGameStats_cleanState';
 
 const ROOM_VERSION = 2;
 const ROOM_IMAGES = {
@@ -500,6 +500,7 @@ class AmbientMusic {
         this.ctx = null; this.master = null; this.bus = null;
         this.enabled = true; this._playing = false;
         this._chordTimer = null; this._chimeTimer = null; this._chordIdx = 0;
+        this._noteTimers = [];
         this._chords = [
             [220.00, 261.63, 329.63], [174.61, 220.00, 261.63],
             [130.81, 164.81, 196.00], [196.00, 246.94, 293.66]
@@ -541,6 +542,7 @@ class AmbientMusic {
     }
     _playNote(freq, dur, type = 'sine', vol = 0.1) {
         if (!this.ctx || !this.bus) return;
+        if (!this._playing) return;
         const t = this.ctx.currentTime;
         const o1 = this.ctx.createOscillator(); o1.type = type; o1.frequency.value = freq;
         const o2 = this.ctx.createOscillator(); o2.type = type; o2.frequency.value = freq * 1.004;
@@ -554,6 +556,13 @@ class AmbientMusic {
     }
     start() {
         if (!this.ctx || this._playing || !this.enabled) return;
+        if (this.ctx.state === 'suspended') {
+            const p = this.ctx.resume();
+            if (p && p.then) {
+                p.then(() => { if (this.enabled && !this._playing) this.start(); }).catch(() => {});
+            }
+            return;
+        }
         this._playing = true;
         const t = this.ctx.currentTime;
         this.master.gain.cancelScheduledValues(t);
@@ -563,21 +572,41 @@ class AmbientMusic {
     }
     stop() {
         this._playing = false;
-        clearTimeout(this._chordTimer); clearTimeout(this._chimeTimer);
+        clearTimeout(this._chordTimer); this._chordTimer = null;
+        clearTimeout(this._chimeTimer); this._chimeTimer = null;
+        if (this._noteTimers) {
+            this._noteTimers.forEach(id => clearTimeout(id));
+            this._noteTimers = [];
+        }
+        this._chordIdx = 0;
         if (this.master && this.ctx) {
             const t = this.ctx.currentTime;
             this.master.gain.cancelScheduledValues(t);
             this.master.gain.setValueAtTime(this.master.gain.value, t);
-            this.master.gain.linearRampToValueAtTime(0, t + 1);
+            this.master.gain.linearRampToValueAtTime(0, t + 0.4);
         }
     }
-    setEnabled(v) { this.enabled = !!v; if (v) this.start(); else this.stop(); }
+    setEnabled(v) {
+        this.enabled = !!v;
+        if (v) {
+            if (!this.ctx) this.init();
+            this.resume();
+        } else {
+            this.stop();
+        }
+    }
     _scheduleChord() {
         if (!this._playing) return;
         const chord = this._chords[this._chordIdx % this._chords.length];
         this._chordIdx++;
-        chord.forEach((f, i) => setTimeout(() => this._playNote(f, 5.5, 'sine', 0.08), i * 220));
-        chord.forEach(f => setTimeout(() => this._playNote(f * 2, 5.5, 'sine', 0.025), 100));
+        chord.forEach((f, i) => {
+            const id = setTimeout(() => { if (this._playing) this._playNote(f, 5.5, 'sine', 0.08); }, i * 220);
+            this._noteTimers.push(id);
+        });
+        chord.forEach(f => {
+            const id = setTimeout(() => { if (this._playing) this._playNote(f * 2, 5.5, 'sine', 0.025); }, 100);
+            this._noteTimers.push(id);
+        });
         this._chordTimer = setTimeout(() => this._scheduleChord(), 5000);
     }
     _scheduleChime() {
@@ -749,7 +778,7 @@ class GameState {
         this.questCounters = { cleanToday: 0, killBugsToday: 0, fastCleanToday: 0, soapUsesToday: 0, moneyEarnedToday: 0, petActionsToday: 0, starsToday: 0 };
         this.lastAdTime = 0; this.tutorialDone = false;
         this.pets = { cat: { owned: false, level: 1 }, dog: { owned: false, level: 1 }, hamster: { owned: false, level: 1 }, parrot: { owned: false, level: 1 } };
-        this.settings = { vibration: true, lang: null, music: true };
+        this.settings = { lang: null, music: true };
         this.dailyBonus = { lastClaimDate: '', streakDay: 0 };
         this.leaderboardBestMoney = 0; this.leaderboardBestPrestige = 0;
     }
@@ -868,7 +897,6 @@ class GameState {
         this.steamLevel = 1; this.stainRemoverLevel = 1;
         this.doubleBugReward = false;
         // ⚠️ selectedBrush и unlockedBrushes НЕ сбрасываются — скины остаются навсегда
-        // ⚠️ selectedRoom и unlockedRooms тоже не сбрасываются
         if (this.legacyUpgrades.jump_start) { this.carpetIndex = 3; this.carpetLevel = 2; }
         else if (this.legacyUpgrades.fast_start) { this.carpetIndex = 2; this.carpetLevel = 1; }
         else { this.carpetIndex = 1; this.carpetLevel = 0; }
@@ -1382,7 +1410,6 @@ class Effects {
     steamEffect(x, y, color = 0xDDEEFF) {
         if (this._fxCount >= this._fxMax) return;
         this._fxCount++;
-        // Цветной пушистый шар — гарантированно цвет скина
         const circle = this.scene.add.circle(x, y, 16, color, 0.7).setDepth(9);
         this.scene.tweens.add({
             targets: circle,
@@ -2928,30 +2955,41 @@ class SettingsUI {
             pill.hit.on('pointerdown', () => { pill.tap(); onTap(); });
         };
 
+        // Язык
         row(390, t('language'), LANG === 'ru' ? '🇷🇺 Русский' : '🇬🇧 English', '#00FF88', async () => {
             LANG = LANG === 'ru' ? 'en' : 'ru';
             st.settings.lang = LANG;
             await this.saveSystem.save();
             this.scene.scene.restart();
         });
+
+        // Музыка
         row(470, t('music'), st.settings.music ? t('musicOn') : t('musicOff'), st.settings.music ? '#00FF00' : '#FF6666', async () => {
             st.settings.music = !st.settings.music;
             await this.saveSystem.save();
-            this.scene.ambientMusic?.setEnabled(st.settings.music);
+            const am = this.scene.ambientMusic;
+            if (am) {
+                if (st.settings.music) {
+                    if (!am.ctx) am.init();
+                    am.enabled = true;
+                    am.resume();
+                } else {
+                    am.enabled = false;
+                    am.stop();
+                }
+            }
             this.refresh();
         });
-        row(550, t('vibration'), st.settings.vibration ? t('vibOn') : t('vibOff'), st.settings.vibration ? '#00FF00' : '#FF6666', async () => {
-            st.settings.vibration = !st.settings.vibration;
-            await this.saveSystem.save();
-            if (st.settings.vibration) { try { navigator.vibrate?.(BALANCE.vibrationMs); } catch {} }
-            this.refresh();
-        });
-        row(630, t('exportSave'), t('exportBtn'), '#00E5FF', () => {
+
+        // Экспорт
+        row(550, t('exportSave'), t('exportBtn'), '#00E5FF', () => {
             const data = JSON.stringify(st.toSaveObject());
             try { navigator.clipboard.writeText(data); this.scene.showMessage(t('saveCopied')); }
             catch { try { const ta = document.createElement('textarea'); ta.value = data; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); this.scene.showMessage(t('saveCopied')); } catch {} }
         });
-        row(710, t('importSave'), t('importBtn'), '#00E5FF', async () => {
+
+        // Импорт
+        row(630, t('importSave'), t('importBtn'), '#00E5FF', async () => {
             try {
                 const text = await navigator.clipboard.readText();
                 const data = JSON.parse(text);
@@ -2966,8 +3004,9 @@ class SettingsUI {
             } catch { this.scene.showMessage(t('saveInvalid')); }
         });
 
+        // Сброс прогресса
         let confirmPending = false;
-        const rstBtn = push(s.add.text(W/2, 800, t('resetProgress'), {
+        const rstBtn = push(s.add.text(W/2, 730, t('resetProgress'), {
             fontSize: '20px', fill: '#FFFFFF', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#550000', padding: { x: 25, y: 14 }
         }).setOrigin(0.5).setDepth(63).setInteractive({ useHandCursor: true }));
         rstBtn.on('pointerdown', async () => {
@@ -3041,8 +3080,6 @@ class LeaderboardUI {
 </script>
 
 <script>
-const CLEAN_STATE_KEY = 'carpetGameStats_cleanState';
-
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
@@ -3158,7 +3195,7 @@ class MainScene extends Phaser.Scene {
         this.cleaning.onStainRemove = () => { if (this.tutorial) this.tutorial.reportAction('stain'); };
         this.cleaning.onCelebrate = () => { this.effects.celebration(W, H); this.showMessage(t('carpetClean')); };
         this.stars = new FinishStarsSystem(this, this.cleaning, this.state, this.effects);
-        this.stars.onStarPopped = () => { this.refreshHUD(); this.vibrate(); this.mascot?.react('star'); };
+        this.stars.onStarPopped = () => { this.refreshHUD(); this.mascot?.react('star'); };
         this.stars.onAllPopped = () => { this.showMessage(t('allStars')); this.refreshHUD(); };
         this.bugs = new BugSystem(this, this.carpetBounds, this.state, {
             onKill: (x, y) => this.effects.starBurst(x, y, 3),
@@ -3847,7 +3884,6 @@ class MainScene extends Phaser.Scene {
             if (p < m) this['_milestone_' + m] = false;
         });
     }
-    vibrate() { if (!this.state.settings.vibration) return; try { navigator.vibrate?.(BALANCE.vibrationMs); } catch {} }
     showNoFoodWarning() {
         if (this.noFoodCooldown) return;
         this.noFoodCooldown = true;
