@@ -339,11 +339,36 @@ const ROOM_SKINS = [
 ];
 
 const BRUSH_SKINS = [
-    { id: 'classic', icon: '🧼', color: 0xFFFFFF, name: { ru: 'Классика', en: 'Classic' }, price: 0 },
-    { id: 'gold',    icon: '✨', color: 0xFFD700, name: { ru: 'Золотая',  en: 'Gold' },    price: 5000 },
-    { id: 'fire',    icon: '🔥', color: 0xFF5522, name: { ru: 'Огненная', en: 'Fire' },    price: 12000 },
-    { id: 'ice',     icon: '❄️', color: 0x88CCFF, name: { ru: 'Ледяная',  en: 'Ice' },     price: 20000 },
-    { id: 'rainbow', icon: '🌈', color: 0xFF44FF, name: { ru: 'Радужная', en: 'Rainbow' }, price: 30000 }
+    {
+        id: 'classic', icon: '🧼', color: 0xFFFFFF,
+        icons: { soap: '🧼', wash: '🧹', scraper: '🪒', steam: '🔥', remover: '🧴' },
+        fx: { bubble: 0xE0F4FF, splash: 0x9AD6FF, steam: 0xDDEEFF },
+        name: { ru: 'Классика', en: 'Classic' }, price: 0
+    },
+    {
+        id: 'gold', icon: '✨', color: 0xFFD700,
+        icons: { soap: '🧴', wash: '🌟', scraper: '🗡️', steam: '☀️', remover: '💧' },
+        fx: { bubble: 0xFFEE99, splash: 0xFFD700, steam: 0xFFEEBB },
+        name: { ru: 'Золотая', en: 'Gold' }, price: 5000
+    },
+    {
+        id: 'fire', icon: '🔥', color: 0xFF5522,
+        icons: { soap: '🌋', wash: '💦', scraper: '⚔️', steam: '🔥', remover: '🧯' },
+        fx: { bubble: 0xFF8855, splash: 0xFF5522, steam: 0xFFAA66 },
+        name: { ru: 'Огненная', en: 'Fire' }, price: 12000
+    },
+    {
+        id: 'ice', icon: '❄️', color: 0x88CCFF,
+        icons: { soap: '🫧', wash: '🌊', scraper: '💠', steam: '❄️', remover: '🧊' },
+        fx: { bubble: 0xE8F6FF, splash: 0x88CCFF, steam: 0xC8E8FF },
+        name: { ru: 'Ледяная', en: 'Ice' }, price: 20000
+    },
+    {
+        id: 'rainbow', icon: '🌈', color: 0xFF44FF,
+        icons: { soap: '🦄', wash: '🌈', scraper: '⚡', steam: '🌟', remover: '🔮' },
+        fx: { bubble: 0xFF44FF, splash: 0x00E5FF, steam: 0xFFFF44 },
+        name: { ru: 'Радужная', en: 'Rainbow' }, price: 30000
+    }
 ];
 
 const PETS = [
@@ -730,11 +755,13 @@ class GameState {
     }
     getCurrentRadius() {
         const legacyBonus = (this.legacyUpgrades.brush_master || 0) * 5;
-        return Math.floor(BALANCE.brushRadius * (1 + (this.toolLevel - 1) * BALANCE.toolRadiusBonus)) + legacyBonus;
+        const base = Math.floor(BALANCE.brushRadius * (1 + (this.toolLevel - 1) * BALANCE.toolRadiusBonus)) + legacyBonus;
+        return Math.floor(base * (1 + this.getBrushSkinBonus().radius));
     }
     getRewardMultiplier() {
         let m = Math.pow(BALANCE.rewardMultiplierPerCarpet, this.carpetLevel);
         if (this.pets.parrot.owned) m *= (1 + this.getParrotBonus());
+        m *= (1 + this.getBrushSkinBonus().money);
         return m;
     }
     getToolMoneyMultiplier() { return 1 + (this.toolLevel - 1) * BALANCE.toolMoneyBonus; }
@@ -749,11 +776,13 @@ class GameState {
     getRemoverUpgradePrice() { return BALANCE.removerBasePrice * this.stainRemoverLevel; }
     getSoapPower() {
         const base = BALANCE.soapPower * (1 + (this.soapLevel - 1) * 0.40);
-        return base * (1 + (this.legacyUpgrades.soap_master || 0) * 0.25);
+        const legacy = 1 + (this.legacyUpgrades.soap_master || 0) * 0.25;
+        return base * legacy * (1 + this.getBrushSkinBonus().power);
     }
     getWashStrength() {
         const base = BALANCE.washStrength * (1 + (this.washLevel - 1) * 0.35);
-        return base * (1 + (this.legacyUpgrades.wash_master || 0) * 0.25);
+        const legacy = 1 + (this.legacyUpgrades.wash_master || 0) * 0.25;
+        return base * legacy * (1 + this.getBrushSkinBonus().power);
     }
     getSwatterCooldown() { return Math.max(BALANCE.swatterCooldownMin, BALANCE.swatterCooldown - this.swatterLevel * BALANCE.swatterCooldownStep); }
     getSwatterRadius() { return BALANCE.swatterRadius + this.swatterLevel * BALANCE.swatterRadiusStep; }
@@ -761,7 +790,10 @@ class GameState {
     getSteamRadiusBonus() { return (this.steamLevel - 1) * 8; }
     getSteamFuelCost() { return BALANCE.steamFuelCost * Math.max(0.5, 1 - (this.steamLevel - 1) * 0.10); }
     getSteamFuelRegen() { return BALANCE.steamFuelRegen * (1 + (this.steamLevel - 1) * 0.20); }
-    getStainRemoverPower() { return BALANCE.stainRemoverPower * (1 + (this.stainRemoverLevel - 1) * 0.40); }
+    getStainRemoverPower() {
+        return BALANCE.stainRemoverPower * (1 + (this.stainRemoverLevel - 1) * 0.40)
+            * (1 + this.getBrushSkinBonus().power);
+    }
     getPrestigeMultiplier() {
         let mult = BALANCE.prestigeMultiplier;
         if (this.legacyUpgrades.double_income) mult = Math.max(mult, 2.0);
@@ -835,6 +867,8 @@ class GameState {
         this.soapLevel = 1; this.washLevel = 1; this.swatterLevel = 0;
         this.steamLevel = 1; this.stainRemoverLevel = 1;
         this.doubleBugReward = false;
+        // ⚠️ selectedBrush и unlockedBrushes НЕ сбрасываются — скины остаются навсегда
+        // ⚠️ selectedRoom и unlockedRooms тоже не сбрасываются
         if (this.legacyUpgrades.jump_start) { this.carpetIndex = 3; this.carpetLevel = 2; }
         else if (this.legacyUpgrades.fast_start) { this.carpetIndex = 2; this.carpetLevel = 1; }
         else { this.carpetIndex = 1; this.carpetLevel = 0; }
@@ -928,7 +962,25 @@ class GameState {
     }
     selectBrushSkin(id) { if (!this.unlockedBrushes.includes(id)) return false; this.selectedBrush = id; return true; }
     getBrushIcon() { const s = BRUSH_SKINS.find(b => b.id === this.selectedBrush); return s ? s.icon : '🧼'; }
+    getBrushIconFor(tool) {
+        const s = BRUSH_SKINS.find(b => b.id === this.selectedBrush) || BRUSH_SKINS[0];
+        if (s.icons && s.icons[tool]) return s.icons[tool];
+        return s.icon;
+    }
     getBrushColor() { const s = BRUSH_SKINS.find(b => b.id === this.selectedBrush); return s ? s.color : 0xFFFFFF; }
+    getBrushSkinBonus() {
+        switch (this.selectedBrush) {
+            case 'gold':    return { money: 0.10, radius: 0,    power: 0    };
+            case 'fire':    return { money: 0,    radius: 0.15, power: 0    };
+            case 'ice':     return { money: 0,    radius: 0,    power: 0.15 };
+            case 'rainbow': return { money: 0.10, radius: 0.10, power: 0.10 };
+            default:        return { money: 0,    radius: 0,    power: 0    };
+        }
+    }
+    getBrushFx() {
+        const s = BRUSH_SKINS.find(b => b.id === this.selectedBrush) || BRUSH_SKINS[0];
+        return s.fx || { bubble: 0xE0F4FF, splash: 0x9AD6FF, steam: 0xDDEEFF };
+    }
     getAchievementValue(type) {
         switch (type) {
             case 'carpetsCleaned': return this.carpetsCleaned;
@@ -1262,14 +1314,13 @@ class Effects {
         const s = this.scene;
         if (!s.textures.exists('fx_bubble')) {
             const g = s.add.graphics();
-            g.fillStyle(0xE0F4FF, 0.85); g.fillCircle(8, 8, 7);
+            g.fillStyle(0xFFFFFF, 0.9); g.fillCircle(8, 8, 7);
             g.lineStyle(1.5, 0xFFFFFF, 0.9); g.strokeCircle(8, 8, 7);
-            g.fillStyle(0xFFFFFF, 1); g.fillCircle(6, 6, 2);
             g.generateTexture('fx_bubble', 16, 16); g.destroy();
         }
         if (!s.textures.exists('fx_drop')) {
             const g = s.add.graphics();
-            g.fillStyle(0x9AD6FF, 1); g.fillCircle(4, 5, 4); g.fillTriangle(0, 5, 8, 5, 4, 0);
+            g.fillStyle(0xFFFFFF, 1); g.fillCircle(4, 5, 4); g.fillTriangle(0, 5, 8, 5, 4, 0);
             g.generateTexture('fx_drop', 8, 10); g.destroy();
         }
     }
@@ -1281,15 +1332,19 @@ class Effects {
         em.explode(cfg.quantity || 4);
         this.scene.time.delayedCall((cfg.lifespan || 600) + 200, () => { try { em.destroy(); } catch {} });
     }
-    bubbles(x, y) {
+    bubbles(x, y, color = null) {
         if (this._fxCount >= this._fxMax) return;
         if (Math.random() > BALANCE.bubbleChance) return;
-        this._emitter('fx_bubble', x, y, { quantity: 2, lifespan: 700, speed: { min: 30, max: 70 }, scale: { start: 0.9, end: 1.4 }, alpha: { start: 0.9, end: 0 } });
+        const cfg = { quantity: 2, lifespan: 700, speed: { min: 30, max: 70 }, scale: { start: 0.9, end: 1.4 }, alpha: { start: 0.9, end: 0 } };
+        if (color !== null) cfg.tint = color;
+        this._emitter('fx_bubble', x, y, cfg);
     }
-    splash(x, y) {
+    splash(x, y, color = null) {
         if (this._fxCount >= this._fxMax) return;
         if (Math.random() > BALANCE.splashChance) return;
-        this._emitter('fx_drop', x, y, { quantity: 3, lifespan: 550, speed: { min: 50, max: 130 }, angle: { min: 0, max: 360 }, scale: { start: 1.1, end: 0.2 } });
+        const cfg = { quantity: 3, lifespan: 550, speed: { min: 50, max: 130 }, angle: { min: 0, max: 360 }, scale: { start: 1.1, end: 0.2 } };
+        if (color !== null) cfg.tint = color;
+        this._emitter('fx_drop', x, y, cfg);
     }
     star(x, y) {
         if (this._fxCount >= this._fxMax) return;
@@ -1324,13 +1379,17 @@ class Effects {
         this.scene.tweens.add({ targets: tt, alpha: 0, scale: 1.8, duration: 400, ease: 'Cubic.easeOut',
             onComplete: () => { this._fxCount--; tt.destroy(); } });
     }
-    steamEffect(x, y) {
+    steamEffect(x, y, color = 0xDDEEFF) {
         if (this._fxCount >= this._fxMax) return;
         this._fxCount++;
-        const s = ['☁️','💨','🌫️'][Math.floor(Math.random() * 3)];
-        const tt = this.scene.add.text(x, y, s, { fontSize: '40px' }).setOrigin(0.5).setDepth(9).setAlpha(0.7);
-        this.scene.tweens.add({ targets: tt, y: y - 40, alpha: { from: 0.7, to: 0 }, scale: { from: 1, to: 1.4 }, duration: 500, ease: 'Cubic.easeOut',
-            onComplete: () => { this._fxCount--; tt.destroy(); } });
+        // Цветной пушистый шар — гарантированно цвет скина
+        const circle = this.scene.add.circle(x, y, 16, color, 0.7).setDepth(9);
+        this.scene.tweens.add({
+            targets: circle,
+            y: y - 50, scale: { from: 1, to: 2.2 }, alpha: { from: 0.7, to: 0 },
+            duration: 600, ease: 'Cubic.easeOut',
+            onComplete: () => { this._fxCount--; circle.destroy(); }
+        });
     }
     drawSwatterCursor(x, y) {
         const g = this.gfxSwatter;
@@ -1790,9 +1849,6 @@ class BugSystem {
         if (!fromPet) this.state.registerBugKill();
         this.onKill?.(bug.x, bug.y, fromPet);
         if (!fromPet) {
-            // Базовая награда +5 ТОЛЬКО если куплена двойная
-            // Бонус уровня мухобойки +1 за каждый уровень
-            // Всё это умножается на 2 если двойная куплена
             const base = this.state.doubleBugReward ? BALANCE.bugRewardPerKill : BALANCE.bugBaseReward;
             const lvl = this.state.getSwatterRewardBonus();
             let totalReward = base + lvl;
@@ -2488,7 +2544,16 @@ class ShopUI {
             const stroke = selected ? 0x00FF00 : (unlocked ? 0x888888 : 0x444444);
             const pill = makePill(s, x, y, cardW, cardH, { radius: 18, fill, stroke, strokeW: selected ? 4 : 2, depth: 41 });
             push(pill.cont);
-            push(s.add.text(x, y - 32, skin.icon, { fontSize: '48px' }).setOrigin(0.5).setDepth(42));
+            if (kind === 'brush' && skin.icons) {
+                const iconsRow = ['soap', 'wash', 'scraper', 'steam', 'remover'];
+                iconsRow.forEach((tt, idx) => {
+                    const ix = x - 32 + idx * 16;
+                    push(s.add.text(ix, y - 44, skin.icons[tt], { fontSize: '18px' }).setOrigin(0.5).setDepth(42));
+                });
+                push(s.add.text(x, y - 12, skin.icon, { fontSize: '36px' }).setOrigin(0.5).setDepth(42));
+            } else {
+                push(s.add.text(x, y - 32, skin.icon, { fontSize: '48px' }).setOrigin(0.5).setDepth(42));
+            }
             push(s.add.text(x, y + 16, loc(skin.name), { fontSize: '15px', fill: unlocked ? '#FFFFFF' : '#888888', fontStyle: 'bold', fontFamily: FONT_HAND, wordWrap: { width: cardW - 10 }, align: 'center' }).setOrigin(0.5).setDepth(42));
             const priceY = y + 50;
             if (selected) push(s.add.text(x, priceY, t('selected'), { fontSize: '14px', fill: '#00FF00', fontStyle: 'bold', fontFamily: FONT_HAND }).setOrigin(0.5).setDepth(42));
@@ -2600,7 +2665,7 @@ class ShopUI {
             t('prestigeGain', gain) + '\n' +
             t('prestigeMult', curMult.toFixed(2), nextMult.toFixed(2)) + '\n\n' +
             `${t('willStay')}\n` +
-            (LANG === 'ru' ? 'Наследие, скины, достижения\n' : 'Legacy, skins, achievements\n') +
+            (LANG === 'ru' ? 'Наследие, скины (щётка+комната), достижения\n' : 'Legacy, skins (brush+room), achievements\n') +
             (st.legacyUpgrades.pet_friends ? (LANG === 'ru' ? 'Питомцы\n' : 'Pets\n') : (LANG === 'ru' ? 'Питомцы СБРОСЯТСЯ\n' : 'Pets will RESET\n')) +
             `\n${t('willReset')}\n` +
             (LANG === 'ru' ? 'Деньги, ковры, инструменты, автоеда, ×2 мух' : 'Money, carpets, tools, auto-food, ×2 bugs');
@@ -3073,9 +3138,22 @@ class MainScene extends Phaser.Scene {
         this.effects = new Effects(this);
         this.cleaning = new CleaningSystem(this, this.carpetBounds, this.state);
         this.cleaning.onProgress = (p) => this.updateProgressBar(p);
-        this.cleaning.onSoap = (x, y) => { this.effects.bubbles(x, y); if (this.tutorial) this.tutorial.reportAction('soap'); };
-        this.cleaning.onErase = (x, y) => { this.effects.splash(x, y); this.effects.star(x, y); if (this.tutorial) this.tutorial.reportAction('wash'); };
-        this.cleaning.onSteam = (x, y) => { this.effects.steamEffect(x, y); if (this.tutorial) this.tutorial.reportAction('steam'); };
+        this.cleaning.onSoap = (x, y) => {
+            const fx = this.state.getBrushFx();
+            this.effects.bubbles(x, y, fx.bubble);
+            if (this.tutorial) this.tutorial.reportAction('soap');
+        };
+        this.cleaning.onErase = (x, y) => {
+            const fx = this.state.getBrushFx();
+            this.effects.splash(x, y, fx.splash);
+            this.effects.star(x, y);
+            if (this.tutorial) this.tutorial.reportAction('wash');
+        };
+        this.cleaning.onSteam = (x, y) => {
+            const fx = this.state.getBrushFx();
+            this.effects.steamEffect(x, y, fx.steam);
+            if (this.tutorial) this.tutorial.reportAction('steam');
+        };
         this.cleaning.onCrustRemove = () => { if (this.tutorial) this.tutorial.reportAction('scrape'); };
         this.cleaning.onStainRemove = () => { if (this.tutorial) this.tutorial.reportAction('stain'); };
         this.cleaning.onCelebrate = () => { this.effects.celebration(W, H); this.showMessage(t('carpetClean')); };
@@ -3100,7 +3178,10 @@ class MainScene extends Phaser.Scene {
         this.shop.onPetBought = () => this.pets.refreshIndicators();
         this.shop.onSkinChange = (kind) => {
             if (kind === 'room') this.room.draw(this.state.selectedRoom);
-            if (kind === 'brush') this.updateBrushIcon();
+            if (kind === 'brush') {
+                this.updateBrushIcon();
+                this.selectTool(this.currentTool);
+            }
         };
         this.museum = new MuseumUI(this, this.state);
         this.questsUI = new QuestsUI(this, this.state);
@@ -3132,7 +3213,6 @@ class MainScene extends Phaser.Scene {
         this.buildToolButtons(W, H);
         this.setupInput();
         this.selectTool('soap');
-        // Пытаемся восстановить прогресс чистки
         let restored = false;
         try {
             const raw = localStorage.getItem(CLEAN_STATE_KEY);
@@ -3343,7 +3423,11 @@ class MainScene extends Phaser.Scene {
         this.updateQuestBadge(); this.updateDayNightText();
     }
     updateQuestBadge() { if (!this.questBadge) return; this.questBadge.setVisible(this.state.quests.some(q => this.state.isQuestComplete(q) && !this.state.questClaimed[q.id])); }
-    updateBrushIcon() { /* отключено */ }
+    updateBrushIcon() {
+        if (this.currentTool && this.state.getBrushIconFor) {
+            this.brush.setText(this.state.getBrushIconFor(this.currentTool));
+        }
+    }
     buildToolButtons(W, H) {
         const btnY = 1195;
         const tools = [];
@@ -3413,7 +3497,7 @@ class MainScene extends Phaser.Scene {
         this.currentTool = tool;
         const iconMap = { soap: '🧼', wash: '🧹', scraper: '🪒', steam: '🔥', remover: '🧴' };
         if (iconMap[tool]) {
-            this.brush.setText(iconMap[tool]);
+            this.brush.setText(this.state.getBrushIconFor(tool));
         } else {
             this._setBrushVisible(false);
         }
