@@ -92,7 +92,8 @@ const I18N = {
         prestigeGain: 'Получишь: +{0} 👑 Очков Наследия',
         prestigeMult: 'Множитель дохода: ×{0} → ×{1}',
         willStay: '✅ ОСТАНЕТСЯ:', willReset: '❌ СБРОСИТСЯ:',
-        confirmPrestige: '⚠️ ТОЧНО? ЕЩЁ РАЗ', prestigeBtn: '🔥 ПРЕСТИЖ (+{0} 👑)',
+        confirmPrestige: '⚠️ ТОЧНО? ЕЩЁ РАЗ', prestigeBtn: '🔥 ПРЕСТИЖ (-{1}💰, +{0} 👑)',
+        prestigeNeedMoney: 'Нужно {0}💰 на балансе',
         achievementsTitle: '🏆 ДОСТИЖЕНИЯ', achievementsOpened: 'Открыто: {0} / {1}',
         page: 'Стр. {0} / {1}',
         questsTitle: '📅 ЗАДАНИЯ', questsUpdate: 'Обновление: каждый день (UTC)',
@@ -173,7 +174,8 @@ const I18N = {
         prestigeGain: 'You will get: +{0} 👑 Legacy points',
         prestigeMult: 'Income multiplier: ×{0} → ×{1}',
         willStay: '✅ WILL STAY:', willReset: '❌ WILL RESET:',
-        confirmPrestige: '⚠️ SURE? TAP AGAIN', prestigeBtn: '🔥 PRESTIGE (+{0} 👑)',
+        confirmPrestige: '⚠️ SURE? TAP AGAIN', prestigeBtn: '🔥 PRESTIGE (-{1}💰, +{0} 👑)',
+        prestigeNeedMoney: 'Need {0}💰 on balance',
         achievementsTitle: '🏆 ACHIEVEMENTS', achievementsOpened: 'Unlocked: {0} / {1}',
         page: 'Page {0} / {1}',
         questsTitle: '📅 QUESTS', questsUpdate: 'Refresh: every day (UTC)',
@@ -276,6 +278,7 @@ const BALANCE = {
     rewardMin: 40, rewardMax: 70,
     rewardMultiplierPerCarpet: 1.25,
     prestigeMultiplier: 1.5,
+    prestigePrice: 12000,
     brushRadius: 35, toolRadiusBonus: 0.10, toolMoneyBonus: 0.10, toolBasePrice: 100,
     soapPower: 0.35, soapBasePrice: 120,
     washStrength: 0.30, washBasePrice: 150,
@@ -327,11 +330,11 @@ const LEGACY_UPGRADES = [
     { id: 'brush_master', icon: '🧹', name: { ru: 'Мастер щётки', en: 'Brush Master' },       desc: { ru: '+5 к стартовому радиусу', en: '+5 starting radius' }, cost: 2,  maxLevel: 5 },
     { id: 'soap_master', icon: '🧼', name: { ru: 'Мастер мыла', en: 'Soap Master' },          desc: { ru: '+25% к силе мыла', en: '+25% soap power' }, cost: 2,  maxLevel: 5 },
     { id: 'wash_master', icon: '🧹', name: { ru: 'Мастер смыва', en: 'Rinse Master' },        desc: { ru: '+25% к силе смыва', en: '+25% rinse power' }, cost: 2,  maxLevel: 5 },
+    { id: 'start_food',  icon: '🍞', name: { ru: 'Сытный старт', en: 'Hearty Start' },        desc: { ru: '+5 стартовой еды после престижа', en: '+5 starting food after prestige' }, cost: 2, maxLevel: 3 },
     { id: 'pet_friends', icon: '🐾', name: { ru: 'Друзья навек', en: 'Friends Forever' },     desc: { ru: 'Питомцы остаются после престижа', en: 'Pets stay after prestige' }, cost: 3,  maxLevel: 1 },
-    { id: 'fast_start',  icon: '⚡', name: { ru: 'Быстрый старт', en: 'Fast Start' },          desc: { ru: 'Престиж начинается со 2-го ковра', en: 'Prestige starts from carpet 2' }, cost: 4,  maxLevel: 1 },
-    { id: 'jump_start',  icon: '⏩', name: { ru: 'Прыжок', en: 'Jump Start' },                 desc: { ru: 'Престиж начинается с 3-го ковра', en: 'Prestige starts from carpet 3' }, cost: 6,  maxLevel: 1 },
+    { id: 'fast_start',  icon: '⚡', name: { ru: 'Быстрый старт', en: 'Fast Start' },          desc: { ru: 'Престиж начинается со 2-го ковра', en: 'Prestige starts from carpet 2' }, cost: 6,  maxLevel: 1 },
     { id: 'double_income', icon: '🌟', name: { ru: 'Двойной доход', en: 'Double Income' },    desc: { ru: 'Множитель престижа ×2.0', en: 'Prestige multiplier ×2.0' }, cost: 8,  maxLevel: 1 },
-    { id: 'crystal_rain', icon: '💎', name: { ru: 'Кристальный дождь', en: 'Crystal Rain' },  desc: { ru: '+1💎 за каждый новый престиж', en: '+1💎 per new prestige' }, cost: 10, maxLevel: 1 },
+    { id: 'jump_start',  icon: '⏩', name: { ru: 'Прыжок', en: 'Jump Start' },                 desc: { ru: 'Престиж начинается с 3-го ковра', en: 'Prestige starts from carpet 3' }, cost: 10, maxLevel: 1 },
     { id: 'gods_legacy', icon: '👑', name: { ru: 'Наследие Богов', en: "Gods' Legacy" },      desc: { ru: 'Множитель престижа ×3.0', en: 'Prestige multiplier ×3.0' }, cost: 15, maxLevel: 1 }
 ];
 
@@ -383,19 +386,19 @@ const ROOM_SKINS = [
 const BRUSH_SKINS = [
     {
         id: 'classic', icon: '🧼', color: 0xFFFFFF,
-        icons: { soap: '🧼', wash: '🧹', scraper: '🪒', steam: '🔥', remover: '🧴' },
+        icons: { soap: '🧼', wash: '💧', scraper: '🪒', steam: '🔥', remover: '🧴' },
         fx: { bubble: 0xE0F4FF, splash: 0x9AD6FF, steam: 0xDDEEFF },
         name: { ru: 'Классика', en: 'Classic' }, price: 0
     },
     {
         id: 'gold', icon: '✨', color: 0xFFD700,
-        icons: { soap: '🧴', wash: '🌟', scraper: '🗡️', steam: '☀️', remover: '💧' },
+        icons: { soap: '🧴', wash: '✨', scraper: '🗡️', steam: '☀️', remover: '💰' },
         fx: { bubble: 0xFFEE99, splash: 0xFFD700, steam: 0xFFEEBB },
         name: { ru: 'Золотая', en: 'Gold' }, price: 5000
     },
     {
         id: 'fire', icon: '🔥', color: 0xFF5522,
-        icons: { soap: '🌋', wash: '💦', scraper: '⚔️', steam: '🔥', remover: '🧯' },
+        icons: { soap: '🌋', wash: '🌊', scraper: '⚔️', steam: '🔥', remover: '🧯' },
         fx: { bubble: 0xFF8855, splash: 0xFF5522, steam: 0xFFAA66 },
         name: { ru: 'Огненная', en: 'Fire' }, price: 12000
     },
@@ -430,7 +433,7 @@ const DAILY_REWARDS = [
 const CARPET_TUTORIALS = {
     1: [
         { text: { ru: 'Веди пальцем по ковру с 🧼 МЫЛОМ,\nчтобы нанести пену.', en: 'Swipe with 🧼 SOAP\nto apply lather.' }, check: 'soap', need: 3 },
-        { text: { ru: 'Переключись на 🧹 СМЫТЬ\nи смывай пену.', en: 'Switch to 🧹 RINSE\nand wash off the foam.' }, check: 'wash', need: 3 },
+        { text: { ru: 'Переключись на 💧 СМЫТЬ\nи смывай пену.', en: 'Switch to 💧 RINSE\nand wash off the foam.' }, check: 'wash', need: 3 },
         { text: { ru: 'Когда грязь почти уйдёт —\nсобирай ⭐ звёзды тапом!', en: 'Tap ⭐ stars when dirt is gone!' }, check: 'auto', need: 0 },
         { text: { ru: 'Ковёр чист на 100%?\nЖми «ПОЛУЧИТЬ ДЕНЬГИ».', en: 'Carpet 100% clean?\nTap "GET MONEY".' }, check: 'finish', need: 1 }
     ],
@@ -442,7 +445,7 @@ const CARPET_TUTORIALS = {
     3: [
         { text: { ru: '🪒 Новый инструмент — СКРЕБОК.\nИм снимаются засохшие корки.', en: '🪒 New tool — SCRAPER.' }, check: 'auto', need: 0 },
         { text: { ru: 'Проведи 🪒 скребком по корке.', en: 'Swipe 🪒 scraper over crust.' }, check: 'scrape', need: 2 },
-        { text: { ru: 'После скребка смывай пыль 🧹.', en: 'After scraping, rinse 🧹.' }, check: 'auto', need: 0 }
+        { text: { ru: 'После скребка смывай пыль 💧.', en: 'After scraping, rinse 💧.' }, check: 'auto', need: 0 }
     ],
     4: [
         { text: { ru: '🔥 Новый инструмент — ПАР.', en: '🔥 New tool — STEAM.' }, check: 'auto', need: 0 },
@@ -929,17 +932,21 @@ class GameState {
         this.legacyUpgrades[id] = (this.legacyUpgrades[id] || 0) + 1; return true;
     }
     getLegacyUpgradesBought() { let c = 0; for (const id in this.legacyUpgrades) c += this.legacyUpgrades[id]; return c; }
-    canPrestige() { return this.carpetIndex >= BALANCE.totalCarpets; }
+    canPrestigeUnlocked() { return this.carpetIndex >= BALANCE.totalCarpets; }
+    canPrestige() {
+        return this.canPrestigeUnlocked() && this.money >= BALANCE.prestigePrice;
+    }
     prestige() {
         if (!this.canPrestige()) return false;
+        this.money = 0;
         this.prestigeLevel += 1;
         const gain = this.prestigeLevel === 1 ? BALANCE.legacyPerPrestige1 : BALANCE.legacyPerPrestigeN;
         this.legacyPoints += gain;
-        this.money = 0; this.food = BALANCE.startFood; this.toolLevel = BALANCE.startToolLevel;
+        this.food = BALANCE.startFood + (this.legacyUpgrades.start_food || 0) * 5;
+        this.toolLevel = BALANCE.startToolLevel;
         this.soapLevel = 1; this.washLevel = 1; this.swatterLevel = 0;
         this.steamLevel = 1; this.stainRemoverLevel = 1;
         this.doubleBugReward = false;
-        // Скины не сбрасываются
         if (this.legacyUpgrades.jump_start) { this.carpetIndex = 3; this.carpetLevel = 2; }
         else if (this.legacyUpgrades.fast_start) { this.carpetIndex = 2; this.carpetLevel = 1; }
         else { this.carpetIndex = 1; this.carpetLevel = 0; }
@@ -988,7 +995,8 @@ class GameState {
     }
     buyNewCarpet() {
         if (!this.canBuyNewCarpet()) return false;
-        this.money = 0; this.food = BALANCE.startFood;
+        this.money = 0;
+        this.food = BALANCE.startFood + (this.legacyUpgrades.start_food || 0) * 5;
         this.carpetIndex += 1; this.carpetLevel += 1; return true;
     }
     upgradeTool() { const p = this.getToolUpgradePrice(); if (this.money < p) return false; this.money -= p; this.toolLevel += 1; return true; }
@@ -2512,7 +2520,7 @@ class ShopUI {
                 async () => { st.upgradeSoap(); await this._afterBuy(); }); y += 82;
             const curWash = (st.getWashStrength() * 100).toFixed(0);
             const nextWash = ((st.getWashStrength() + BALANCE.washStrength * 0.35) * 100).toFixed(0);
-            item(y, `🧹 ${t('wash2')} ${st.washLevel}  ${curWash}%→${nextWash}%`, st.getWashUpgradePrice(),
+            item(y, `💧 ${t('wash2')} ${st.washLevel}  ${curWash}%→${nextWash}%`, st.getWashUpgradePrice(),
                 async () => { st.upgradeWash(); await this._afterBuy(); }); y += 82;
         }
         if (st.carpetIndex >= 2) {
@@ -2733,13 +2741,54 @@ class ShopUI {
     }
     _renderPrestige(push) {
         const s = this.scene, st = this.state;
-        if (!st.canPrestige()) {
+
+        // Ещё не все 5 ковров открыты
+        if (!st.canPrestigeUnlocked()) {
             push(s.add.text(360, 640, t('prestigeLocked'), { ...TEXT_STYLES.shopInfo('#AAAAAA', 26), align: 'center' }).setOrigin(0.5).setDepth(42));
             return;
         }
+
         const cy = 640;
         push(s.add.rectangle(360, cy, 620, 520, 0x1a0a1a).setDepth(41).setStrokeStyle(3, 0xFFD700, 0.7));
         push(s.add.text(360, cy - 210, t('prestigeAvailable'), { ...TEXT_STYLES.shop('#FFD700', 30) }).setOrigin(0.5).setDepth(42));
+
+        // Не хватает денег для престижа
+        if (st.money < BALANCE.prestigePrice) {
+            const need = BALANCE.prestigePrice;
+            push(s.add.text(360, cy - 100, LANG === 'ru'
+                ? `Нужно ${need}💰 на балансе\n(есть ${st.money}💰)`
+                : `Need ${need}💰 on balance\n(have ${st.money}💰)`, {
+                ...TEXT_STYLES.shopInfo('#FF8888', 22), align: 'center'
+            }).setOrigin(0.5).setDepth(42));
+            push(s.add.text(360, cy + 20, LANG === 'ru'
+                ? `Собери ${need - st.money}💰 ещё\nи возвращайся!`
+                : `Collect ${need - st.money}💰 more\nand come back!`, {
+                ...TEXT_STYLES.shopInfo('#AAAAAA', 18), align: 'center'
+            }).setOrigin(0.5).setDepth(42));
+
+            // Кнопка "посмотреть рекламу" — быстрый способ добрать монеты
+            const cd = this.ads.getCooldownRemaining();
+            const adAvailable = cd <= 0;
+            const adLabel = adAvailable ? t('adWatch', BALANCE.adRewardMoney) : t('adWait', Math.ceil(cd / 1000));
+            const adPill = makePill(s, 360, cy + 150, 480, 60, {
+                radius: 22,
+                fill: adAvailable ? 0x4a3a10 : 0x2a2a2a,
+                stroke: adAvailable ? 0xFFD700 : 0x666666,
+                strokeW: 3, depth: 42
+            });
+            push(adPill.cont);
+            push(s.add.text(360, cy + 150, adLabel, {
+                fontSize: '18px', fill: adAvailable ? '#FFD700' : '#888888',
+                fontStyle: 'bold', fontFamily: FONT_HAND
+            }).setOrigin(0.5).setDepth(43));
+            if (adAvailable) adPill.hit.on('pointerdown', async () => {
+                adPill.tap();
+                await this._showAdAndRefresh();
+            });
+
+            return;
+        }
+
         const curMult = st.getPrestigeMultiplier();
         const nextMult = curMult * 2.0;
         const gain = st.prestigeLevel === 0 ? BALANCE.legacyPerPrestige1 : BALANCE.legacyPerPrestigeN;
@@ -2751,10 +2800,11 @@ class ShopUI {
             (LANG === 'ru' ? 'Наследие, скины (щётка+комната), достижения\n' : 'Legacy, skins (brush+room), achievements\n') +
             (st.legacyUpgrades.pet_friends ? (LANG === 'ru' ? 'Питомцы\n' : 'Pets\n') : (LANG === 'ru' ? 'Питомцы СБРОСЯТСЯ\n' : 'Pets will RESET\n')) +
             `\n${t('willReset')}\n` +
-            (LANG === 'ru' ? 'Деньги, ковры, инструменты, автоеда, ×2 мух' : 'Money, carpets, tools, auto-food, ×2 bugs');
+            (LANG === 'ru' ? 'Деньги (-12000💰), ковры, инструменты, автоеда, ×2 мух' : 'Money (-12000💰), carpets, tools, auto-food, ×2 bugs');
         push(s.add.text(360, cy - 20, info, { ...TEXT_STYLES.shopInfo('#FFFFFF', 17), align: 'center', lineSpacing: 4 }).setOrigin(0.5).setDepth(42));
+
         let confirmPending = false;
-        const btnLabel = t('prestigeBtn', gain);
+        const btnLabel = t('prestigeBtn', gain, BALANCE.prestigePrice);
         const btn = push(s.add.text(360, cy + 210, btnLabel, {
             fontSize: '24px', fill: '#000000', fontStyle: 'bold', fontFamily: FONT_HAND, backgroundColor: '#FFD700', padding: { x: 30, y: 15 }
         }).setOrigin(0.5).setDepth(42).setInteractive({ useHandCursor: true }));
@@ -3403,7 +3453,7 @@ class MainScene extends Phaser.Scene {
         this.toolText = this.add.text(28, 102, '🧹 ' + this.state.getCurrentRadius(), TEXT_STYLES.stat('#87CEEB', 20)).setDepth(10);
         this.carpetText = this.add.text(188, 102, '🧽 ' + this.state.carpetsCleaned, TEXT_STYLES.stat('#FFD700', 20)).setDepth(10);
 
-        this.soapLvlText = this.add.text(28, 132, `🧼${this.state.soapLevel}  🧹${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 17)).setDepth(10);
+        this.soapLvlText = this.add.text(28, 132, `🧼${this.state.soapLevel}  💧${this.state.washLevel}  🪰${this.state.swatterLevel}`, TEXT_STYLES.stat('#AAE0FF', 17)).setDepth(10);
         this.dayNightText = this.add.text(28, 162, '', { fontSize: '16px', fill: '#FFD700', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 4 }).setDepth(10);
         this.updateDayNightText();
         this.timerText = this.add.text(320, 162, '⏱ 0:00', { fontSize: '18px', fill: '#FFDD66', fontStyle: 'bold', fontFamily: FONT_HAND, stroke: '#000000', strokeThickness: 5 }).setOrigin(1, 0).setDepth(10);
@@ -3534,7 +3584,7 @@ class MainScene extends Phaser.Scene {
         this.foodText.setText('🍞 ' + this.state.food);
         this.toolText.setText('🧹 ' + this.state.getCurrentRadius());
         this.carpetText.setText('🧽 ' + this.state.carpetsCleaned);
-        this.soapLvlText.setText(`🧼${this.state.soapLevel}  🧹${this.state.washLevel}  🪰${this.state.swatterLevel}`);
+        this.soapLvlText.setText(`🧼${this.state.soapLevel}  💧${this.state.washLevel}  🪰${this.state.swatterLevel}`);
         this.updateQuestBadge(); this.updateDayNightText();
     }
     updateQuestBadge() { if (!this.questBadge) return; this.questBadge.setVisible(this.state.quests.some(q => this.state.isQuestComplete(q) && !this.state.questClaimed[q.id])); }
@@ -3548,7 +3598,7 @@ class MainScene extends Phaser.Scene {
         const tools = [];
         if (this.state.carpetIndex <= 3) {
             tools.push({ id: 'soap', icon: '🧼', label: t('soap'), color: 0x5a7a9a });
-            tools.push({ id: 'wash', icon: '🧹', label: t('wash'), color: 0x5a7a9a });
+            tools.push({ id: 'wash', icon: '💧', label: t('wash'), color: 0x4a7a9a });
         }
         if (this.state.carpetIndex >= 2) tools.push({ id: 'swatter', icon: '🪰', label: t('swatter'), color: 0x9a5a5a });
         if (this.state.carpetIndex === 3) tools.push({ id: 'scraper', icon: '🪒', label: t('scraper'), color: 0x9a7a4a });
@@ -3610,7 +3660,7 @@ class MainScene extends Phaser.Scene {
     selectTool(tool) {
         if (this.state.carpetIndex >= 4 && (tool === 'soap' || tool === 'wash')) tool = 'steam';
         this.currentTool = tool;
-        const iconMap = { soap: '🧼', wash: '🧹', scraper: '🪒', steam: '🔥', remover: '🧴' };
+        const iconMap = { soap: '🧼', wash: '💧', scraper: '🪒', steam: '🔥', remover: '🧴' };
         if (iconMap[tool]) {
             this.brush.setText(this.state.getBrushIconFor(tool));
         } else {
