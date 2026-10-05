@@ -5,30 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Чистим Ковры / Clean Carpets</title>
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🧽</text></svg>">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
     <!-- Yandex Games SDK — актуальный путь по документации -->
     <script src="/sdk.js"></script>
     <script>
         // Явная инициализация SDK — до старта Phaser
+        // п. 2.14: язык берём из ysdk.environment.i18n.lang
         window.__ysdk = null;
         window.__ysdkReady = false;
+        window.__yandexLang = null;
         (async () => {
             try {
-                if (typeof YaGames !== 'undefined') {
-                    window.__ysdk = await YaGames.init();
-                    window.__ysdkReady = true;
-                    console.log('[Yandex SDK] Initialized');
-                } else {
+                if (typeof YaGames === 'undefined') {
                     console.warn('[Yandex SDK] YaGames is not defined — /sdk.js not loaded');
+                    return;
                 }
+                window.__ysdk = await YaGames.init();
+                window.__ysdkReady = true;
+                try {
+                    const i18nLang = window.__ysdk?.environment?.i18n?.lang;
+                    if (i18nLang) {
+                        window.__yandexLang = i18nLang;
+                        console.log('[Yandex SDK] Player language from SDK:', i18nLang);
+                    } else {
+                        console.warn('[Yandex SDK] environment.i18n.lang is empty');
+                    }
+                } catch (e) {
+                    console.warn('[Yandex SDK] Failed to read environment.i18n.lang:', e);
+                }
+                console.log('[Yandex SDK] Initialized');
             } catch (e) {
                 console.warn('[Yandex SDK] init failed:', e);
             }
         })();
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/phaser@4.0.0/dist/phaser.min.js"></script>
+    <!-- Phaser — локальный файл в архиве -->
+    <script src="phaser.min.js"></script>
     <style>
         * {
             margin: 0; padding: 0; box-sizing: border-box;
@@ -42,7 +53,7 @@
             background: #1a1a1a; overflow: hidden;
             touch-action: none;
             overscroll-behavior: none;
-            font-family: 'Caveat', 'Comic Sans MS', cursive;
+            font-family: 'Caveat', 'Comic Sans MS', 'Segoe Script', cursive;
         }
         canvas { display: block; touch-action: none; }
     </style>
@@ -225,25 +236,25 @@ function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
 let LANG = 'ru';
 function detectLang(ysdk) {
-    // 1. Приоритет — язык игрока из SDK Яндекса (требование п. 2.14)
-    try {
-        const lang = ysdk?.environment?.i18n?.lang;
-        if (lang) {
-            console.log('[i18n] Yandex SDK lang:', lang);
-            if (I18N[lang]) return lang;
-            if (['uk', 'be', 'kk', 'ky', 'uz', 'az', 'hy', 'ka'].includes(lang)) return 'ru';
-            return 'en';
-        }
-    } catch (e) {
-        console.warn('[i18n] SDK lang read error:', e);
+    // п. 2.14 — язык из SDK Яндекс Игр (главный источник)
+    let sdkLang = null;
+    try { sdkLang = window.__yandexLang; } catch {}
+    if (!sdkLang && ysdk) {
+        try { sdkLang = ysdk?.environment?.i18n?.lang || null; } catch {}
     }
-    // 2. Резерв — язык браузера
+    if (sdkLang) {
+        console.log('[i18n] Using SDK language:', sdkLang);
+        const lc = String(sdkLang).toLowerCase();
+        if (I18N[lc]) return lc;
+        if (['uk', 'be', 'kk', 'ky', 'uz', 'az', 'hy', 'ka', 'tg', 'tk', 'mo'].includes(lc)) return 'ru';
+        return 'en';
+    }
+    console.log('[i18n] SDK lang unavailable, using navigator.language');
     try {
         const nav = (navigator.language || 'ru').slice(0, 2).toLowerCase();
         if (I18N[nav]) return nav;
         if (['uk', 'be', 'kk'].includes(nav)) return 'ru';
     } catch {}
-    // 3. Финальный дефолт
     return 'ru';
 }
 function t(key, ...args) {
@@ -928,7 +939,7 @@ class GameState {
         this.soapLevel = 1; this.washLevel = 1; this.swatterLevel = 0;
         this.steamLevel = 1; this.stainRemoverLevel = 1;
         this.doubleBugReward = false;
-        // Скины НЕ сбрасываются
+        // Скины не сбрасываются
         if (this.legacyUpgrades.jump_start) { this.carpetIndex = 3; this.carpetLevel = 2; }
         else if (this.legacyUpgrades.fast_start) { this.carpetIndex = 2; this.carpetLevel = 1; }
         else { this.carpetIndex = 1; this.carpetLevel = 0; }
@@ -1227,7 +1238,6 @@ class SaveSystem {
         };
 
         try {
-            // Ждём, пока SDK проинициализируется (максимум 6 сек)
             let waited = 0;
             while (!window.__ysdkReady && waited < 6000) {
                 await new Promise(r => setTimeout(r, 100));
@@ -1236,15 +1246,16 @@ class SaveSystem {
             if (!window.__ysdk) throw new Error('no SDK');
             this.ysdk = window.__ysdk;
 
-            // Язык из SDK — приоритетный источник (п. 2.14)
+            const sdkLang = window.__yandexLang || this.ysdk?.environment?.i18n?.lang || null;
             const detected = detectLang(this.ysdk);
             if (this.state.settings.lang && I18N[this.state.settings.lang]) {
                 LANG = this.state.settings.lang;
+                console.log('[i18n] Using saved player language:', LANG, '(SDK was:', sdkLang + ')');
             } else {
                 LANG = detected;
                 this.state.settings.lang = detected;
+                console.log('[i18n] Auto-detected from SDK:', LANG, '(SDK lang:', sdkLang + ')');
             }
-            console.log('[i18n] Using language:', LANG);
 
             const keys = Object.keys(this.state.toSaveObject());
             const stats = await this.ysdk.player.getStats(keys);
@@ -3120,6 +3131,10 @@ class LeaderboardUI {
 class PreloadScene extends Phaser.Scene {
     constructor() { super('PreloadScene'); }
     preload() {
+        // п. 2.14 — устанавливаем язык ДО первой отрисовки UI
+        LANG = detectLang(window.__ysdk);
+        console.log('[i18n] LANG set in PreloadScene:', LANG);
+
         for (let i = 1; i <= BALANCE.totalCarpets; i++) this.load.image('carpet' + i, `image.carpet/carpet${i}.png`);
         for (const id in ROOM_IMAGES) {
             this.load.image('room_' + id, ROOM_IMAGES[id]);
